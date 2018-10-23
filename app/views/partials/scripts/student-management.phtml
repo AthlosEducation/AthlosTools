@@ -1,0 +1,1973 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to Check All Checkboxes in Table --//
+		$('#check-all').change(function(event){
+			if(this.checked){
+				$('.select-check').prop('checked', true);
+			}else{
+				$('.select-check').prop('checked', false);
+			}
+		});
+		
+		//-- Change # of Results to Display --//
+		$('#changeLimit a').click(function(event){
+			event.preventDefault();
+			//-- grab var --//
+			var numLimit = $(this).attr('data-val');
+			//-- set var --//
+			$(this).parent('li').parent('ul').next('input.form-control').val(numLimit);
+			//-- submit form --//
+			$('#changeLimit').submit();
+		});
+		
+		//-- Display Filters --//
+		$('#show-user-filters > a').click(function(e){
+			e.preventDefault();
+			$('#user-filters').slideToggle(500);
+			if($(this).children('span').text() == 'Show Filters'){
+				$(this).children('span').text('Hide Filters');
+			}else{
+				$(this).children('span').text('Show Filters');
+			}
+		});
+		
+		/*---------------------------------
+			Pagination for Content Tabs
+		----------------------------------*/
+		$('.users-pager li > a').click(function(e){
+			e.preventDefault();
+			//-- make sure button isn't disabled --//
+			if($(this).parent('li').hasClass('disabled') || $(this).parent('li').hasClass('active')){ return false; }
+			
+			//-- Figure out what the active page is based on the button clicked --//
+			if($(this).parent('li').hasClass('prev')){
+				var activeItem = $(this).parent('li').siblings('li.active').prev('li').children('a');
+			}else if($(this).parent('li').hasClass('next')){
+				var activeItem = $(this).parent('li').siblings('li.active').next('li').children('a');
+			}else{
+				var activeItem = $(this);
+			}
+			
+			//-- Get Values --//
+			var page = $(activeItem).attr('data-page');
+			//-- Set Page Var / Submit Form --//
+			$('#pageNumber').val(page);
+			$('#pagerForm').submit();
+			
+		});
+		/*--------------------
+			end pagination
+		---------------------*/
+		
+		/*-----------------------------------------
+			hide pager items when too many pages
+		------------------------------------------*/
+		if($('.pagination .scrunch').length > 200){
+			//console.log($('.pagination .scrunch').length);
+			$('.pagination .scrunch').hide();
+			$('.pagination .scrunch:nth-child(10n)').show();
+		}
+		/*--------------------------
+			end hide pager items 
+		----------------------------*/
+		
+		/*------------------
+			Bulk Actions
+		-------------------*/
+		$.fn.enrollStudents = function(){
+			//-- Confirmation prompt --//
+			bootbox.confirm("Are you sure you want to enroll these students?", function(result) {
+				if(result){
+					//-- Grabbed selected students --//
+					var x=0;
+					var sidList = '';
+					$('input:checkbox.select-check').each(function () {
+						var sThisVal = (this.checked ? $(this).val() : "");
+						if(sThisVal != ""){
+							if(x==0){
+								sidList = sThisVal;
+							}else{
+								sidList+= "," + sThisVal;
+							}
+							x++;
+						}
+					});
+					//-- Make sure a student is selected --//
+					if(sidList != ''){
+						//-- Setup Ajax Call --//
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/enroll";'."\n"; ?>
+						var data = {
+							action: "enroll_student",
+							idlist: sidList
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Students Enrolled', 'The students were enrolled successfully.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+									}else if(results.result == 'invalid'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+					}
+				}
+			});
+		};
+		
+		$.fn.unenrollStudents = function(){
+			//-- Confirmation prompt --//
+			bootbox.confirm("Are you sure you want to mark these students as not enrolled?", function(result) {
+				if(result){
+					//-- Grabbed selected students --//
+					var x=0;
+					var sidList = '';
+					$('input:checkbox.select-check').each(function () {
+						var sThisVal = (this.checked ? $(this).val() : "");
+						if(sThisVal != ""){
+							if(x==0){
+								sidList = sThisVal;
+							}else{
+								sidList+= "," + sThisVal;
+							}
+							x++;
+						}
+					});
+					//-- Make sure a student is selected --//
+					if(sidList != ''){
+						//-- Setup Ajax Call --//
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/unenroll";'."\n"; ?>
+						var data = {
+							action: "unenroll_student",
+							idlist: sidList
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Students Un-Enrolled', 'The students were un-enrolled successfully.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+									}else if(results.result == 'invalid'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+					}
+				}
+			});
+		};
+		
+		$.fn.assignPeriod = function(){
+			var period = $('#turf-period').val().replace(/[^0-9]/g,'');
+			if(period){
+				//-- Confirmation prompt --//
+				bootbox.confirm("Are you sure you want to add these students to turf period "+ period +"?", function(result) {
+					if(result){
+						//-- Grabbed selected students --//
+						var x=0;
+						var sidList = '';
+						$('input:checkbox.select-check').each(function () {
+							var sThisVal = (this.checked ? $(this).val() : "");
+							if(sThisVal != ""){
+								if(x==0){
+									sidList = sThisVal;
+								}else{
+									sidList+= "," + sThisVal;
+								}
+								x++;
+							}
+						});
+						//-- Make sure a student is selected --//
+						if(sidList != ''){
+							//-- Setup Ajax Call --//
+							var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/assignturf";'."\n"; ?>
+							var data = {
+								action: "assign_turf_period",
+								idlist: sidList,
+								period: period
+								};
+							jQuery.post(ajaxurl, data, function(json){
+								if(typeof json != 'undefined'){
+									var results = jQuery.parseJSON(json);
+									if(typeof results.result != 'undefined'){
+										if(results.result == 'success'){
+											$('#assignTurfModal').modal('hide');
+											//-- Success - Howler MSG --//
+											howlerMsg('success', 'Students Assigned', 'The students were successfully assigned to a turf period.', 7500, 'fa fa-check', false);
+										}else if(results.result == 'failed'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+										}else if(results.result == 'invalid'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+										}
+									}
+								}
+							});
+						}else{
+							//-- No Students Selected --//
+							howlerMsg('danger', 'No Students Selected', 'Please select a student by checking the checkbox to the left of their name and then try again.', 7500, 'fa fa-ban', false);
+						}
+					}
+				});
+			}else{
+				//-- Invalid Period Type (not valid number) --//
+				howlerMsg('danger', 'Invalid Turf Period', 'The data type is incorrect, please refresh the page and try again.', 7500, 'fa fa-ban', false);
+			}
+		};
+		/*----------------------
+			end bulk actions
+		-----------------------*/
+		
+		
+		/*----------------------------
+			Teacher List - Resource
+		-----------------------------*/
+		//-- Check All Grades --//
+		$('#allTeachers').change(function(event){
+			//-- Select School --//
+			var schoolID = $('#teach-school-filter').val();
+			if(schoolID){ var schoolClass = '.'+ schoolID; }else{ var schoolClass = ''; }
+			
+			if(this.checked){
+				$('.teach-grade-filter').prop('checked', true);
+				$('.all'+ schoolClass).show();
+			}else{
+				$('.teach-grade-filter').prop('checked', false);
+				$('.all').hide();
+			}
+		});
+		//-- Filtering --//
+		$('.teach-grade-filter').change(function(event){
+			//-- change state of show/hide all checkbox --//
+			if(!this.checked){
+				$('#allTeachers').prop('checked', false);
+			}
+			//-- show all the selected grades --//
+			var schoolID = $('#teach-school-filter').val();
+			if(schoolID){ var schoolClass = '.'+ schoolID; }else{ var schoolClass = ''; }
+			$('.all').hide();
+			$('.teach-grade-filter:checked').each(function(){
+				var gradeClass = $(this).val();
+				$(schoolClass +'.'+ gradeClass).show();
+			});
+		});
+		$('#teach-school-filter').change(function(event){
+			var schoolID = $(this).val();
+			if(schoolID){ var schoolClass = '.'+ schoolID; }else{ var schoolClass = ''; }
+			$('.all').hide();
+			$('.teach-grade-filter:checked').each(function(){
+				var gradeClass = $(this).val();
+				$(schoolClass +'.'+ gradeClass).show();
+			});
+		
+		});
+		
+		$('#teachRefList').click(function(event){
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/teachlist";'."\n"; ?>
+			var data = {
+				action: "grab_teacher_list"
+			};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Populate the modal --//
+							$('#teachListTable tbody').children('tr').remove();
+							if(results.teachers){
+								jQuery.each(results.teachers, function (i, teacher){
+									var rowStr = '<tr class="all s'+ teacher.school;
+									var gradeStr = '';
+									var strLen = teacher.grades.length;
+									for (var x = 0; x < strLen; x++){
+										rowStr+= ' g'+ teacher.grades[x];
+										gradeStr+= teacher.grades[x] +',';
+									}
+									rowStr+= '"><td><span class="label label-primary" style="font-size: 11px;">'+ teacher.id +'</span></td><td>'+ teacher.last +'</td><td>'+ teacher.first +'</td><td>'+ gradeStr +'</td>';
+									rowStr+= '</tr>';
+									$('#teachListTable tbody').append(rowStr);
+								});
+							}else{
+								$('#teachListTable tbody').append('<tr><td colspan="4">No Teachers Available!</td></tr>');
+							}
+							
+							//-- Show Modal --//
+							$('#teacherListModal').modal('show');
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Teacher Reference Unavailable', 'Failed to retrieve the teacher reference list.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*----------------------
+			end Teacher List
+		-----------------------*/
+		
+		
+		/*----------------------------
+			Coach List - Resource
+		-----------------------------*/
+		$('#coach-school-filter').change(function(event){
+			var schoolID = $(this).val();
+			if(schoolID){
+				var schoolClass = '.'+ schoolID;
+				$('#coachListTable .all').hide();
+				$('#coachListTable '+ schoolClass).show();
+			}else{
+				$('#coachListTable .all').show();
+			}
+		});
+		
+		$('#coachRefList').click(function(event){
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/coachlist";'."\n"; ?>
+			var data = {
+				action: "grab_coach_list"
+			};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Populate the modal --//
+							$('#coachListTable tbody').children('tr').remove();
+							if(results.coaches){
+								jQuery.each(results.coaches, function (i, coach){
+									var rowStr = '<tr class="all s'+ coach.school;
+									var gradeStr = '';
+									rowStr+= '"><td><span class="label label-primary" style="font-size: 11px;">'+ coach.alt_id +'</span></td><td>'+ coach.last +'</td><td>'+ coach.first +'</td><td>'+ coach.schoolname +'</td>';
+									rowStr+= '</tr>';
+									$('#coachListTable tbody').append(rowStr);
+								});
+							}else{
+								$('#coachListTable tbody').append('<tr><td colspan="4">No Coaches Available!</td></tr>');
+							}
+							
+							//-- Show Modal --//
+							$('#coach-school-filter').val('');
+							$('#coachListModal').modal('show');
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Coach Reference Unavailable', 'Failed to retrieve the coach reference list.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*----------------------
+			end Coach List
+		-----------------------*/
+		
+		
+		/*-----------------
+			Add Student
+		------------------*/
+		$('.addStudent').click(function(e){
+			//-- Initiate Validation --//
+			$('#addStudentForm').parsley('destroy');
+			$('#addStudentForm').resetParsley();
+			
+			if($('#addStudentForm').parsley('validate')){
+				console.log('Validation Successful');
+				//-- Check for any failed ajax checks --//
+				if(!$('#addUserForm .failed').get(0)){
+					//-- passed validation - Run Add Script --//
+					
+					var alt_id = $('#add-alt-id').val();
+					var state_id = $('#add-state-id').val();
+					var first = $('#add-first').val();
+					var last = $('#add-last').val();
+					var email = $('#add-email').val();
+					var school = $('#add-school').val();
+					var grade = $('#add-grade').val();
+					//var teacher = $('#add-teacher').val();
+					var coach = $('#add-coach').val();
+					var pass = $('#add-pass').val();
+					if($('#send-new-user-email-checkbox:checked').get(0)){
+						var sendEmail = 1;
+					}else{
+						var sendEmail = 0;
+					}
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/addstudent";'."\n"; ?>
+					var data = {
+						action: "add_student",
+						altid: alt_id,
+						stateid: state_id,
+						first: first,
+						last: last,
+						email: email,
+						school: school,
+						grade: grade,
+						//teacher: teacher,
+						coach: coach,
+						pass: pass,
+						send_email: sendEmail
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide Modal --//
+									$('#addStudentModal').modal('hide');
+									
+									//-- Clear Out Data --//
+									$('#addStudentForm .form-control').val('');
+									$('#addStudentModal .field-msg').text('');
+									$('#addStudentModal .form-group').removeClass('failed').removeClass('successful');
+									//$('#add-teacher option:not(:first)').remove();
+									
+									//-- Success Message --//
+									howlerMsg('success', 'Student Added', 'The student was added successfully', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+					
+				}
+				
+			} // end if validation cleared
+		});
+		/*--------------------
+			end Add Student
+		---------------------*/
+		
+		/*-----------------
+			Edit Student
+		------------------*/
+		$('.editStudent').click(function(e){
+			//-- Retrieve User --//
+			var theID = $(this).attr('data-student-val');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/editstudent";'."\n"; ?>
+			var data = {
+				action: "grab_student",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#editStudentForm .form-control').val('');
+							
+							//-- Populate Modal --//
+							var newID = results.id;
+							$('#edit-first').val(results.first);
+							$('#edit-last').val(results.last);
+							$('#edit-email').val(results.email).attr('data-user-val', newID);
+								//-- if school field exists --//
+							if($('#edit-school').get(0)){
+								$('#edit-school').val(results.school);
+							}
+								//-- if grade field exists --//
+							if($('#edit-grade').get(0)){
+								$('#edit-grade').val(results.grade);
+							}
+								//-- if teacher field exists --//
+							/*if($('#edit-teacher').get(0)){
+								$('#edit-teacher option:not(:first)').remove();
+								if(results.teachers){
+									jQuery.each(results.teachers, function (i, teacher){
+										$('#edit-teacher').append('<option value="'+ teacher.id +'">'+ teacher.name +'</option>');
+									});
+								}else{
+									$('#edit-teacher').append('<option value="">No teachers available</option>');
+								}
+								$('#edit-teacher').val(results.teacher);
+							}*/
+								//-- if Coach field exists --//
+							if($('#edit-coach').get(0)){
+								$('#edit-coach').val(results.coach);
+							}
+							$('#edit-alt-id').val(results.alt_id);
+							$('#edit-state-id').val(results.state_id);
+							
+							//-- hide or show password fields --//
+							jQuery('#edit-email').blur();
+							
+							//-- Show modal --//
+							$('#editStudentModal .modal-header h3 .insert-username').text(results.first +' '+ results.last);
+							$('#editStudentModal .field-msg').text('');
+							$('#editStudentModal .form-group').removeClass('failed').removeClass('successful');
+							$('#editStudentModal').modal('show');
+							//-- reset parsley validation --//
+							$('#editStudentForm').parsley('destroy');
+							$('#editStudentForm').resetParsley();
+							
+							//-- validate form --//
+							$('#editStudentSubmit').off().click(function(event){
+								event.preventDefault();
+								if($('#editStudentForm').parsley('validate')){
+									//-- Check for any failed ajax checks --//
+									if(!$('#editStudentForm .failed').get(0)){
+										//-- Passed Validation - Run Edit Script --//
+
+										var first = $('#edit-first').val();
+										var last = $('#edit-last').val();
+										var email = $('#edit-email').val();
+										var pass = $('#edit-pass').val();
+											//-- if school field exists --//
+										if($('#edit-school').get(0)){
+											var school = $('#edit-school').val();
+										}else{
+											var school = '';
+										}
+											//-- if grade field exists --//
+										if($('#edit-grade').get(0)){
+											var grade = $('#edit-grade').val();
+										}else{
+											var grade = '';
+										}
+											//-- if teacher field exists --//
+										if($('#edit-teacher').get(0)){
+											var teacher = $('#edit-teacher').val();
+										}else{
+											var teacher = '';
+										}
+											//-- if coach field exists --//
+										if($('#edit-coach').get(0)){
+											var coach = $('#edit-coach').val();
+										}else{
+											var coach = '';
+										}
+										var alt_id = $('#edit-alt-id').val();
+										var state_id = $('#edit-state-id').val();
+										
+											//-- Send email notifying changed username / password --//
+										if($('#send-new-pass-email-checkbox:checked').get(0)){
+											var sendEmail = 1;
+										}else{
+											var sendEmail = 0;
+										}
+
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/editstudent";'."\n"; ?>
+										var info = {
+											action: "edit_student",
+											student_id: newID,
+											altid: alt_id,
+											stateid: state_id,
+											first: first,
+											last: last,
+											email: email,
+											school: school,
+											grade: grade,
+											//teacher: teacher,
+											coach: coach,
+											pass: pass,
+											send_email: sendEmail
+										};
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#editStudentModal').modal('hide');
+
+														//-- Success Message --//
+														howlerMsg('success', 'Student Updated', 'The student was updated successfully', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+
+									}
+									
+								} // end if validation cleared
+								
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the student, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*---------------------
+			end Edit Student
+		----------------------*/
+		
+		/*--------------------
+			Delete Student
+		---------------------*/
+		$('.delStudent').click(function(e){
+		    var theID = $(this).attr('data-student-val');
+			var theName = $(this).attr('data-student-name');
+			var container = $(this).parent('td').parent('tr');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/delstudent";'."\n"; ?>
+			var data = {
+				action: "delete_student",
+				theID: theID
+				};
+			//-- Ask to confirm "Do you really want to delete this?" --//
+			bootbox.confirm("Are you sure you want to delete <span style='font-weight: bold;'>"+ theName +"</span>?", function(result) {
+				if(result){
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(container).delay(500).slideUp('fast');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Student Deleted', 'The student was deleted successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*-----------------------
+			end Delete Student
+		------------------------*/
+		
+		/*--------------------
+			Assign Parents
+		---------------------*/
+		$(document).on( "click", '.assignParents', function(e){
+			//-- Retrieve Parents / Suggestions --//
+			var theID = $(this).attr('data-student-val');
+			var theName = $(this).attr('data-student-name');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/assignparents";'."\n"; ?>
+			var data = {
+				action: "grab_parents",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							
+							//-- remove last / add new parent list --//
+							$('#existing-parents ol').children('li').remove();
+							$('#existing-parents').hide();
+							if(results.parents){
+								$('#existing-parents').show();
+								jQuery.each(results.parents, function (i, rel){
+									//console.log(rel.first +' - '+ rel.last +' - '+ rel.email +' - '+ rel.valid);
+									if(rel.valid == 1){
+										var tag = '<span class="label label-success"><i class="fa fa-check"></i> Verified</span>';
+									}else{
+										var tag = '<span class="label label-primary removeParent" data-rel-val="'+ rel.id +'"><i class="fa fa-times"></i> Remove</span>';
+									}
+									$('#existing-parents ol').append('<li><span class="bold parent-name">'+ rel.first +' '+ rel.last +'</span> - '+ rel.email +' '+ tag +'</li>');
+								});
+							}
+							
+							//-- remove last / add new suggestions list --//
+							$('#results-box').children('div.checkbox').remove();
+							if(results.suggestions){
+								$('#results-box h5').text('Possible Matches');
+								jQuery.each(results.suggestions, function (i, sugg){
+									//console.log(sugg.first +' - '+ sugg.last +' - '+ sugg.email);
+									$('#results-box').append('<div class="checkbox"><label><input type="checkbox" class="setParent" value="'+ sugg.id +'"> <span class="bold sugg-name">'+ sugg.first +' '+ sugg.last +'</span> - <span class="sugg-email">'+ sugg.email +'</span></label></div>');
+								});
+							}else{
+								$('#results-box h5').text('No existing suggestions');
+							}
+							
+							//-- Set Event Listeners --//
+							$('body').off("change", ".setParent").on("change", ".setParent", function(){ $(this).assignParent(); });
+							$('body').off("click", ".removeParent").on("click", ".removeParent", function(){ $(this).removeParent(); });
+							
+							$('#results-box').attr('data-student-val', results.id); //-- important --//
+							$('#assignParentModal .modal-header h3 .insert-username').text(theName);
+							$('#assignParentModal').modal('show');
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the parents, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+		});
+		/*-----------------------
+			end assign parents
+		------------------------*/
+		
+		$.fn.resetParsley = function(){
+			$(this).parsley ({
+				trigger: 'change',
+				errors: {
+					container: function (element, isRadioOrCheckbox) {
+						if (element.parents ('form').is('.form-horizontal')) {
+							return element.parents ("*[class^='col-']");
+						}
+
+						return element.parents ('.form-group');
+					}
+				}
+			});
+		};
+		
+		$.fn.assignParent = function(){
+			if($(this).prop('checked')){
+				var thisItem = $(this);
+				var parentName = $(this).next('span.sugg-name').text();
+				var parentEmail = $(this).next('span.sugg-name').next('span.sugg-email').text();
+				var studentID = $('#results-box').attr('data-student-val');
+				if(studentID){
+					bootbox.confirm("Are you sure you want to assign <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ parentName +"</span> as this student's parent?", function(result){
+						if(result){
+							var parentID = $(thisItem).val();
+							//console.log(parentID +' - is assigned!');
+							var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/assignparents";'."\n"; ?>
+							var data = {
+								action: "assign_parent",
+								parentID: parentID,
+								studentID: studentID
+								};
+							jQuery.post(ajaxurl, data, function(json){
+								if(typeof json != 'undefined'){
+									var results = jQuery.parseJSON(json);
+									if(typeof results.result != 'undefined'){
+										if(results.result == 'success'){
+											//-- add parent to parent list --//
+											$('#existing-parents ol').append('<li><span class="bold parent-name">'+ parentName +'</span> - '+ parentEmail +'<span class="label label-primary removeParent" data-rel-val="'+ results.relID +'"><i class="fa fa-times"></i> Remove</span></li>');
+											//-- Make sure parents list is visible --//
+											$('#existing-parents').show();
+											//-- remove from results list --//
+											$(thisItem).parent('label').parent('div.checkbox').remove();
+											//-- Add Event Listener --//
+											$('body').off("click", ".removeParent").on("click", ".removeParent", function(){ $(this).removeParent(); });
+											//-- Success - Howler MSG --//
+											howlerMsg('success', 'Parent Assigned', 'The parent was successfully assigned to the student.', 7500, 'fa fa-check', false);
+										}else if(results.result == 'failed'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('danger', 'Assignment Failed', 'Something went wrong, the parent was not assigned.', 7500, 'fa fa-exclamation', false);
+										}
+									}
+								}
+							});
+
+						}else{
+							$(thisItem).prop('checked', false);
+						}
+					});
+				}
+			}
+		}
+		
+		
+		$.fn.removeParent = function(){
+			var thisItem = $(this);
+			var relID = $(this).attr('data-rel-val');
+			var parentName = $(this).siblings('span.parent-name').text();
+			bootbox.confirm("Are you sure you want to remove <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ parentName +"</span> as this student's parent?", function(result){
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/assignparents";'."\n"; ?>
+					var data = {
+						action: "remove_parent",
+						theID: relID
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- remove from parents list --//
+									$(thisItem).parent('li').remove();
+									//-- Make sure parents list is hidden if no parents --//
+									if(!$('#existing-parents ol li').get(0)){
+										$('#existing-parents').hide();
+									}
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Parent Removed', 'The parent was successfully removed.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Removal Failed', 'Something went wrong, the parent was not removed.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+
+				}
+			});
+		}
+		
+		/*--------------------
+			Search Parents
+		---------------------*/
+		$('#searchParents').click(function(e){
+			var searchVal = $('#parent-search').val();
+			var studentID = $('#results-box').attr('data-student-val');
+			if(searchVal && studentID){
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/assignparents";'."\n"; ?>
+				var data = {
+					action: "search_parents",
+					theVal: searchVal,
+					studentID: studentID
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+
+								//-- replace content in the search results box --//
+								$('#results-box').children('div.checkbox').remove();
+								if(results.items){
+									$('#results-box h5').text('Search Results');
+									jQuery.each(results.items, function (i, item){
+										$('#results-box').append('<div class="checkbox"><label><input type="checkbox" class="setParent" value="'+ item.id +'"> <span class="bold sugg-name">'+ item.first +' '+ item.last +'</span> - <span class="sugg-email">'+ item.email +'</span></label></div>');
+									});
+								}else{
+									$('#results-box h5').text('No matching items');
+								}
+
+								//-- Set Event Listeners --//
+								$('body').off("change", ".setParent").on("change", ".setParent", function(){ $(this).assignParent(); });
+
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Search Failed', 'There was a problem retrieving the search results, Refresh the page, and try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		/*----------------
+			end search
+		-----------------*/
+		
+		//-- Populate (Add Teachers) with Filtered List --//
+		/*$('#add-grade, #add-school').change(function(e){
+			//-- grab variables --//
+			var grade = $('#add-grade').val();
+			var school = $('#add-school').val();
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/filteredteachers";'."\n"; ?>
+			var data = {
+				action: "grab_teachers",
+				school: school,
+				grade: grade
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							$('#add-teacher option:not(:first)').remove();
+							if(results.teachers){
+								jQuery.each(results.teachers, function (i, teacher){
+									//console.log(teacher.id +' - '+ teacher.name);
+									$('#add-teacher').append('<option value="'+ teacher.id +'">'+ teacher.name +'</option>');
+								});
+							}else{
+								$('#add-teacher').append('<option value="">No teachers available</option>');
+							}
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the Teacher List, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+		});*/
+		
+		//-- Populate (Edit Teachers) with Filtered List --//
+		/*$('#edit-grade, #edit-school').change(function(e){
+			//-- grab variables --//
+			var grade = $('#edit-grade').val();
+			var school = $('#edit-school').val();
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/students/filteredteachers";'."\n"; ?>
+			var data = {
+				action: "grab_teachers",
+				school: school,
+				grade: grade
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							$('#edit-teacher option:not(:first)').remove();
+							if(results.teachers){
+								jQuery.each(results.teachers, function (i, teacher){
+									//console.log(teacher.id +' - '+ teacher.name);
+									$('#edit-teacher').append('<option value="'+ teacher.id +'">'+ teacher.name +'</option>');
+								});
+							}else{
+								$('#edit-teacher').append('<option value="">No teachers available</option>');
+							}
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the Teacher List, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+		});*/
+		
+		/*--------------------
+			Validate Email
+		---------------------*/
+		$('#add-email, #edit-email').blur(function(e){
+			var thisID = $(this).attr('id');
+			var emailVal = $(this).val();
+			var thisInput = $(this);
+			var userID = $(this).attr('data-user-val');
+			var userType = 'student';
+			var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+			if(emailVal.length > 0){
+				//-- Make sure its formatted like an email --//
+				if(emailVal == '' || !re.test(emailVal)){
+				    $(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+					$(this).parent('div').removeClass('successful').addClass('failed');
+					hideExtraFields(thisID);
+				}else{
+					
+					//-- setup ajax request --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/parents/validemail";'."\n"; ?>
+					var data = {
+						action: "validate_email",
+						email: emailVal,
+						user_id: userID,
+						type: userType
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Email is valid');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+									showExtraFields(thisID);
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Email already in use - Email Address has to be unique - pick a new one');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+									hideExtraFields(thisID);
+								}
+							}
+						}
+					});
+					
+				}
+				
+			}else{
+				//-- No value for Email --//
+				//$(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+				$(this).prev('em').text('');
+				$(this).parent('div').removeClass('successful').removeClass('failed');
+				hideExtraFields(thisID);
+			}
+		});
+		/*-- end email --*/
+		
+		
+		/*--------------------------------------------
+			Show / Hide - Add / Edit Student Fields
+		---------------------------------------------*/
+		function hideExtraFields(element_id){
+			var form_section = element_id.replace('-email', '').replace('#', '');
+			if(form_section == 'add'){
+				//-- Temporary Remove Parsley --//
+				/*$('#addStudentForm').parsley('destroy');
+				//-- Remove Password Fields from Form Validation --//
+				$('#add-pass').removeAttr('data-required');
+				$('#addStudentForm').parsley('removeItem', '#add-pass');
+				$('#confirm-pass').removeAttr('data-required');
+				$('#addStudentForm').parsley('removeItem', '#confirm-pass');
+				//-- Re-instantiate Parsley --//
+				$('#addStudentForm').resetParsley();*/
+				//-- hide elements --//
+				$('.add-generate').parent('div').hide();
+				$('#add-pass').parent('div.form-group').hide();
+				$('#confirm-pass').parent('div.form-group').hide();
+				$('#send-new-user-email-box').hide();
+				//-- clear out checkbox / password --//
+				$('#send-new-user-email-checkbox').prop("checked", false);
+				$('#add-pass, #confirm-pass').prev('em').text('');
+				$('#add-pass, #confirm-pass').parent('div').removeClass('failed').removeClass('successful');
+				$('#add-pass, #confirm-pass').val('');
+			}else if(form_section == 'edit'){
+				//-- Temporary Remove Parsley --//
+				/*$('#editStudentForm').parsley('destroy');
+				//-- Remove Password Fields from Form Validation --//
+				$('#edit-pass').removeAttr('data-required');
+				$('#addStudentForm').parsley('removeItem', '#edit-pass');
+				$('#confirm-edit-pass').removeAttr('data-required');
+				$('#addStudentForm').parsley('removeItem', '#confirm-edit-pass');
+				//-- Re-instantiate Parsley --//
+				$('#editStudentForm').resetParsley();*/
+				//-- hide elements --//
+				$('.edit-generate').parent('div').hide();
+				$('#edit-pass').parent('div.form-group').hide();
+				$('#confirm-edit-pass').parent('div.form-group').hide();
+				$('#send-new-pass-email-box').hide();
+				//-- clear out checkbox / password --//
+				$('#send-new-pass-email-checkbox').prop("checked", false);
+				$('#edit-pass, #confirm-edit-pass').prev('em').text('');
+				$('#edit-pass, #confirm-edit-pass').parent('div').removeClass('failed').removeClass('successful');
+				$('#edit-pass, #confirm-edit-pass').val('');
+			}
+		}
+		function showExtraFields(element_id){
+			var form_section = element_id.replace('-email', '').replace('#', '');
+			if(form_section == 'add'){
+				//-- Temporary Remove Parsley --//
+				/*$('#addStudentForm').parsley('destroy');
+				//-- Add Password Fields to Form Validation --//
+				$('#add-pass').attr('data-required', 'true');
+				$('#confirm-pass').attr('data-required', 'true');
+				$('#addStudentForm').parsley('addItem', '#add-pass');
+				$('#addStudentForm').parsley('addItem', '#confirm-pass');
+				$('#add-pass').parsley('addConstraint', { required: true });
+				$('#confirm-pass').parsley('addConstraint', { required: true });
+				//-- Re-instantiate Parsley --//
+				$('#addStudentForm').resetParsley();*/
+				//-- hide elements --//
+				$('.add-generate').parent('div').show('500');
+				$('#add-pass').parent('div.form-group').show('500');
+				$('#confirm-pass').parent('div.form-group').show('500');
+				$('#send-new-user-email-box').show('500');
+				$('#send-new-user-email-checkbox').prop("checked", true);
+			}else if(form_section == 'edit'){
+				//-- Temporary Remove Parsley --//
+				/*$('#editStudentForm').parsley('destroy');
+				//-- Add Password Fields to Form Validation --//
+				$('#edit-pass').attr('data-required', 'true');
+				$('#confirm-edit-pass').attr('data-required', 'true');
+				$('#addStudentForm').parsley('addItem', '#edit-pass');
+				$('#addStudentForm').parsley('addItem', '#confirm-edit-pass');
+				$('#edit-pass').parsley('addConstraint', { required: true });
+				$('#confirm-edit-pass').parsley('addConstraint', { required: true });
+				//-- Re-instantiate Parsley --//
+				$('#editStudentForm').resetParsley();*/
+				//-- hide elements --//
+				$('.edit-generate').parent('div').show('500');
+				$('#edit-pass').parent('div.form-group').show('500');
+				$('#confirm-edit-pass').parent('div.form-group').show('500');
+				$('#send-new-pass-email-box').show('500');
+				$('#send-new-pass-email-checkbox').prop("checked", true);
+			}
+		}
+		/*---------------------
+			end show / hide
+		----------------------*/
+		
+		
+		/*-----------------------
+			Validate Password
+		------------------------*/
+		$.fn.validatePassword = function(pass, confirm, clear) {
+			var passVal = $(pass).val();
+			var confirmVal = $(confirm).val();
+			
+			//-- Check Password - at least 8 characters long --//
+			if(passVal.length == 0 && clear == true){
+				$(pass).prev('em').text('');
+				$(pass).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal.length < 8){
+				$(pass).prev('em').text('Password needs to be at least 8 characters long');
+				$(pass).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(pass).prev('em').text('Good Password');
+				$(pass).parent('div').removeClass('failed').addClass('successful');
+			}
+			
+			//-- Confirm Password --//
+			if(confirmVal.length == 0 && clear == true){
+				$(confirm).prev('em').text('');
+				$(confirm).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal !== confirmVal){
+				$(confirm).prev('em').text('Passwords do not match');
+				$(confirm).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(confirm).prev('em').text('Password Confirmed');
+				$(confirm).parent('div').removeClass('failed').addClass('successful');
+			}
+		};
+		
+		$('#confirm-pass, #add-pass').blur(function(e){
+			$(this).validatePassword($('#add-pass'), $('#confirm-pass'), true);
+		});
+		$('#confirm-edit-pass, #edit-pass').blur(function(e){
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end valid password --*/
+		
+		/*-----------------------
+			Generate password
+		------------------------*/
+		$('.add-generate').click(function(e){
+			var randStr = generatePassword();
+			$('#add-pass, #confirm-pass').val(randStr);
+			$(this).validatePassword($('#add-pass'), $('#confirm-pass'), false);
+		});
+		$('.edit-generate').click(function(e){
+			var randStr = generatePassword();
+			$('#edit-pass, #confirm-edit-pass').val(randStr);
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end generate pass --*/
+	});
+	
+	function generatePassword() {
+	    var length = 10,
+	        charset = "abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+	        retVal = "";
+	    for (var i = 0, n = charset.length; i < length; ++i) {
+	        retVal += charset.charAt(Math.floor(Math.random() * n));
+	    }
+	    return retVal;
+	}
+</script>
+
+<!-- Add Student Modal -->
+<div id="addStudentModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Add New Student</h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Add Student Form -->
+				<form id="addStudentForm" class="parsley-form" method="post">
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="add-first">First Name</label>
+						<input type="text" name="first" id="add-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-last">Last Name</label>
+						<input type="text" name="last" id="add-last" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-email">Email Address</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="email" id="add-email" class="form-control" value="">
+					</div>
+					
+					<?php //-- Select School --//
+						if(!isset($schools) || !$schools){
+							echo '<input type="hidden" id="add-school" value="0" />';
+						}else if(isset($schools) && isset($schoolID) && $this->session->get("user-role") != 1){
+							echo '<input type="hidden" id="add-school" value="'.$schoolID.'" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-school">School</label>
+								<select id="add-school" name="add-school" class="form-control" data-required="true">
+									<option value="">Select School</option>
+									<?php
+									if($schools){
+										$curState = '';
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Grade Level --//
+						if(!isset($grade_level) || !$grade_level){
+							echo '<input type="hidden" id="add-grade" value="0" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-grade">Grade Level</label>
+								<select id="add-grade" name="add-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Teacher --//
+						/*if(!isset($teacherRef) || !$teacherRef){
+							echo '<input type="hidden" id="add-teacher" value="0" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-teacher">Home Room Teacher</label>
+								<select id="add-teacher" name="add-teacher" class="form-control">
+									<option value="">Select Teacher</option>
+									<?php
+										foreach($teacherRef as $teachID => $teachName){
+											echo '<option value="'.$teachID.'">'.$teachName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}*/
+					?>
+					
+					<?php
+					//-- Select Coach --//
+					if(isset($coachRef) && $coachRef){ ?>
+						<div class="form-group">	
+							<label for="add-coach">Athletic Performance Coach</label>
+							<select id="add-coach" name="add-coach" class="form-control">
+								<option value="">Select Coach</option>
+								<?php
+									foreach($coachRef as $coachID => $coachName){
+										echo '<option value="'.$coachID.'">'.$coachName.'</option>';
+									}
+								?>
+							</select>
+						</div><?php
+					}else{
+						echo '<input type="hidden" id="add-coach" value="" />';
+					}
+					?>
+					<div class="form-group">
+						<label for="add-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="alt-id" id="add-alt-id" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="add-state-id">State ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="state-id" id="add-state-id" class="form-control" value="">
+					</div>
+					
+					<div style="margin: 0 0 5px;">
+						<span class="label label-primary add-generate" style="cursor: pointer;">Generate Password</span>
+					</div>
+					<div class="form-group">
+						<label for="add-pass">Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="pass" id="add-pass" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="confirm-pass">Re-enter Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="confirm-pass" id="confirm-pass" class="form-control" value="">
+					</div>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<div id="send-new-user-email-box">
+					<input type="checkbox" id="send-new-user-email-checkbox" checked="checked" />
+					<label for="send-new-user-email-checkbox">Send student welcome email</label>
+				</div>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary addStudent">Add New Student</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit User Modal -->
+<div id="editStudentModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Edit Student: <span class="insert-username"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit Student Form -->
+				<form id="editStudentForm" class="parsley-form" method="post">
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="edit-first">First Name</label>
+						<input type="text" name="first" id="edit-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-last">Last Name</label>
+						<input type="text" name="last" id="edit-last" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-email">Email Address</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="email" id="edit-email" class="form-control" value="">
+					</div>
+					
+					<?php //-- Select School --//
+						if(isset($schools) && $this->session->get("user-role") != 1){
+							echo '<input type="hidden" id="edit-school" value="" />';
+						}else if(isset($schools) && $schools){ ?>
+							<div class="form-group">	
+								<label for="edit-school">School</label>
+								<select id="edit-school" name="edit-school" class="form-control" data-required="true">
+									<option value="">Select School...</option>
+									<?php
+										//-- List Out Schools --//
+										$curState = '';
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Grade Level --//
+						if(isset($grade_level) && $grade_level){ ?>
+							<div class="form-group">	
+								<label for="edit-grade">Grade Level</label>
+								<select id="edit-grade" name="edit-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Teacher --//
+						/*if(isset($teacherRef) && $teacherRef){ ?>
+							<div class="form-group">	
+								<label for="edit-teacher">Home Room Teacher</label>
+								<select id="edit-teacher" name="edit-teacher" class="form-control">
+									<option value="">Select Teacher</option>
+									<?php
+										foreach($teacherRef as $teachID => $teachName){
+											echo '<option value="'.$teachID.'">'.$teachName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}*/
+					?>
+					
+					<?php
+					//-- Select Coach --//
+					if(isset($coachRef) && $coachRef){ ?>
+						<div class="form-group">	
+							<label for="edit-coach">Athletic Performance Coach</label>
+							<select id="edit-coach" name="edit-coach" class="form-control">
+								<option value="">Select Coach</option>
+								<?php
+									foreach($coachRef as $coachID => $coachName){
+										echo '<option value="'.$coachID.'">'.$coachName.'</option>';
+									}
+								?>
+							</select>
+						</div><?php
+					}else{
+						echo '<input type="hidden" id="edit-coach" value="" />';
+					}
+					?>
+					<div class="form-group">
+						<label for="edit-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="alt-id" id="edit-alt-id" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="edit-state-id">State ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="state-id" id="edit-state-id" class="form-control" value="">
+					</div>
+					
+					<div style="margin: 0 0 5px;">
+						<span class="label label-primary edit-generate" style="cursor: pointer;">Generate Password</span>
+					</div>
+					<div class="form-group">
+						<label for="edit-pass">Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="pass" id="edit-pass" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="confirm-edit-pass">Re-enter Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="confirm-pass" id="confirm-edit-pass" class="form-control" value="">
+					</div>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<div id="send-new-pass-email-box">
+					<input type="checkbox" id="send-new-pass-email-checkbox" checked="checked" />
+					<label for="send-new-pass-email-checkbox">Send new password email</label>
+				</div>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="editStudentSubmit">Update Student</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit Assign Parent Modal -->
+<div id="assignParentModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Manage Parents for: <span class="insert-username"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- List out parents -->
+				<div id="existing-parents">
+					<h4>Assigned Parents</h4>
+					<ol></ol>
+				</div>
+				
+				<div class="form-group">
+					<label for="parent-search">Parent Search</label><br />
+					<input type="text" id="parent-search" class="form-control" value="" placeholder="enter email address or name..." onblur="this.value = this.value.replace(/ +(?= )/g,'');">
+					<span class="btn btn-primary" id="searchParents">Submit</span>
+				</div>
+				
+				<h4>Assign Parents</h4>
+				<div id="results-box" class="well">
+					<h5 style="font-style: italic;">Possible Suggestions</h5>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit Teacher List (Helper) Modal -->
+<div id="teacherListModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				
+				<div class="teacherList-left" style="float: left; width: 75%;">
+					<?php //-- School Filter for Teacher List--//
+					if($schools && $this->session->get("user-role") == 1){ ?>
+						<div id="help-school-filter">
+							<label for="teach-school-filter">School Filter</label>
+							<select id="teach-school-filter" class="form-control" style="margin-left: 5px; width: 65%; display: inline;">
+								<option value="">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									foreach($schools as $school){
+										if($school->state != $curState){
+											if($curState){
+												echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+											}else{
+												echo '<optgroup label="'.$states[$school->state].'">';
+											}
+											$curState = $school->state;
+										}
+										if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="s'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+									}
+									echo '</optgroup>';
+								?>
+							</select>
+						</div><?php
+					}else{ ?>
+						<input type="hidden" id="teach-school-filter" val="" /><?php
+					}
+					
+					//-- Set style for teacher list --//
+					if($this->session->get("user-role") == 1){
+						$teacherListStyle = 'margin: 20px 20px 0 0; padding: 20px 0 0 0; border-top: 1px solid #e1e1e1;';
+					}else{
+						$teacherListStyle = 'margin: 0 20px 0 0;';
+					}
+					
+					?>
+					
+					<div id="the-teacher-list" style="<?php echo $teacherListStyle; ?>">
+						
+						<h4>
+							Reference: Teacher List
+						</h4>
+
+						<table id="teachListTable" class="table table-hover">
+					        <thead>
+					          <tr>
+					            <th>ID #</th>
+					            <th>Last Name</th>
+					            <th>First Name</th>
+								<th>Grades</th>
+					          </tr>
+					        </thead>
+					        <tbody>
+					          <tr><td></td><td></td><td></td><td></td></tr>
+					        </tbody>
+					      </table>
+						
+					</div>
+				</div><!-- /.teacherList-left -->
+				
+				<!-- Grade Filters for Teacher List -->
+				<div class="teacherList-right" style="float: left; padding: 10px; width: 25%; background-color: #f1f1f1; border: 1px solid #aeaeae; border-radius: 3px;">
+					<?php
+					if(isset($grade_level) && $grade_level){ ?>
+						<h5 style="font-weight: 600;">Grade Filter</h5>
+						<!-- Select / Deselect All Checkboxes -->
+						<div class="checkbox" style="margin-bottom: 0;">
+							<label>
+								<input type="checkbox" value="" id="allTeachers" <?php if(!isset($gradeID)){ echo 'checked="checked"'; } ?>>
+								<span style="position: relative; bottom: 1px;">Show/Hide All</span></label>
+						</div>
+						<div id="gradeFilterList">
+							<?php
+								//-- List Out Grade Levels --//
+								foreach($grade_level as $grade){
+									if(isset($gradeID) && $grade->id == $gradeID || !isset($gradeID)){ $sel = 'checked="checked"'; }else{ $sel = ''; }
+									echo '<div class="checkbox">';
+									echo '<label><input type="checkbox" value="g'.$grade->id.'" '.$sel.' class="teach-grade-filter"> <span style="position: relative; bottom: 1px;">'.$grade->gradeName.'</span></label>';
+									echo '</div>';
+								}
+							?>
+						</div><?php
+					} ?>
+				</div>
+				<div style="clear: both;"></div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+<!-- Coach Reference List (Helper) Modal -->
+<div id="coachListModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				
+				<div class="coachList-left">
+					<?php //-- School Filter for Teacher List--//
+					if($schools && $this->session->get("user-role") == 1){ ?>
+						<div id="help-school-filter">
+							<label for="coach-school-filter">School Filter</label>
+							<select id="coach-school-filter" class="form-control" style="margin-left: 5px; width: 65%; display: inline;">
+								<option value="">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									foreach($schools as $school){
+										if($school->state != $curState){
+											if($curState){
+												echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+											}else{
+												echo '<optgroup label="'.$states[$school->state].'">';
+											}
+											$curState = $school->state;
+										}
+										if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="s'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+									}
+									echo '</optgroup>';
+								?>
+							</select>
+						</div><?php
+					}else{ ?>
+						<input type="hidden" id="coach-school-filter" val="" /><?php
+					}
+					
+					//-- Set style for teacher list --//
+					if($this->session->get("user-role") == 1){
+						$coachListStyle = 'margin: 20px 20px 0 0; padding: 20px 0 0 0; border-top: 1px solid #e1e1e1;';
+					}else{
+						$coachListStyle = 'margin: 0 20px 0 0;';
+					}
+					
+					?>
+					
+					<div id="the-teacher-list" style="<?php echo $coachListStyle; ?>">
+						
+						<h4>
+							Reference: Athletic Coach List
+						</h4>
+
+						<table id="coachListTable" class="table table-hover">
+					        <thead>
+					          <tr>
+					            <th>SIS ID #</th>
+					            <th>Last Name</th>
+					            <th>First Name</th>
+								<th>School</th>
+					          </tr>
+					        </thead>
+					        <tbody>
+					          <tr><td></td><td></td><td></td><td></td></tr>
+					        </tbody>
+					      </table>
+						
+					</div>
+				</div><!-- /.coachList-left -->
+				
+			</div><!-- /.modal-body -->
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div><!-- /.modal-footer -->
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- End Coach Reference Modal -->
+
+
+<!-- Assign Turf Period Modal -->
+<div id="assignTurfModal" class="modal fade" style="z-index: 1035">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Assign Turf Period</h3>
+			</div>
+			<div class="modal-body">
+				<p>Please select the period that you would like to assign the selected students to.</p>
+				<!-- Turf Period -->
+				<div class="form-group">	
+					<label for="turf-period">Turf Period</label>
+					<select id="turf-period" name="turf-period" class="form-control" data-required="true">
+						<option value="">Select Period</option><?php
+						$x = 1;
+						while($x < 11){
+							echo '<option value="'.$x.'">Period '.$x.'</option>';
+							$x++;
+						} ?>
+					</select>
+				</div>
+			</div><!-- /.modal-body -->
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" onclick="jQuery(this).assignPeriod();">Assign Period</button>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Import Coach Assignments CSV Modal -->
+<div id="importCoachCSVModal" class="modal fade" style="z-index: 1035">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Import Coach Assignments CSV File</h3>
+			</div>
+			<div class="modal-body">
+				
+				<p>
+					Select the file that you would like to import into the selected management interface, Please ensure that the file you are Importing is intended for this section. This is only for assigning coaches, if you are importing students you need to use a different import uploader:
+				</p>
+				
+				<!-- Import CSV File Form -->
+				<span class="btn btn-primary fileinput-button">
+			        <i class="glyphicon glyphicon-plus"></i>
+			        <span>Select CSV File...</span>
+			        <!-- The file input field used as target for the file upload widget -->
+			        <input id="coachfileupload" type="file" name="files[]" multiple>
+			    </span>
+			    <br>
+			    <br>
+			    <!-- The global progress bar -->
+			    <div id="coachprogress" class="progress">
+			        <div class="progress-bar progress-bar-primary"></div>
+			    </div>
+			    <!-- The container for the uploaded files -->
+			    <div id="coachfileUploads" class="files"></div>
+			    <br>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Import CSV Modal -->
+<div id="importCSVModal" class="modal fade" style="z-index: 1035">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Import CSV File</h3>
+			</div>
+			<div class="modal-body">
+				
+				<?php
+					/*-------------------------
+						School to import to
+					--------------------------*/
+					if($this->session->get("user-school")){
+						//-- User has a school they belong to, should be everyone except Administrators --// ?>
+						<input type="hidden" name="theImportSchool" id="theImportSchool" value="<?php echo $this->session->get("user-school"); ?>" /><?php
+					}else{
+						//-- User has no school, select which school the import should be done for --// ?>
+						<p>Please select the school that the new students will be added to.</p>
+						<p style="margin-bottom: 20px;">
+							<select id="theImportSchool" class="form-control" style="width: 65%;">
+								<option value="none">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									if(isset($schools) && $schools){
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									}
+								?>
+							</select>
+						</p><?php
+					}
+					/*-- end import school --*/ ?>
+				
+				<p>
+					Select the file that you would like to import into the selected management interface, Please ensure that the file you are Importing is intended for this section:
+				</p>
+				
+				<!-- Import CSV File Form -->
+				<span class="btn btn-primary fileinput-button">
+			        <i class="glyphicon glyphicon-plus"></i>
+			        <span>Select CSV File...</span>
+			        <!-- The file input field used as target for the file upload widget -->
+			        <input id="fileupload" type="file" name="files[]" multiple>
+			    </span>
+			    <br>
+			    <br>
+			    <!-- The global progress bar -->
+			    <div id="progress" class="progress">
+			        <div class="progress-bar progress-bar-primary"></div>
+			    </div>
+			    <!-- The container for the uploaded files -->
+			    <div id="fileUploads" class="files"></div>
+			    <br>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script type="text/javascript">
+	/*----------------------------------------------------
+		jQuery - Coach Assignments file upload handler
+	----------------------------------------------------*/
+	$(function () {
+	    'use strict';
+	    // Change this to the location of your server-side upload handler:
+		var currLocation = $(location).attr('href').replace("/staff","");
+	    var coachUploadUrl = currLocation + "/coachupload";
+		var coachImportUrl = currLocation + "/coachimport";
+		var theTrait = "";
+		var theSchool = "";
+	
+	    $('#coachfileupload').fileupload({
+	        url: coachUploadUrl,
+	        dataType: 'json',
+			maxFileSize: 5000000,
+			acceptFileTypes: /(\.|\/)(csv)$/i,
+	        done: function (e, data) {
+				
+				$('#coachfileUploads').empty();
+				console.log(data);
+	            $.each(data.result.files, function (index, file) {
+					if('error' in file){
+						alert("Your file: '" + file.name + "' received the following error after being uploaded -- '" + file.error +"' -- Please Try Again");
+					}else{
+						$.ajax({
+							type: "post",
+							url: coachImportUrl,
+							data: { name: file.name, action: "CSVImport", trait: theTrait, importSchool: theSchool },
+							success: function(data){
+								console.log(data);
+								var results = jQuery.parseJSON(data);
+								//alert(results.recordsUpdated);
+								if('uploaded' in results){
+									$('<h5/>').text("Your File '" + results.uploaded + "' Was Successfully Uploaded").appendTo('#coachfileUploads');
+								}	
+								//messages for newly Added							
+								if('added' in results){
+									$('<h4/>').text("Successfully Added The Following " + results.userType + ":").appendTo('#coachfileUploads');
+
+									if(results.userType == "Student(s)"){
+										$('<h5/>').text("Click a Name to Add/Confirm Parent Relationships:").appendTo('#coachfileUploads');
+									}
+
+									$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+									var addedSplit = results.added.split(',');
+									if(typeof results.addedID !== 'undefined'){
+										var addedIDSplit = results.addedID.split(',');
+									}
+									$.each(addedSplit, function(number){
+										if(addedSplit[number] != ""){
+											if(typeof results.addedID !== 'undefined'){
+												$('<li/>').addClass("assignParents").attr("data-student-val",addedIDSplit[number]).attr("data-student-name",addedSplit[number]).text(addedSplit[number]).appendTo('#coachfileUploads ul:last');
+											}else{
+												$('<li/>').addClass("editUser").attr("data-user-val","id").text(addedSplit[number]).appendTo('#coachfileUploads ul:last');
+											}	
+										}
+									});
+								}
+
+								//Updated Records
+								if(results.recordsUpdated > 0){
+									if('resultSucceeded' in results){
+										$('<h4/>').text("Successfully Added/Updated " + results.userType + " For The Following :").appendTo('#coachfileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+										var succeededSplit = results.resultSucceeded.split(',');
+										$.each(succeededSplit, function(number){
+											if(succeededSplit[number] != ""){
+												$('<li/>').text(succeededSplit[number]).appendTo('#coachfileUploads ul:last');
+											}
+										});
+									}else{
+										$('<h4/>').text("Successfully Updated The Following " + results.userType + ":").appendTo('#coachfileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+										var updatesSplit = results.updatedRecords.split(',');
+										$.each(updatesSplit, function(number){
+											if(updatesSplit[number] != ""){
+												$('<li/>').text(updatesSplit[number]).appendTo('#coachfileUploads ul:last');
+											}
+										});
+									}
+
+								}else if(results.recordsAdded > 0){
+									if('resultSucceeded' in results){
+										$('<h4/>').text("Successfully Added " + results.userType + " For The Following :").appendTo('#coachfileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+										var succeededSplit = results.resultSucceeded.split(',');
+										$.each(succeededSplit, function(number){
+											if(succeededSplit[number] != ""){
+												$('<li/>').text(succeededSplit[number]).appendTo('#coachfileUploads ul:last');
+											}
+										});
+									}
+								}else{
+									$('<h4/>').text("No Records Were Updated").appendTo('#coachfileUploads');
+									if('resultFailed' in results){
+										$('<h4/>').text("Failed to Add/Update " + results.userType + " For The Following :").appendTo('#coachfileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+										var failedSplit = results.resultFailed.split(',');
+										$.each(failedSplit, function(number){
+											if(failedSplit[number] != ""){
+												$('<li/>').text(failedSplit[number]).appendTo('#coachfileUploads ul:last');
+											}
+										});
+										$('<h5/>').text("Error Messages:").appendTo('#coachfileUploads');
+										$.each(results.msg, function(number){
+											if(results.msg[number] != ""){
+												$('<p/>').text(results.msg[number]).appendTo('#coachfileUploads');
+											}
+										});
+									}
+								}
+
+								//Error Messages
+								if('failed' in results){
+									$('<h4/>').text("Failed Adding/Updating The Following " + results.userType + ":").appendTo('#coachfileUploads');
+									$('<ul/>').addClass("list-inline").appendTo('#coachfileUploads');
+									var failSplit = results.failed.split(',');
+									$.each(failSplit, function(number){
+										if(failSplit[number] != ""){
+											$('<li/>').text(failSplit[number]).appendTo('#coachfileUploads ul:last');
+										}
+									});
+									$('<h5/>').text("Error Messages:").appendTo('#coachfileUploads');
+									$.each(results.msg, function(number){
+										if(results.msg[number] != ""){
+											$('<p/>').text(results.msg[number]).appendTo('#coachfileUploads');
+										}
+									});
+
+								}
+
+								if('permissions' in results){
+									$('<h4/>').text("Your Permissions Are Not Sufficient to Perform This Action").appendTo('#coachfileUploads');
+								}
+							}
+						})
+					}
+	                //$('<p/>').text(file.name).appendTo('#fileUploads');
+	            });
+				
+	        },
+	        progressall: function (e, data) {
+	            var progress = parseInt(data.loaded / data.total * 100, 10);
+	            $('#coachprogress .progress-bar').css(
+	                'width',
+	                progress + '%'
+	            );
+	        }
+	    }).prop('disabled', !$.support.fileInput)
+	        .parent().addClass($.support.fileInput ? undefined : 'disabled');
+	});
+	/*--------------------------------------------------------
+		jQuery - End Coach Assignments file upload handler
+	---------------------------------------------------------*/
+</script>

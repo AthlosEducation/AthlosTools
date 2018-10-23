@@ -1,0 +1,371 @@
+<?php
+/*
+*	Widget: Students Graded (Character)
+*/
+?>
+<div class="portlet">
+	<div class="portlet-header">
+		<h3>
+			<i class="fa fa-group"></i> Students Graded
+		</h3>
+		<?php if(isset($schoolID) && $schoolID){ ?>
+			<ul class="portlet-tools pull-right">
+				<li>
+					<span id="show-report-filters" class="btn btn-sm btn-secondary"><i class="fa fa-filter"></i> &nbsp;Filters</span>
+				</li>
+			</ul><?php
+		} ?>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content" style="padding-top: 15px;">
+		<?php
+		if(!isset($schoolID) || !$schoolID){ ?>
+			<div class="alert alert-danger">
+				<a class="close" data-dismiss="alert" href="#" aria-hidden="true">×</a>
+				<strong>Select School</strong> Can not run this report without a school selected.
+			</div><?php
+		}else{
+			$staff_grading_title = 'Grading Stats: '.$theSchool->schoolName;
+
+			//--- filters for admins and character coaches ---// ?>
+			<div id="grade-report-filters"><?php
+				if($this->session->get("user-role") < 3){ ?>
+					<form id="staffFilter" action="" method="post" style="margin: 0 0 10px;">
+						<label for="filter-staff">Staff Filter</label>
+						<select name="filterStaff" id="filter-staff" class="form-control" onchange="jQuery('#staffFilter').submit();">
+							<option value="">Select Staff Member</option>
+							<?php
+								if(isset($staff_members)){
+									//-- List Out Staff Members --//
+									$roles = array(3 => 'Teachers', 4 => 'Turf Coaches');
+									$curRole = '';
+									foreach($staff_members as $staff){
+										if($staff->role != $curRole){
+											if($curRole){
+												echo '</optgroup><optgroup label="'.$roles[$staff->role].'">';
+											}else{
+												echo '<optgroup label="'.$roles[$staff->role].'">';
+											}
+											$curRole = $staff->role;
+										}
+										if(isset($staffID) && $staff->id == $staffID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$staff->id.'" '.$sel.'>'.$staff->lname.', '.$staff->fname.'</option>';
+									}
+									echo '</optgroup>';
+								}
+							?>
+						</select>
+						<?php echo $schoolFilter.$termFilter.$traitFilter; ?>
+					</form><?php
+				}else{
+
+				} //-- end filters for admins / char coaches --//
+
+				//-- Filters for everyone --// ?>
+				<form id="traitFilter" action="" method="post">
+					<label for="filter-trait">Trait Filter</label>
+					<select name="filterTrait" id="filter-trait" class="form-control" onchange="jQuery('#traitFilter').submit();">
+						<!--<option value="">Select Character Trait</option>-->
+						<?php
+							if($this->session->get("user-role") <= 2){
+								if(isset($traitID) && $traitID == 'none'){
+									$sel = 'selected="selected"';
+									$the_trait_name = 'Number of Students Graded - Not Filtered By Character Trait';
+								}else{ $sel = ''; }
+								echo '<option value="none" '.$sel.'>Any Character Trait</option>';
+							}
+							if(isset($traits)){
+								//-- List Out Character Traits --//
+								foreach($traits as $trait){
+									if(isset($traitID) && $trait->url_name == $traitID){
+										$sel = 'selected="selected"';
+										$the_trait_name = 'Trait: '.$trait->trait_name;
+									}else{ $sel = ''; }
+									echo '<option value="'.$trait->url_name.'" '.$sel.'>'.$trait->trait_name.'</option>';
+								}
+								echo '</optgroup>';
+							}
+						?>
+					</select>
+					<?php echo $schoolFilter.$termFilter.$staffFilter; ?>
+				</form><hr>
+			</div><?php
+
+			/*-------------------
+				Gather Report
+			-------------------*/
+			if(!isset($staffID) || !$staffID){
+				$all_students = Students::find(array("school = :schoolid: AND active = 1", "bind" => array("schoolid" => $schoolID)));
+				$total_students = count($all_students);
+				//-- gather list of students for sql queries --//
+				$id_str = '';
+				foreach($all_students as $student){
+					if($id_str == ''){
+						$id_str.= $student->id;
+					}else{
+						$id_str.= ','.$student->id;
+					} 
+				}
+				//-- Run Grade Counting Queries --//
+				if($id_str != ''){
+					$extra_conditions = " AND student IN(".$id_str.")";
+				}else{
+					$extra_conditions = "";
+				}
+				$bind = array();
+				if(isset($semesterID)){
+					$extra_conditions.= " AND semester = :sem:";
+					//$bind['sem'] = $semesterID;
+					$bind['sem'] = $this->session->get("current-semester");
+				}
+				if(isset($traitID) && $traitID !== 'none'){
+					$extra_conditions.= " AND ".$traitID." != 0";
+				}
+				if($total_students > 0){
+					$count_grades_teacher = Grading::count(array("eval_role = 3".$extra_conditions, "bind" => $bind));
+					$count_grades_turf = Grading::count(array("eval_role = 4".$extra_conditions, "bind" => $bind));
+					$count_grades_parent = Grading::count(array("eval_role = 5".$extra_conditions, "bind" => $bind));
+					$count_grades_student = Grading::count(array("eval_role = 0".$extra_conditions, "bind" => $bind));
+					
+					//-- Get Percentages --//
+					$per_teach = round(($count_grades_teacher / $total_students) * 100);
+					$per_turf = round(($count_grades_turf / $total_students) * 100);
+					$per_parent = round(($count_grades_parent / $total_students) * 100);
+					$per_student = round(($count_grades_student / $total_students) * 100);
+				}else{
+					//-- zero out if no students exist --//
+					$count_grades_teacher = $count_grades_turf = $count_grades_parent = $count_grades_student = 0;
+					$per_teach = $per_turf = $per_parent = $per_student = 0;
+				}
+
+				//-- Report Findings --// ?>
+				<h5 style="font-weight: 600;"><?php
+					echo $staff_grading_title;
+					//-- trait name --//
+					if(isset($the_trait_name)){ ?>
+						<br><br><span class="text-primary"><?php echo $the_trait_name; ?></span><?php
+					} ?>
+				</h5>
+
+				<!-- Teachers -->
+				<div class="progress-stat" style="margin: 0 0 10px;">
+					<div class="stat-header">
+						<div class="stat-label">Teachers</div> <!-- /.stat-label -->
+						<div class="stat-value"><?php echo $count_grades_teacher.'/'.$total_students; ?></div> <!-- /.stat-value -->
+					</div> <!-- /stat-header -->
+
+					<div class="progress progress-striped active">
+						<div class="progress-bar progress-bar-primary" role="progressbar" aria-valuenow="<?php echo $per_teach; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_teach; ?>%"></div>
+					</div> <!-- /.progress -->
+				</div> <!-- /.progress-stat -->
+
+				<!-- Turf Coaches -->
+				<div class="progress-stat" style="margin: 0 0 10px;">
+					<div class="stat-header">
+						<div class="stat-label">Turf Coaches</div> <!-- /.stat-label -->
+						<div class="stat-value"><?php echo $count_grades_turf.'/'.$total_students; ?></div> <!-- /.stat-value -->
+					</div> <!-- /stat-header -->
+
+					<div class="progress progress-striped active">
+						<div class="progress-bar progress-bar-secondary" role="progressbar" aria-valuenow="<?php echo $per_turf; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_turf; ?>%"></div>
+					</div> <!-- /.progress -->
+				</div> <!-- /.progress-stat -->
+
+				<!-- Students -->
+				<div class="progress-stat" style="margin: 0 0 10px;">
+					<div class="stat-header">
+						<div class="stat-label">Students</div> <!-- /.stat-label -->
+						<div class="stat-value"><?php echo $count_grades_student.'/'.$total_students; ?></div> <!-- /.stat-value -->
+					</div> <!-- /stat-header -->
+
+					<div class="progress progress-striped active">
+						<div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="<?php echo $per_student; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_student; ?>%"></div>
+					</div> <!-- /.progress -->
+				</div> <!-- /.progress-stat -->
+
+				<!-- Parents -->
+				<div class="progress-stat" style="margin: 0 0 10px;">
+					<div class="stat-header">
+						<div class="stat-label">Parents</div> <!-- /.stat-label -->
+						<div class="stat-value"><?php echo $count_grades_parent.'/'.$total_students; ?></div> <!-- /.stat-value -->
+					</div> <!-- /stat-header -->
+
+					<div class="progress progress-striped active">
+						<div class="progress-bar progress-bar-tertiary" role="progressbar" aria-valuenow="<?php echo $per_parent; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_parent; ?>%"></div>
+					</div> <!-- /.progress -->
+				</div> <!-- /.progress-stat --><?php
+			}else{
+				//-- Determine role of staff member --//
+				$staff_member = Users::findFirst(array("id = :staffid:", "bind" => array("staffid" => $staffID)));
+				$staff_role = $staff_member->role;
+				$staff_member_name = $staff_member->fname.' '.$staff_member->lname;
+				unset($staff_member);
+
+				//-- Grab list of students --//
+				if($staff_role == 3){
+					$all_students = Students::find(array("school = :schoolid: AND teacher = :staffid: AND active = 1", "bind" => array("schoolid" => $schoolID, "staffid" => $staffID)));
+				}else if($staff_role == 4){
+					$limits = GradeLimit::findFirst(array("user = :staffid:", "bind" => array("staffid" => $staffID)));
+					if(!empty($limits) || !empty($limits->grades)){
+						$all_students = Students::find(array("school = :schoolid: AND grade IN (".$limits->grades.") AND active = 1", "bind" => array("schoolid" => $schoolID)));
+					}
+				}
+
+				if(isset($all_students) && count($all_students) > 0){
+					$total_students = count($all_students);
+					//-- gather list of students for sql queries --//
+					$id_str = '';
+					foreach($all_students as $student){
+						if($id_str == ''){
+							$id_str.= $student->id;
+						}else{
+							$id_str.= ','.$student->id;
+						} 
+					}
+					
+					//-- Run Grade Counting Queries --//
+					if($id_str != ''){
+						$extra_conditions = " AND student IN(".$id_str.")";
+					}else{
+						$extra_conditions = "";
+					}
+					$bind = array();
+					if(isset($semesterID)){
+						$extra_conditions.= " AND semester = :sem:";
+						//$bind['sem'] = $semesterID;
+						$bind['sem'] = $this->session->get("current-semester");
+					}
+					if(isset($traitID)){
+						$extra_conditions.= " AND ".$traitID." != 0";
+					}
+					$count_grades_teacher = Grading::count(array("eval_role = 3".$extra_conditions, "bind" => $bind));
+					$count_grades_turf = Grading::count(array("eval_role = 4".$extra_conditions, "bind" => $bind));
+					$count_grades_student = Grading::count(array("eval_role = 0".$extra_conditions, "bind" => $bind));
+					//-- Get Percentages --//
+					$per_teach = round(($count_grades_teacher / $total_students) * 100);
+					$per_turf = round(($count_grades_turf / $total_students) * 100);
+					$per_student = round(($count_grades_student / $total_students) * 100);
+
+					//-- Report Findings --// ?>
+					<h5 style="font-weight: 600;"><?php
+						echo $staff_member_name;
+						//-- trait name --//
+						if(isset($the_trait_name)){ ?>
+							<br><br><span class="text-primary"><?php echo $the_trait_name; ?></span><?php
+						} ?>
+					</h5>
+
+					<?php
+					if($staff_role == 3){ ?>
+						<!-- Teachers -->
+						<div class="progress-stat" style="margin: 0 0 10px;">
+							<div class="stat-header">
+								<div class="stat-label">Entered by Teacher</div> <!-- /.stat-label -->
+								<div class="stat-value"><?php echo $count_grades_teacher.'/'.$total_students; ?></div> <!-- /.stat-value -->
+							</div> <!-- /stat-header -->
+
+							<div class="progress progress-striped active">
+								<div class="progress-bar progress-bar-primary" role="progressbar" aria-valuenow="<?php echo $per_teach; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_teach; ?>%"></div>
+							</div> <!-- /.progress -->
+						</div> <!-- /.progress-stat -->
+						
+						<!-- Students -->
+						<div class="progress-stat" style="margin: 0 0 10px;">
+							<div class="stat-header">
+								<div class="stat-label">Entered by Student</div> <!-- /.stat-label -->
+								<div class="stat-value"><?php echo $count_grades_student.'/'.$total_students; ?></div> <!-- /.stat-value -->
+							</div> <!-- /stat-header -->
+
+							<div class="progress progress-striped active">
+								<div class="progress-bar progress-bar-secondary" role="progressbar" aria-valuenow="<?php echo $per_student; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_student; ?>%"></div>
+							</div> <!-- /.progress -->
+						</div> <!-- /.progress-stat --><?php
+					}else if($staff_role == 4){ ?>
+						<!-- Turf Coaches -->
+						<div class="progress-stat" style="margin: 0 0 10px;">
+							<div class="stat-header">
+								<div class="stat-label">Entered by Turf Coach</div> <!-- /.stat-label -->
+								<div class="stat-value"><?php echo $count_grades_turf.'/'.$total_students; ?></div> <!-- /.stat-value -->
+							</div> <!-- /stat-header -->
+
+							<div class="progress progress-striped active">
+								<div class="progress-bar progress-bar-primary" role="progressbar" aria-valuenow="<?php echo $per_turf; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_turf; ?>%"></div>
+							</div> <!-- /.progress -->
+						</div> <!-- /.progress-stat --><?php
+					}
+					
+					if(isset($traitID)){
+						/*---------------
+							Bar Graph
+						----------------*/
+						//-- grab class grades --//
+						if($staff_role == 3){
+							$grades = Grading::find(array("eval_role = 3".$extra_conditions, "bind" => $bind));
+						}else if($staff_role == 4){
+							$grades = Grading::find(array("eval_role = 4".$extra_conditions, "bind" => $bind));
+						}
+
+						if($grades){
+							$gradeStr = '';
+							$gradeCount = 0;
+							foreach($grades as $grade){
+								if($gradeStr == ''){
+									$gradeStr.= $grade->{$traitID};
+								}else{
+									$gradeStr.= ','.$grade->{$traitID};
+								}
+								$gradeCount++;
+								if($gradeCount > 100){ break; }
+							} ?>
+							<h5 style="margin: 20px 0 0; font-weight: 600;">Class <?php echo $the_trait_name; ?>:</h5>
+							<div class="spark-stat col-md-12 col-sm-12 col-xs-12" style="padding: 0; overflow: hidden;">
+								<div id="bar-trait"><?php echo $gradeStr.',0'; ?></div>
+							</div> <!-- /.col --><?php
+						}
+						//-- end bar graph --//
+
+						/*-----------------------------
+							Students Without Grades
+						------------------------------*/
+						$student_list = array();
+						foreach($all_students as $student){
+							$student_grade = Grading::findFirst(array("eval_role = :staffrole: AND semester = :sem: AND student = :sid:", "bind" => array("staffrole" => $staff_role, "sem" => $this->session->get("current-semester"), "sid" => $student->id)));
+							if(!$student_grade || empty($student_grade) || $student_grade->{$traitID} == 0){
+								$student_list[] = $student->fname.' '.$student->lname;
+								if(count($student_list) > 5){ break; }
+							}
+						}
+
+						//-- List out Student List --//
+						if(!empty($student_list) && count($student_list) > 0){ ?>
+							<h5 style="margin: 20px 0 0; font-weight: 600;">Staff Grade Missing:</h5>
+							<ul class="pull-left" style="margin: 8px 0 0;"><?php
+									$i = 0;
+									foreach($student_list as $child){
+										echo '<li>'.$child.'</li>';
+										$i++;
+										if($i == 3){
+											echo '</ul><ul class="pull-left" style="margin: 8px 0 0;">';
+										}
+									}
+								?>
+							</ul><?php
+						}
+						//-- End Students Without Grades --//
+					}
+				}else{
+					//-- No Students Found --// ?>
+					<div class="alert alert-danger">
+						<a class="close" data-dismiss="alert" href="#" aria-hidden="true">×</a>
+						<strong>No Students Found</strong> This staff member has no students assigned.
+					</div><?php
+				}
+
+			} ?>
+			<p style="clear: both; margin: 0 0 5px; text-align: center;">
+				<a href="/grading/staff" class="btn btn-secondary" style="margin: 20px 0 0;">Go To Grading</a>
+			</p><?php
+		} ?>
+
+
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

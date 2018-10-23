@@ -1,0 +1,353 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Manage Users';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		
+		<?php
+			
+		//-- Update the user districts --//
+		/*$numSuccess = $numFailed = 0;
+		$allUsers = Users::find('');
+		foreach($allUsers as $us){
+			if(!empty($us->school) && empty($us->district)){
+				//-- Grab Campus State & District --//
+				$campus_info = Schools::findFirst(array("id = ".$us->school, "columns" => "state, district"));
+				$us->district = $campus_info->district;
+				if($us->save() == false){
+					$numFailed++;
+				}else{
+					$numSuccess++;
+				}
+			}
+		}
+		echo $numSuccess.' - Succeeded to save and update their districts<br /><br />';
+		echo $numFailed.' - Failed to save and update.<br />';
+		exit();*/
+		
+		?>
+		
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div id="controlBar" class="col-md-12">
+			<?php if($cap['users']['add']){ ?>
+				<!-- add User Btn -->
+				<span class="btn btn-primary" onclick="jQuery(this).openAddUser();" title="Add New User" style="margin-right: 5px;"><i class="fa fa-plus"></i></span>
+			<?php } ?>
+			
+			<!--<div id="bulk-actions" class="btn-group" title="Bulk Actions" style="margin-right: 5px;">
+				<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+					<i class="fa fa-reorder"></i> <span class="bulk-txt">Bulk Actions</span> <span class="caret"></span>
+				</button>
+				<ul class="dropdown-menu" role="menu">
+					--><!--<li><a href="javascript:;" onclick="$(this).getCSV();">Export CSV File</a></li>--><!--
+					<li><a href="javascript:;" onclick="$('#CSVonlyAltIDs').val(''); $(this).getCSV();">Export CSV File</a></li>
+					<li><a href="javascript:;" onclick="$('#CSVonlyAltIDs').val(1); $(this).getCSV();">Export CSV of Coaches Without Alt ID</a></li>
+					<li><a href="javascript:;" onclick="jQuery('#importCSVModal').modal('show');">Import CSV File</a></li>
+				</ul>
+			</div>--><!-- /#bulk-actions -->
+			
+			<?php
+			//-- Show / Hide Filters --//
+			if((((isset($schoolID) && $schoolID) || (isset($districtID) && $districtID)) && $cap['users']['add']) || isset($roleID) || (isset($searchTerm) && $searchTerm)){
+				$filterText = 'Hide Filters';
+				$showFilters = 'style="display: block;"';
+			}else{
+				$filterText = 'Show Filters';
+				$showFilters = '';
+			} ?>
+			<div id="show-user-filters" class="btn-group" title="Filters" style="margin-right: 5px;">
+				<a href="#" class="btn btn-secondary"><i class="fa fa-filter"></i> <span><?php echo $filterText; ?></span></a>
+			</div>
+			
+			<!-- Refresh Button -->
+			<div class="btn-group" title="Refresh Page" style="margin-right: 5px;">
+				<form id="refresh-page" action="" method="post">
+					<span class="btn btn-success" id="refresh-ctrl-btn" onclick="jQuery('#refresh-page').submit();"><i class="fa fa-refresh"></i> <span>Refresh</span></span>
+					<?php echo $inputs.$filters; ?>
+				</form>
+			</div>
+			
+			<div class="limit-results" title="Display Limit" style="float: right;">
+				<form id="changeLimit" action="" method="post">
+					<div id="bulk-actions" class="btn-group">
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+							<span id="limit-display-txt">Display &nbsp;</span><span class="badge badge-tertiary"><?php echo $limit; ?></span> <span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<?php
+								$numRes = array(10, 25, 50);
+								foreach($numRes as $num){ ?>
+									<li><a href="#" data-val="<?php echo $num; ?>"><?php echo $num; ?></a></li><?php
+								}
+							?>
+						</ul>
+						<input type="hidden" name="limit" id="theLimit" class="form-control" value="<?php echo $limit; ?>" />
+					</div>
+					<?php echo $inputs.$schoolFilter.$districtFilter.$roleFilter.$searchFilter; ?>
+				</form>
+			</div><!-- /.limit-results -->
+			
+			<!-- Filters -->
+			<div id="user-filters" class="well" <?php echo $showFilters; ?>>
+				<?php //-- district filter --//
+				if($districts && $this->session->get("user-role") <= 2){ ?>
+					<div class="filter-district col-sm-6">
+						<form id="districtFilter" action="" method="post">
+							<label for="filter-districts">District Filter</label>
+							<select name="filterDistrict" id="filter-districts" class="form-control" onchange="jQuery('#districtFilter').submit();">
+								<option value="">Select District</option>
+								<?php
+								if(!empty($districts)){
+									foreach($districts as $district){
+										if(isset($districtID) && $districtID == $district->id){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$district->id.'" '.$sel.'>'.$district->districtName.'</option>';
+									}
+								} ?>
+							</select>
+							<?php echo $inputs.$limitFilter.$schoolFilter.$roleFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}
+				
+				//-- school filter --//
+				if($schools && $this->session->get("user-role") <= 3){ ?>
+					<div class="filter-school col-sm-6">
+						<form id="schoolFilter" action="" method="post">
+							<label for="filter-schools">School Filter</label>
+							<select name="filterSchool" id="filter-schools" class="form-control" onchange="jQuery('#schoolFilter').submit();">
+								<option value="">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									foreach($schools as $school){
+										if($school->state != $curState){
+											if($curState){
+												echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+											}else{
+												echo '<optgroup label="'.$states[$school->state].'">';
+											}
+											$curState = $school->state;
+										}
+										if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+									}
+									echo '</optgroup>';
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$districtFilter.$roleFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}
+				
+				//-- User Role Filter --//
+				$roles = array();
+				$user_roles = UserRole::find(array('id != 9', "order" => "id ASC")); //-- Don't show parents --// ?>
+				<div class="filter-role col-sm-6" <?php if($this->session->get("user-role") <= 2){ echo 'style="margin-top: 10px;"'; } ?>>
+					<form id="roleFilter" action="" method="post">
+						<label for="filter-roles">User Role Filter</label>
+						<select name="filterRole" id="filter-roles" class="form-control" onchange="jQuery('#roleFilter').submit();">
+							<option value="">Show All</option>
+							<?php
+							foreach($user_roles as $user_role){
+								if($user_role->id >= $this->session->get("user-role")){
+									if(isset($roleID) && $roleID == $user_role->id){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+									echo '<option value="'.$user_role->id.'" '.$sel.'>'.(substr($user_role->roleName, -1) == 'h' ? $user_role->roleName.'es' : $user_role->roleName.'s' ).'</option>';
+									$roles[$user_role->id] = $user_role->roleName;
+								}
+							} ?>
+						</select>
+						<?php echo $inputs.$limitFilter.$districtFilter.$schoolFilter.$searchFilter; ?>
+					</form>
+				</div>
+				
+				<!-- Search Filter -->
+				<div id="filter-search" class="col-sm-6" <?php if($this->session->get("user-role") <= 3){ echo 'style="margin-top: 10px;"'; } ?>>
+					<form id="searchFilter" action="" method="post">
+						<label for="searchTerm">Search User Filter</label>
+						<div class="input-group">
+							<input type="text" name="filterSearch" id="searchTerm" class="form-control" placeholder="Enter First or Last Name" value="<?php if(isset($searchTerm) && $searchTerm != ''){ echo $searchTerm; } ?>">
+							<div class="input-group-btn">
+								<button type="button" id="quick-search" class="btn btn-tertiary" onclick="jQuery('#searchFilter').submit();"><i class="fa fa-search"></i> Search</button>
+							</div><!-- /input-group-btn -->
+						</div><!-- /input-group -->
+						<?php echo $inputs.$limitFilter.$districtFilter.$roleFilter.$schoolFilter; ?>
+					</form>
+				</div>
+				<!-- End Search Filter -->
+				<div class="clear"></div>
+			</div>
+			<!-- end filters -->
+		</div><!-- /#controlBar -->
+		
+		<div id="display-results" class="col-md-12">
+			<div class="table-responsive">
+				
+				<table class="table table-hover table-bordered">
+					<thead>
+						<tr>
+							<th style="width: 30px;">
+								<input type="checkbox" id="check-all" />
+							</th>
+							<th>
+								<form id="form1" action="" method="post">
+									<input type="hidden" name="field" value="firstname" />
+									<span onclick="jQuery('#form1').submit();">First Name</span>
+									<?php
+									echo $lastField;
+									if($field == 'firstname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th>
+								<form id="form2" action="" method="post">
+									<input type="hidden" name="field" value="lastname" />
+									<span onclick="jQuery('#form2').submit();">Last Name</span>
+									<?php
+									echo $lastField;
+									if($field == 'lastname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form3" action="" method="post">
+									<input type="hidden" name="field" value="userrole" />
+									<span onclick="jQuery('#form3').submit();">User Role</span>
+									<?php
+									echo $lastField;
+									if($field == 'userrole'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form4" action="" method="post">
+									<input type="hidden" name="field" value="email" />
+									<span onclick="jQuery('#form4').submit();">Email</span>
+									<?php
+									echo $lastField;
+									if($field == 'email'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form5" action="" method="post">
+									<input type="hidden" name="field" value="school" />
+									<span onclick="jQuery('#form5').submit();">School</span>
+									<?php
+									echo $lastField;
+									if($field == 'school'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php
+						if(count($users) > 0){
+							foreach($users as $user){ ?>
+								<tr>
+									<td style="width: 30px;">
+										<input type="checkbox" class="select-check" name="select-user[]" value="<?php echo $user->id; ?>" />
+									</td>
+									<td><?php echo $user->fname; ?></td>
+									<td><?php echo $user->lname; ?></td>
+									<td><?php echo $roles[$user->role]; ?></td>
+									<td class="hideable"><?php echo $user->email; ?></td>
+									<?php
+									//-- School Name Abbreviation --//
+									if(isset($school_abbreviations) && isset($school_abbreviations[$user->school])){ ?>
+										<td class="hideable"><?php echo $school_abbreviations[$user->school]; ?></td><?php
+									}else{ ?>
+										<td class="hideable">N/A</td><?php
+									}
+									?>
+									
+									<td>
+										<?php
+										$user_name = $user->fname.' '.$user->lname;
+										
+										//-- Can't edit or delete yourself --//
+										if($this->session->get('user-id') != $user->id){ ?>
+											<?php if($cap['users']['edit']){ ?>
+												<span class="label label-secondary editUser" data-user-val="<?php echo $user->id; ?>"><i class="fa fa-pencil"></i> Edit</span>
+											<?php } ?>
+											
+											<?php if($cap['users']['delete']){ ?>
+												<span class="label label-tertiary delUser" data-user-val="<?php echo $user->id; ?>" data-user-name="<?php echo $user_name; ?>"><i class="fa fa-ban"></i> Delete</span>
+											<?php } ?>
+										<?php } ?>
+									</td>
+								</tr><?php
+							}
+						}else{ ?>
+							<tr><td colspan="7">No Results</td></tr><?php
+						} ?>
+					</tbody>
+				</table>
+				
+			</div><!-- /.table-responsive -->
+		</div><!-- /#display-results -->
+		
+		<div class="col-md-12">
+			
+			<?php
+			//-- Create Pager --//
+			if($totalUsers > $limit){
+				//-- Calculations --//
+				$numLimit = $totalUsers / $limit;
+				$curMin = (($pageNum - 1) * $limit) + 1;
+				$curMax = $pageNum * $limit;
+				if($curMax > $totalUsers){ $curMax = $totalUsers; }
+				
+				echo '<div class="users-pager">';
+				echo '<span class="page-count">Showing <span class="curMin">'.$curMin.'</span> - <span class="curMax">'.$curMax.'</span> of '.$totalUsers.' Users</span>';
+				echo '<ul class="pagination" data-limit="'.$limit.'" data-total="'.$totalUsers.'">';
+				if($pageNum == 1){ $prevClass = 'disabled'; }else{ $prevClass = ''; }
+				echo '<li class="prev '.$prevClass.'"><a href="#">← Previous</a></li>';
+				$i = 0;
+				while($i < $numLimit){
+					$i++;
+					if($i == $pageNum){ $theClass = 'active '; }else{ $theClass = ''; }
+					if($i == 1){ $theClass.= 'firstPage '; }
+					if($i >= $numLimit){ $theClass.= 'lastPage '; }
+					if(!$theClass && $numLimit > 5 && ($i > ($pageNum + 2) || $i < ($pageNum - 2))){ $theClass.= 'scrunch '; }
+					echo '<li class="'.$theClass.'"><a href="#" data-page="'.$i.'">'.$i.'</a></li>';
+				}
+				if($curMax == $totalUsers){ $nextClass = 'disabled'; }else{ $nextClass = ''; }
+				echo '<li class="next '.$nextClass.'"><a href="#">Next → </a></li></ul>';
+				echo '</div>'; ?>
+				
+				<form id="pagerForm" action="" method="post">
+					<input type="hidden" name="pageNum" id="pageNumber" value="<?php echo $pageNum; ?>" />
+					<?php echo $inputs.$limitFilter.$schoolFilter.$roleFilter.$searchFilter; ?>
+				</form><?php
+			} ?>
+			
+		</div>
+		
+	</div><!-- /#content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/manage-users");
+	$this->partial("partials/footer-bottom");
+?>

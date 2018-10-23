@@ -1,0 +1,173 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Manage Campuses';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div id="controlBar" class="col-md-12">
+			<?php if($cap['campuses']['add']){ ?>
+				<!-- add School Btn -->
+				<span class="btn btn-primary" onclick="jQuery('#addSchoolModal').modal('show');" title="Add School" style="margin-right: 5px;"><i class="fa fa-plus"></i></span>
+			<?php } ?>
+			
+			<!-- Refresh Button -->
+			<div class="btn-group" title="Refresh Page" style="margin-right: 5px;">
+				<form id="refresh-page" action="" method="post">
+					<span class="btn btn-success" id="refresh-ctrl-btn" onclick="jQuery('#refresh-page').submit();"><i class="fa fa-refresh"></i> <span>Refresh</span></span>
+					<?php echo $inputs.$filters; ?>
+				</form>
+			</div>
+			
+			<div class="limit-results" title="Display Limit" style="float: right;">
+				<form id="changeLimit" action="" method="post">
+					<div id="bulk-actions" class="btn-group">
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+							<span id="limit-display-txt">Display &nbsp;</span><span class="badge badge-tertiary"><?php echo $limit; ?></span> <span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<?php
+								$numRes = array(10, 25, 50);
+								foreach($numRes as $num){ ?>
+									<li><a href="#" data-val="<?php echo $num; ?>"><?php echo $num; ?></a></li><?php
+								}
+							?>
+						</ul>
+						<input type="hidden" name="limit" id="theLimit" class="form-control" value="<?php echo $limit; ?>" />
+					</div>
+					<?php echo $inputs; ?>
+				</form>
+			</div><!-- /.limit-results -->
+		</div><!-- /#controlBar -->
+		
+		<div id="display-results" class="col-md-12">
+			
+			<table class="table table-hover table-bordered">
+				<thead>
+					<tr>
+						<th style="width: 30px;">
+							<input type="checkbox" id="check-all" />
+						</th>
+						<th>
+							<form id="form1" action="" method="post">
+								<input type="hidden" name="field" value="school-name" />
+								<span onclick="jQuery('#form1').submit();">School Name</span>
+								<?php
+								echo $lastField;
+								if($field == 'school-name'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+								?>
+							</form>
+						</th>
+						<th>
+							<form id="form2" action="" method="post">
+								<input type="hidden" name="field" value="state" />
+								<span onclick="jQuery('#form2').submit();">State</span>
+								<?php
+								echo $lastField;
+								if($field == 'state'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+								?>
+							</form>
+						</th>
+						<th>
+							<form id="form3" action="" method="post">
+								<input type="hidden" name="field" value="city" />
+								<span onclick="jQuery('#form3').submit();">City</span>
+								<?php
+								echo $lastField;
+								if($field == 'city'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+								?>
+							</form>
+						</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					if(count($schools) > 0){
+						foreach($schools as $school){ ?>
+							<tr>
+								<td style="width: 30px;">
+									<input type="checkbox" class="select-check" name="select-school[]" value="<?php echo $school->id; ?>" />
+								</td>
+								<td><?php echo $school->schoolName; ?></td>
+								<td><?php echo $states[$school->state]; ?></td>
+								<td><?php echo $school->city; ?></td>
+								<td>
+									<?php if($cap['campuses']['edit']){ ?>
+										<span class="label label-secondary editSchool" data-school-val="<?php echo $school->id; ?>"><i class="fa fa-pencil"></i> Edit</span>
+									<?php } ?>
+									<?php if($cap['campuses']['delete']){ ?>
+										<span class="label label-tertiary delSchool" data-school-val="<?php echo $school->id; ?>" data-school-name="<?php echo $school->schoolName; ?>"><i class="fa fa-ban"></i> Delete</span>
+									<?php } ?>
+								</td>
+							</tr><?php
+						}
+					}else{ ?>
+						<tr><td colspan="5">No Results</td></tr><?php
+					} ?>
+				</tbody>
+			</table>
+			
+		</div><!-- /#display-results -->
+		
+		<div class="col-md-12">
+			
+			<?php
+			//-- Create Pager --//
+			if($totalSchools > $limit){
+				//-- Calculations --//
+				$numLimit = $totalSchools / $limit;
+				$curMin = (($pageNum - 1) * $limit) + 1;
+				$curMax = $pageNum * $limit;
+				if($curMax > $totalSchools){ $curMax = $totalSchools; }
+				
+				echo '<div class="users-pager">';
+				echo '<span class="page-count">Showing <span class="curMin">'.$curMin.'</span> - <span class="curMax">'.$curMax.'</span> of '.$totalSchools.' entries</span>';
+				echo '<ul class="pagination" data-limit="'.$limit.'" data-total="'.$totalSchools.'">';
+				if($pageNum == 1){ $prevClass = 'disabled'; }else{ $prevClass = ''; }
+				echo '<li class="prev '.$prevClass.'"><a href="#">← Previous</a></li>';
+				$i = 0;
+				while($i < $numLimit){
+					$i++;
+					if($i == $pageNum){ $theClass = 'active '; }else{ $theClass = ''; }
+					if($i == 1){ $theClass.= 'firstPage '; }
+					if($i >= $numLimit){ $theClass.= 'lastPage '; }
+					if(!$theClass && $numLimit > 5 && ($i > ($pageNum + 2) || $i < ($pageNum - 2))){ $theClass.= 'scrunch '; }
+					echo '<li class="'.$theClass.'"><a href="#" data-page="'.$i.'">'.$i.'</a></li>';
+				}
+				if($curMax == $totalSchools){ $nextClass = 'disabled'; }else{ $nextClass = ''; }
+				echo '<li class="next '.$nextClass.'"><a href="#">Next → </a></li></ul>';
+				echo '</div>'; ?>
+				
+				<form id="pagerForm" action="" method="post">
+					<input type="hidden" name="pageNum" id="pageNumber" value="<?php echo $pageNum; ?>" />
+					<?php echo $inputs.$limitFilter; ?>
+				</form><?php
+			} ?>
+			
+		</div>
+		
+	</div>
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/school-management");
+	$this->partial("partials/footer-bottom");
+?>

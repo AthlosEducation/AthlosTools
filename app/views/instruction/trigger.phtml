@@ -1,0 +1,130 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Trigger Day';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="row">
+
+	    	<div class="col-md-3 col-sm-4">
+	    
+			    <ul id="Trigger-Tabs" class="nav nav-pills nav-stacked">
+					<li class="active">
+			        	<a href="#introduction-tab" data-toggle="tab">
+			        		<i class="fa fa-sun-o"></i> &nbsp;Introduction
+			        	</a>
+			        </li>
+					<li>
+			        	<a href="#step-by-step-tab" data-toggle="tab">
+			        		<i class="fa fa-list-ol"></i> &nbsp;Instructions
+			        	</a>
+			        </li>
+					<li>
+			        	<a href="#lesson-plan-tab" data-toggle="tab">
+			        		<i class="fa fa-thumb-tack"></i> &nbsp;Lesson Plan
+			        	</a>
+			        </li>
+			    </ul>
+
+			</div> <!-- /.col -->
+
+			<div class="col-md-9 col-sm-8">
+			      <div class="tab-content stacked-content">
+					<div class="tab-pane fade in active" id="introduction-tab">
+						<h3 class="heading">Trigger Day Information</h3>
+						<p>Homeroom	teachers play a key role in the teaching and implementation of Athlos Performance Character Traits. The homeroom teacher is responsible for conducting a Trigger Day each time the school wide focus changes from the current Performance Character Trait to the focus on a new	Performance Character Trait.</p>
+						<br />
+						<div class="col-sm-6" style="padding: 0;">
+							<div class="well">
+								<h4>School Performance Character Trait Cycle</h4>
+								<p>With the initiation of a Trigger Day each PCT will have approximately 3 weeks of focus in the school. At the conclusion of that period of time the homeroom teacher will conduct a Trigger Day in the classroom and summarize what was learned from the prior PCT and introduce the new PCT for the students.</p>
+							</div>
+						</div>
+						<div class="col-sm-6" style="padding: 0; text-align: center;">
+							<img src="/img/trigger-day-cycle.png" width="100%" style="max-width: 300px;">
+						</div>
+					</div><!-- /.tab-pane -->
+					
+					<div class="tab-pane fade" id="step-by-step-tab">
+						<h3 class="heading">Trigger Day Step by Step Instructions for Homeroom Teachers</h3>
+						<p>On the designated day (as determined by the school character coach) the homeroom teacher will complete the following steps for the Trigger Day:</p>
+						<p>
+							<span class="instructionEmphasis">Step One:</span>
+							Collect the completed student worksheets from the prior Performance Character Trait focus.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Two:</span>
+							Insure that all students have completed the worksheet and given themselves a grade at the bottom of the worksheet.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Three:</span>
+							Log on to Athlos Tools and print out the student worksheet for the new performance character trait focus.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Four:</span>
+							Provide enough copies of the worksheet for each of the students.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Five:</span>
+							Introduce the new Performance Character Trait by using the suggestion lesson plan noted below. Trigger Day lesson should be no longer than 30 minutes in length.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Six:</span>
+							Enter student grade and homeroom teacher grade for each student on completed Performance Character Trait.
+						</p>
+						
+					</div><!-- /.tab-pane -->
+					
+					<div class="tab-pane fade" id="lesson-plan-tab">
+						<h3 class="heading">Suggested Trigger Day Lesson Plan</h3>
+						<p>Homeroom teachers should encourage the students to actively participate in a group discussion centered on the PCT that is being finished and the new PCT being introduced.</p>
+						<p><span class="instructionEmphasis">Begin by reading the definition of the PCT being completed and ask the student any of the questions listed below.</span></p>
+						<ol>
+							<li>How will this PCT make you a better person?</li>
+							<li>How will this PCT help you be a better student?</li>
+							<li>How will this PCT help you later in life?</li>
+							<li>Can you give an example of someone you know who has this Performance Character Trait and when you have seen them exhibit the Character Trait?</li>
+							<li>If you lack this PCT what could some of the consequences be in life?</li>
+							<li>Can you give an example of someone in history that had this Performance Character Trait and how they exhibited the Trait?</li>
+							<li>Can you define this PCT for me?</li>
+							<li>What other skills and habits do I need in order to have this Performance Character Trait?</li>
+							<li>How	can	you	help others around you develop this PCT?</li>
+							<li>If you possess this PCT how will it help those you associate with?</li>
+						</ol>
+						<p><span class="instructionEmphasis">Read the definition of the new PCT being introduced and ask the students any of the questions listed below:</span></p>
+						<ol>
+							<li>Can you explain what the PCT means to you?</li>
+							<li>Why	would it be important to have this PCT?</li>
+							<li>How will it help you be a better person if you have this PCT?</li>
+							<li>Can you give an example of someone you know that has this PCT?</li>
+						</ol>
+						<p><span class="instructionEmphasis">Have the Student Complete the goal section of the Student Worksheet for the current PCT.</span></p>
+					</div><!-- /.tab-pane -->
+						
+			 	</div>
+			</div> <!-- /.col -->
+
+		</div> <!-- /.row -->
+		
+	</div><!-- #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/default");
+	$this->partial("partials/footer-bottom");
+?>

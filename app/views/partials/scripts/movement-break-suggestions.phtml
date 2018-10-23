@@ -1,0 +1,524 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	//-- For WYSIWYG Editor --//
+	echo $this->tag->javascriptInclude("js/wysihtml5-0.3.0_rc2.min.js");
+	echo $this->tag->javascriptInclude("js/bootstrap-wysihtml5-0.0.2.js");
+	//-- For Validating Suggestion Form --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	//-- Popup script for video popups --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/magnific/jquery.magnific-popup.min.js");
+	?><script type="text/javascript">		
+		jQuery(document).ready(function($){
+			/*-------------------------
+				Set Control Bindings
+			--------------------------*/
+			$.fn.resetBindings = function() {
+				//$(this).attr('id');
+				$(this).off("click", ".approvePost").on("click", ".approvePost", function(){ $(this).approvePost(); });
+				$(this).off("click", ".editPost").on("click", ".editPost", function(){ $(this).editPost(); });
+				$(this).off("click", ".viewPost").on("click", ".viewPost", function(){ $(this).viewPost(); });
+				$(this).off("click", ".trashPost").on("click", ".trashPost", function(){ $(this).trashPost(); });
+				$(this).off("click", ".deletePost").on("click", ".deletePost", function(){ $(this).deletePost(); });
+			};
+			
+			/*---------------------
+				Define Functions
+			----------------------*/
+			$.fn.approvePost = function() {
+			    var theID = $(this).attr('data-post-val');
+				var theStatus = $(this).attr('data-status');
+				var theReply = $(this).attr('data-reply');
+				if(!theReply){ theReply = ''; }
+				var theTitle = $('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(2)').text();
+				var theType = $('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(3)').text();
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/approve";'; ?>
+				var data = {
+					action: "approve_post",
+					theID: theID,
+					theReply: theReply
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								$('#'+ theStatus +'-'+ results.itemID).parent('td').parent('tr').delay(500).slideUp('fast');
+								//-- Add item to list of approved --//
+								jQuery('#approved-curriculum').dataTable().fnAddData([
+									'<span id="approved-'+ results.itemID +'" class="label label-success"><i class="fa fa-check"></i></span>',
+									theTitle,
+									theType,
+									'<span class="label label-primary editPost" data-post-val="'+ results.itemID +'" data-status="approved"><i class="fa fa-pencil"></i> Edit</span><span class="label label-secondary viewPost" data-post-val="'+ results.itemID +'" data-status="approved"><i class="fa fa-file-text-o"></i> View</span><span class="label label-tertiary trashPost" data-post-val="'+ results.itemID +'" data-status="approved" data-reason="false"><i class="fa fa-trash-o"></i> Trash</span>'
+								]);
+								//-- Success - Howler MSG --//
+								howlerMsg('success', 'Post Approved', 'The post was approved successfully. It has been added to the Approved Posts Section.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Post Approval Failed!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-ban', false);
+							}else if(results.result == 'invalid'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			};
+			
+			$.fn.viewPost = function() {
+			    var theID = $(this).attr('data-post-val');
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/view";'; ?>
+				var data = {
+					action: "view_post",
+					theID: theID
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Show modal --//
+								$('#simpleModal div.modal-body').html(results.content);
+								$('#simpleModal div.modal-footer span.view_author').text('Submitted by: '+ results.author);
+								$('#simpleModal').modal('show');
+								//-- Reset Lightbox event handlers --//
+								$('#simpleModal').resetLightbox();
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Post Retrieval Failed!', 'There was a problem retrieving your changes, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			};
+			
+			$.fn.editPost = function() {
+			    var theID = $(this).attr('data-post-val');
+				var theStatus = $(this).attr('data-status');
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/edit";'; ?>
+				var data = {
+					action: "grab_post",
+					theID: theID
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Populate Modal --//
+								var newID = results.id;
+								$('#editPostModal #edit-title').val(results.title);
+								$('#editPostModal #edit-author').val(results.author);
+								$('#edit-content').data("wysihtml5").editor.setValue(results.content);
+								$('#editPostModal #edit-type').val(results.type);
+								$('#editPostModal #edit-video').val(results.vid_url);
+								$('#editPostModal #edit-resource').val(results.ext_url);
+								
+								//-- Show modal --//
+								$('#editPostModal .modal-header h3').text('Edit: '+ results.title);
+								$('#editPostModal').modal('show');
+								//-- reset parsley validation --//
+								$('#editSuggestionForm').parsley('destroy');
+								$('#editSuggestionForm').resetParsley();
+								
+								//-- validate form --//
+								$('.submitEdit').off().click(function(event){
+									event.preventDefault();
+									if($('#editSuggestionForm').parsley('validate')){
+										//-- if parsley validation clears - run edit script --//
+										var theTitle = $('#editPostModal #edit-title').val();
+										var theAuthor = $('#editPostModal #edit-author').val();
+										var theContent = $('#edit-content').data("wysihtml5").editor.getValue();
+										var theType = $('#editPostModal #edit-type').val();
+										var theTypeName = $('#editPostModal #edit-type option:selected').text();
+										var theVideo = $('#editPostModal #edit-video').val();
+										var theResource = $('#editPostModal #edit-resource').val();
+										//-- setup 2nd ajax request --//
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/edit";'; ?>
+										var info = {
+											action: "edit_post",
+											theID: newID,
+											theTitle: theTitle,
+											theAuthor: theAuthor,
+											theContent: theContent,
+											theType: theType,
+											theVideo: theVideo,
+											theResource: theResource
+											};
+										//alert(newID +' - '+ theTitle +' - '+ theAuthor +' - '+ theContent +' - '+ theTrait +' - '+ theType +' - '+ theVideo +' - '+ theResource +' - '+ theImage +' - '+ theTraitName +' - '+ theTypeName);
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#editPostModal').modal('hide');
+														//-- Update Item Info --//
+														$('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(2)').html(theTitle);
+														$('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(3)').text(theTypeName);
+														//-- Success Message --//
+														howlerMsg('success', 'Post Updated Successfully', 'The post was updated successfully.', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+										
+									} // end if validation cleared
+									
+								});
+								
+								//alert($('#edit-content').data("wysihtml5").editor.getValue());  -- Get Value of editor
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Post Retrieval Failed!', 'There was a problem retrieving your changes, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			};
+			
+			$.fn.trashPost = function() {
+			    var theID = $(this).attr('data-post-val');
+				var theStatus = $(this).attr('data-status');
+				var reason = $(this).attr('data-reason');
+				var theTitle = $('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(2)').text();
+				var theType = $('#'+ theStatus +'-'+ theID).parent('td').parent('tr').children('td:nth-child(3)').text();
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/trash";'; ?>
+				if(reason === 'true'){
+					
+					bootbox.dialog({
+						message: "<input type='text' class='bootbox-input bootbox-input-text form-control' autocomplete='off' id='trash-reason' >",
+						title: "Reason Declined? <em>(user will see this)</em>",
+						buttons: {
+							main: {
+								label: "Cancel",
+								className: "",
+								callback: function() {
+									//-- Aborted Declining Post - Info Msg --//
+									howlerMsg('info', 'Trash Attempt Aborted', 'No reason was given to why post is being trashed, aborting trash attempt.', 7500, 'fa fa-info', false);
+								}
+							},
+							exception: {
+								label: "Trash - No Reason/Email",
+								className: "btn-secondary",
+								callback: function() {
+									var data = {
+										action: "trash_post",
+										theID: theID,
+										theReason: ''
+									};
+									//-- run query if no reason needed --//
+									jQuery.post(ajaxurl, data, function(json){
+										if(typeof json != 'undefined'){
+											var results = jQuery.parseJSON(json);
+											if(typeof results.result != 'undefined'){
+												if(results.result == 'success'){
+													$('#'+ theStatus +'-'+ results.itemID).parent('td').parent('tr').delay(500).slideUp('fast');
+													//-- Add item to trash list --//
+													jQuery('#trashed-curriculum').dataTable().fnAddData([
+														'<span id="trashed-'+ results.itemID +'" class="label label-tertiary"><i class="fa fa-exclamation"></i></span>',
+														theTitle,
+														theType,
+														'<span class="label label-success approvePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-check"></i> Restore</span><span class="label label-primary deletePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-ban"></i> Delete</span>'
+													]);
+													//-- Success - Howler MSG --//
+													howlerMsg('success', 'Post Sent to Trash - No Email Sent', 'The post was successfully moved to the trash. You can view it under the Trash Section.', 7500, 'fa fa-check', false);
+												}else if(results.result == 'failed'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('danger', 'Failed to Move Post to Trash!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-ban', false);
+												}else if(results.result == 'invalid'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+												}
+											}
+										}
+									});
+								}
+							},
+							success: {
+								label: "Trash",
+								className: "btn-primary",
+								callback: function(){
+									var result = $('#trash-reason').val()
+									if(result !== null && result){
+										var data = {
+											action: "trash_post",
+											theID: theID,
+											theReason: result
+										};
+										//-- run query if a reason is listed --//
+										jQuery.post(ajaxurl, data, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														$('#'+ theStatus +'-'+ results.itemID).parent('td').parent('tr').delay(500).slideUp('fast');
+														//-- Add item to trash list --//
+														jQuery('#trashed-curriculum').dataTable().fnAddData([
+															'<span id="trashed-'+ results.itemID +'" class="label label-tertiary"><i class="fa fa-exclamation"></i></span>',
+															theTitle,
+															theType,
+															'<span class="label label-success approvePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-check"></i> Restore</span><span class="label label-primary deletePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-ban"></i> Delete</span>'
+														]);
+														//-- Success - Howler MSG --//
+														howlerMsg('success', 'Post Sent to Trash', 'The post was successfully moved to the trash. You can view it under the Trash Section.', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', 'Failed to Move Post to Trash!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-ban', false);
+													}else if(results.result == 'invalid'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+									}else{
+										//-- Aborted Declining Post - Info Msg --//
+										howlerMsg('info', 'Trash Attempt Aborted', 'No reason was given to why post is being trashed, aborting trash attempt.', 7500, 'fa fa-info', false);
+									}
+								}
+							}
+						} // end buttons
+					});
+					
+				}else{
+					var data = {
+						action: "trash_post",
+						theID: theID,
+						theReason: ''
+					};
+					//-- run query if no reason needed --//
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$('#'+ theStatus +'-'+ results.itemID).parent('td').parent('tr').delay(500).slideUp('fast');
+									//-- Add item to trash list --//
+									jQuery('#trashed-curriculum').dataTable().fnAddData([
+										'<span id="trashed-'+ results.itemID +'" class="label label-tertiary"><i class="fa fa-exclamation"></i></span>',
+										theTitle,
+										theType,
+										'<span class="label label-success approvePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-check"></i> Restore</span><span class="label label-primary deletePost" data-post-val="'+ results.itemID +'" data-status="trashed"><i class="fa fa-ban"></i> Delete</span>'
+									]);
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Post Sent to Trash', 'The post was successfully moved to the trash. You can view it under the Trash Section.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Failed to Move Post to Trash!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			};
+			
+			$.fn.deletePost = function() {
+			    var theID = $(this).attr('data-post-val');
+				var theStatus = $(this).attr('data-status');
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/delete";'; ?>
+				var data = {
+					action: "delete_post",
+					theID: theID
+					};
+				//-- Ask to confirm "Do you really want to delete this?" --//
+				bootbox.confirm("Are you sure you want to delete this?", function(result) {
+					if(result){
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										$('#'+ theStatus +'-'+ results.itemID).parent('td').parent('tr').delay(500).slideUp('fast');
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Post Deleted', 'The post was deleted successfully. It has been removed from Curriculum Content.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', 'Post Deletion Failed!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-ban', false);
+									}else if(results.result == 'invalid'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+					}
+				});
+			};
+			
+			$.fn.resetParsley = function() {
+				$(this).parsley ({
+					trigger: 'change',
+					errors: {
+						container: function (element, isRadioOrCheckbox) {
+							if (element.parents ('form').is ('.form-horizontal')) {
+								return element.parents ("*[class^='col-']");
+							}
+
+							return element.parents ('.form-group');
+						}
+					}
+				});
+			};
+			
+			/*-- Lightbox Init Function --*/
+			$.fn.resetLightbox = function() {
+				$('.ui-lightbox').off().magnificPopup({
+					type: 'image',
+					closeOnContentClick: false,
+					closeBtnInside: true,
+					fixedContentPos: true,
+					mainClass: 'mfp-no-margins mfp-with-zoom', // class to remove default margin from left and right side
+					image: {
+						verticalFit: true,
+						tError: '<a href="%url%">The image #%curr%</a> could not be loaded.'
+					}
+				});
+
+				$('.ui-lightbox-video, .ui-lightbox-iframe').off().magnificPopup({
+					disableOn: 700,
+					type: 'iframe',
+					mainClass: 'mfp-fade',
+					removalDelay: 160,
+					preloader: false,
+					fixedContentPos: false
+				});
+			};
+			
+			//-- Instantiate editor --//
+			$('#post-content, #issue-content, #edit-content').wysihtml5();
+			
+			//-- Bind Events --//
+			$('body').resetBindings();
+			$('#pending-curriculum, #approved-curriculum, #trashed-curriculum').bind('draw', function(){ $('body').resetBindings(); });
+			
+			//-- Show / Require video field for video post type --//
+			$('#post-type').change(function(){
+				//-- Destroy Parsley --//
+				$('#suggestionForm').parsley('destroy');
+				
+				var typeVal = $(this).val();
+				if(typeVal == 1){
+					$('#post-video').attr('data-required', 'true');
+					$('#post-video').parent('.form-group').show('500');
+					$('#suggestionForm').parsley('addItem', '#post-video');
+					$('#post-video').parsley('addConstraint', { required: true });
+				}else{
+					$('#post-video').removeAttr('data-required');
+					$('#post-video').parent('.form-group').hide('500');
+					$('#suggestionForm').parsley('removeItem', '#post-video');
+				}
+				//-- Re-instantiate Parsley --//
+				$('#suggestionForm').resetParsley();
+			});
+			
+		});
+		
+		//-- Hide / Show Field Groups --//
+		function hideFieldGroup(input, fieldGroup){
+			fieldGroup = (typeof fieldGroup === "undefined") ? false : fieldGroup;
+			if(fieldGroup){
+				if(jQuery(input).prop("checked")){
+					jQuery(fieldGroup).parent('.form-group').show('500');
+				}else{
+					jQuery(fieldGroup).parent('.form-group').hide('500');
+				}
+			}
+		}
+	</script><?php
+	//-- For Past Suggestions Table Features --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/datatables/jquery.dataTables.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/datatables/DT_bootstrap.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/tableCheckable/jquery.tableCheckable.js");
+	//-- Code Initializations --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<!-- editPost Modal to display edit suggestion form -->
+<div id="editPostModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title"></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit Suggestion Form -->
+				<form id="editSuggestionForm" action="parsley-form" method="post">
+					<input type="hidden" name="form-action" value="edit-suggestion">
+					
+					<div class="form-group">
+						<label for="edit-title">Title</label>
+						<input type="text" name="post_title" id="edit-title" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">	
+						<label for="edit-author">Post Author</label>
+						<select id="edit-author" name="post_author" class="form-control" data-required="true">
+							<option value="">Select One...</option>
+							<?php
+							foreach($authorList as $auth){
+								if($auth->usernm){ $authname = $auth->fname.' '.$auth->lname.' - ('.$auth->usernm.')'; }else{ $authname = $auth->fname.' '.$auth->lname; }
+								echo '<option value="'.$auth->id.'">'.$authname.'</option>';
+							}
+							?>
+						</select>
+					</div>
+					<div class="form-group">	
+						<label for="edity-type">Content Type</label>
+						<select id="edit-type" name="content_type" class="form-control" data-required="true">
+							<option value="">Select One...</option>
+							<?php
+							foreach($types as $type){
+								if($type->id == 1){
+									//-- show huddle video option for super admin --//
+									if($this->session->get("user-role") == 1){
+										echo '<option value="'.$type->id.'">'.$type->type_name.'</option>';
+									}
+								}else{
+									echo '<option value="'.$type->id.'">'.$type->type_name.'</option>';
+								}
+							}
+							?>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="edit-video">Video Url</label>
+						<input type="text" name="post_video" id="edit-video" class="form-control" placeholder="http://" value="" maxlength="255">
+					</div>
+					<div class="form-group">
+						<label for="edit-content">Content</label>
+						<textarea name="post_content" id="edit-content" cols="10" rows="5" class="form-control" placeholder="Enter text ..." data-required="true"></textarea>
+					</div>
+					<div class="form-group">
+						<a href="#" class="btn btn-primary submitEdit">Submit Suggestion</a>
+					</div>
+					
+					<h4>Additional Options</h4>
+					<div class="well">
+						<div class="form-group">
+							<label for="edit-resource">External Resource Url</label>
+							<input type="text" name="post_resource" id="edit-resource" class="form-control" placeholder="http://" value="" maxlength="255">
+						</div>
+					</div>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

@@ -1,0 +1,352 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Athleticism Improvement Reports';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		
+		<!-- Filters -->
+		<div id="user-filters" class="well" <?php echo 'style="display: block;"'; ?>>
+			<!-- Assessment Filter -->
+			<div class="col-sm-6">
+				<div class="form-group">	
+					<label for="filter-assessments">Assessment *</label>
+					<select id="filter-assessments" name="filterAssessments" class="form-control" data-required="true">
+						<option value="">Select Assessment</option><?php
+							$assessments = AthleticAssessments::find('');
+							if(!empty($assessments)){
+								foreach($assessments as $test){
+									if($test->data_label == 'Sec.'){ $newLabel = 'Seconds'; }else if($test->data_label == 'In.'){ $newLabel = "Inches"; }else{ $newLabel = $test->data_label; }
+									echo '<option value="'.$test->url_name.'" data-type="'.$test->type.'" data-measure="'.$test->data.'" data-label="'.$newLabel.'">'.$test->assessment_name.'</option>';
+								}
+							}
+						?>
+					</select>
+				</div>
+			</div><!-- /.col -->
+			<?php
+			 //-- school filter --//
+			if($schools && $this->session->get("user-role") == 1){ ?>
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label for="filter-schools">School</label>
+						<select name="filterSchool" id="filter-schools" class="form-control">
+							<option value="">All Schools</option>
+							<?php
+								//-- List Out Schools --//
+								$curState = '';
+								foreach($schools as $school){
+									if($school->state != $curState){
+										if($curState){
+											echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+										}else{
+											echo '<optgroup label="'.$states[$school->state].'">';
+										}
+										$curState = $school->state;
+									}
+									if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+									echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+								}
+								echo '</optgroup>';
+							?>
+						</select>
+					</div><!-- /.form-group -->
+				</div><?php
+			}
+			//-- grade filter --//
+			if(isset($grade_level) && $grade_level){ ?>
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label for="filter-grade">Grade Level</label>
+						<select name="filterGrade" id="filter-grade" class="form-control">
+							<option value="">Select Grade Level</option>
+							<?php
+								//-- List Out Grade Levels --//
+								foreach($grade_level as $grade){
+									if(isset($gradeID) && $grade->id == $gradeID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+									echo '<option value="'.$grade->id.'" '.$sel.'>'.$grade->gradeName.'</option>';
+								}
+							?>
+						</select>
+					</div><!-- /.form-group -->
+				</div><?php
+			} ?>
+			
+			<div class="col-sm-6">
+				<div class="form-group">
+					<label for="filter-grade">Growth Period *</label>
+					<select name="filterGrowth" id="filter-growth" class="form-control">
+						<?php
+							$growthArr = array(2 => 'Over 2 Year Span', 3 => 'Over 3 year Span');
+							//-- List Out Growth --//
+							foreach($growthArr as $growth => $g_text){
+								echo '<option value="'.$growth.'" '.$sel.'>'.$g_text.'</option>';
+							}
+						?>
+					</select>
+				</div><!-- /.form-group -->
+			</div>
+			
+			<div class="col-sm-12 text-center clear">
+				<span id="get-report" class="btn btn-secondary">Run Report &nbsp;<i class="fa fa-arrow-right"></i></span>
+			</div>
+			
+			<div class="clear"></div>
+		</div>
+		<!-- end filters -->
+		
+		<div class="row">
+			<div class="col-xs-12">
+				<div id="display-results" style="margin-top: 30px;"></div>
+			</div><!-- /.col -->
+		</div><!-- /.row -->
+		
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/default"); ?>
+	
+	<script type="text/javascript">
+		jQuery(document).ready(function($){
+			
+			
+			
+			/* Grab Report AJAX - Retrieval
+			-----------------------------------------*/
+			$('#get-report').click(function(event){
+				if(!$(this).hasClass('disabled')){
+					var school = $('#filter-schools').val();
+					var test = $('#filter-assessments').val();
+					var testLabel = $('#filter-assessments :selected').text();
+					var testMeasureLabel = $('#filter-assessments :selected').attr('data-label');
+					var testMeasure = $('#filter-assessments :selected').attr('data-measure');
+					var testMeasureText = $('#filter-assessments :selected').text();
+					var grade = $('#filter-grade').val();
+					var gradeLabel = $('#filter-grade :selected').text();
+					var growth = $('#filter-growth').val();
+					var growthLabel = $('#filter-growth :selected').text();
+					
+					if(test && growth){
+						$('#get-report').addClass('disabled').children('.fa').removeClass('fa-arrow-right').addClass('fa-spinner fa-pulse');
+						$('#display-results').hide();
+					
+						<?php $ajaxUrl = '/athletic/growthReport";'; ?>
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+						var data = {
+							action: "get_report",
+							grade: grade,
+							school: school,
+							test: test,
+							measure: testMeasure,
+							growth: growth
+						};
+						jQuery.post(ajaxurl, data, function(json){
+							//-- remove loading icon --//
+							$('#get-report').removeClass('disabled').children('.fa').removeClass('fa-spinner fa-pulse').addClass('fa-arrow-right');
+							//-- handle response --//
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										
+										if(!school){ //-- All Schools --//
+											
+											if(results.totalCount == 0){
+												$('#display-results').html('<div class="alert alert-danger"><strong>Nothing!</strong> No results match your search.</div>');
+											}else{
+												//-- Finalize Vars --//
+												if(grade != ''){ var reportTitle = 'All Schools: '+ gradeLabel; }else{ var reportTitle = 'All Schools'; }
+												var totalProgress = (results.totalProgress / results.totalCount).toFixed(2);
+												
+												//-- clear div contents --//
+												$('#display-results').html('<h4 style="font-weight: 600;">'+ reportTitle +' Student Results ('+ growthLabel +') <span style="float: right;">('+ testMeasureText +' measured in '+ testMeasureLabel +')</span></h4>');
+												
+												//-- List Out School Results --//
+												$.each(results.school, function(key, data){
+													if(data.count){
+														$('#display-results').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7;" class="tm-school-container" data-school="'+ key +'"><span class="clickable" style="cursor: pointer;"><i class="fa fa-toggle-right"></i> &nbsp;'+ data.name +' &nbsp;&nbsp; <strong>('+ data.count +')</strong></span> <span class="export-metrics" style="float: right; cursor: pointer;" data-school="'+ key +'" data-grade="'+ results.report.grade +'" data-growth="'+ results.report.growth +'" data-assessment="'+ results.report.test +'"><i class="fa fa-download"></i> Export</span></p>');
+														
+														//-- List out Progress / Decrease Sections --//
+														var summary = '';
+														$.each(data, function(type, typedata){
+															if(type != 'count' && type != 'name' && type != 'progress'){
+																if(type == 'plus'){ var txtClass = "text-success"; }else{ var txtClass = "text-primary"; }
+																summary+= '<p style="margin-bottom: 0; padding-bottom: 5px; margin-left: 18px; cursor: pointer;" class="tm-grade-container tm-school-'+ key +'" data-grade="'+ type +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.type[type] +' &nbsp;&nbsp; <strong class="'+ txtClass +'"><i class="fa fa-'+ type +'"></i> &nbsp;('+ typedata.students.length +')</strong></p>';
+												
+																//-- List out students --//
+																var studentTable = '';
+																$.each(typedata.students, function(i, student){
+																	studentTable+= '<tr><td>'+ (i+1) +'</td><td>'+ student.name +'</td><td>'+ student.pastdata +' &nbsp;('+ student.pastphase +')</td><td>'+ student.curdata +' &nbsp;('+ student.curphase +')</td><td>'+ student.grade +'th</td><td>'+ student.difference.toFixed(2) +'</td></tr>';
+																});
+																summary+= '<div class="tm-grade-contents" style="margin-left: 36px;"><table class="table table-condensed table-striped"><thead><tr><th>#</th><th>Name</th><th>Baseline (phase)</th><th>Current Best (phase)</th><th>Grade Level</th><th>Progress</th></tr></thead><tbody>'+ studentTable +'</tbody></table></div>';
+															}
+														});
+														
+														//-- Append assessment summary to output --//
+														$('#display-results').append('<div class="tm-school-contents">'+ summary +'</div>');
+													}	
+												});
+												//-- Export Entire Report --//
+												$('#display-results').append('<p style="margin-top: 30px;" class="text-center"><span class="btn btn-secondary export-metrics" data-school="'+ results.report.school +'" data-grade="'+ results.report.grade +'" data-growth="'+ results.report.growth +'" data-assessment="'+ results.report.test +'"><i class="fa fa-download"></i> &nbsp;Export Report</span></p>');
+											}
+											
+										}else{ //-- One School Only --//
+											
+											//-- Finalize Vars --//
+											if(grade != ''){ results.school.name = results.school.name +': '+ gradeLabel; }
+											var totalProgress = (results.school.progress / results.school.count).toFixed(2);
+											//-- List Out School Results --//
+											if(results.school.count){
+												//-- clear div contents --//
+												$('#display-results').html('<h4 style="font-weight: 600;">'+ results.school.name +' Student Results ('+ growthLabel +') <span style="float: right;">('+ testMeasureText +' measured in '+ testMeasureLabel +')</span></h4>');
+												$('#display-results').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7;" class="tm-school-container" data-school="'+ school +'"><span class="clickable" style="cursor: pointer;"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.school.name +' &nbsp;&nbsp; <strong>('+ results.school.count +')</strong></span> <span class="export-metrics" style="float: right; cursor: pointer;" data-school="'+ school +'" data-grade="'+ results.report.grade +'" data-growth="'+ results.report.growth +'" data-assessment="'+ results.report.test +'"><i class="fa fa-download"></i> Export</span></p>');
+												
+												//-- List out Progress / Decrease Sections --//
+												var summary = '';
+												$.each(results.school, function(type, typedata){
+													if(type != 'count' && type != 'name' && type != 'progress'){
+														if(type == 'plus'){ var txtClass = "text-success"; }else{ var txtClass = "text-primary"; }
+														summary+= '<p style="margin-bottom: 0; padding-bottom: 5px; margin-left: 18px; cursor: pointer;" class="tm-grade-container tm-school-'+ school +'" data-grade="'+ type +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.type[type] +' &nbsp;&nbsp; <strong class="'+ txtClass +'"><i class="fa fa-'+ type +'"></i> &nbsp;('+ typedata.students.length +')</strong></p>';
+										
+														//-- List out students --//
+														var studentTable = '';
+														$.each(typedata.students, function(i, student){
+															studentTable+= '<tr><td>'+ (i+1) +'</td><td>'+ student.name +'</td><td>'+ student.pastdata +' &nbsp;('+ student.pastphase +')</td><td>'+ student.curdata +' &nbsp;('+ student.curphase +')</td><td>'+ student.grade +'th</td><td>'+ student.difference.toFixed(2) +'</td></tr>';
+														});
+														summary+= '<div class="tm-grade-contents" style="margin-left: 36px;"><table class="table table-condensed table-striped"><thead><tr><th>#</th><th>Name</th><th>Baseline (phase)</th><th>Current Best (phase)</th><th>Grade Level</th><th>Progress</th></tr></thead><tbody>'+ studentTable +'</tbody></table></div>';
+													}
+												});
+												
+												//-- Append assessment summary to output --//
+												$('#display-results').append('<div class="tm-school-contents">'+ summary +'</div>');
+												$('#display-results').append('<p style="margin-top: 30px;" class="text-center"><span class="btn btn-secondary export-metrics" data-school="'+ results.report.school +'" data-grade="'+ results.report.grade +'" data-growth="'+ results.report.growth +'" data-assessment="'+ results.report.test +'"><i class="fa fa-download"></i> &nbsp;Export Report</span></p>');
+											}else{
+												$('#display-results').html('<div class="alert alert-danger"><strong>Nothing!</strong> No results match your search.</div>');
+											}
+											
+										}
+									
+										//-- hide accordion pieces --//
+										$('.tm-grade-contents, .tm-school-contents').hide();
+									
+										//-- instantiate accordion functionality --//
+										$('.tm-school-container > .clickable').off().on("click", function(){
+											if($(this).hasClass('open')){
+												$(this).parent('.tm-school-container').next('.tm-school-contents').slideUp();
+												$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+												$(this).removeClass('open');
+											}else{
+												$(this).parent('.tm-school-container').next('.tm-school-contents').slideDown();
+												$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+												$(this).addClass('open');
+											}
+										});
+										$('.tm-grade-container').off().on("click", function(){
+											if($(this).hasClass('open')){
+												$(this).next('.tm-grade-contents').slideUp();
+												$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+												$(this).removeClass('open');
+											}else{
+												$(this).next('.tm-grade-contents').slideDown();
+												$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+												$(this).addClass('open');
+											}
+										});
+									
+										//-- Export School Reports Functionality --//
+										$('.export-metrics').off().on("click", function(){
+											if(!$(this).hasClass('disabled')){
+												//-- Grab School & Grades --//
+												var thisBtn = $(this);
+												var selectSchool = $(this).attr('data-school');
+												var selectGrade = $(this).attr('data-grade');
+												var selectGrowth = $(this).attr('data-growth');
+												var selectTest = $(this).attr('data-assessment');
+											
+												if(selectTest && selectGrowth){
+													//-- Loading Icon --//
+													$(thisBtn).addClass('disabled').children('.fa').removeClass('fa-download').addClass('fa-spinner fa-pulse');
+												
+												
+													<?php $ajaxUrl2 = '/athletic/exportAthleticism";'; ?>
+													var ajaxurl2 = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl2."\n"; ?>
+												
+													var info = {
+														action: "export_athleticism_report",
+														school: selectSchool,
+														grade: selectGrade,
+														test: selectTest,
+														measure: testMeasure,
+														growth: selectGrowth,
+														testLabel: testLabel,
+														gradeLabel: gradeLabel,
+														measureLabel: testMeasureLabel,
+														measureText: testMeasureText,
+														growthLabel: growthLabel
+													};
+													jQuery.post(ajaxurl2, info, function(json2){
+														//-- Remove Loading Icon --//
+														$(thisBtn).removeClass('disabled').children('.fa').addClass('fa-download').removeClass('fa-spinner fa-pulse');
+														if(typeof json2 != 'undefined'){
+															var results2 = jQuery.parseJSON(json2);
+															if(typeof results2.result != 'undefined'){
+																if(results2.result == 'success'){
+																	//-- Open export in new tab --//
+																	window.open(results2.urlpath);
+																	//-- Success Message --//
+																	howlerMsg('success', 'Metrics Exported', 'School metrics report exported successfully!', 7500, 'fa fa-check', false);
+																}else if(results2.result == 'failed'){
+																	//-- Failed - Howler MSG --//
+																	howlerMsg('danger', 'Invalid Data', 'Invalid data entered.', 7500, 'fa fa-exclamation', false);
+																}
+															}
+														}
+													});
+												
+												}
+											}
+										});
+										//-- Export School Reports Functionality --//
+										
+										$('#display-results').show();
+									
+										//-- Success Message --//
+										howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', 'Invalid Data', 'Invalid data entered.', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+					}
+				
+				}
+			});
+			
+		});
+	</script>
+	
+<?php	
+	$this->partial("partials/footer-bottom");

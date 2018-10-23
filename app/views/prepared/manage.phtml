@@ -1,0 +1,203 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Manage Prepared Minds Curriculum';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="col-md-3 col-sm-5">
+			<!-- Stacked Tabs - Navigation -->
+			<ul class="nav nav-pills nav-stacked">
+				<!--<li class="active">
+					<a href="#manage-docs" data-toggle="tab"><i class="fa fa-download"></i> &nbsp;&nbsp;Manage Downloads</a>
+				</li>-->
+				<li class="active">
+					<a href="#manage-docs-2" data-toggle="tab"><i class="fa fa-download"></i> &nbsp;&nbsp;Manage Downloads</a>
+				</li>
+				<li>
+					<a href="#upload-docs" data-toggle="tab"><i class="fa fa-upload"></i> &nbsp;&nbsp;Upload Files</a>
+				</li>
+			</ul>
+
+		</div><!-- /.col -->
+
+		<div class="col-md-9 col-sm-7">
+
+			<div class="tab-content stacked-content">
+				
+				<div class="tab-pane fade in active" id="manage-docs-2">
+					<div id="manage-downloads">
+						<h3 class="heading"><i class="fa fa-download"></i> Manage Downloads</h3>
+
+						<?php
+							//-- Echo out contents of Amazon Bucket --//
+							if(isset($bucket_contents2) && $bucket_contents2){ ?>
+								<div class="row">
+									<div class="col-md-12">
+
+									    <ul id="myTab" class="nav nav-pills">
+											<?php
+											$pillCount = 1; 
+											foreach($bucket_contents2 as $unit_key => $unit_contents){ ?>
+												<li <?php if($pillCount == 1){ echo 'class="active"'; } ?>>
+										        	<a href="#unit-<?php echo $unit_key; ?>-contents" data-toggle="tab">
+										        		<i class="fa <?php echo $icon_map[$unit_key]; ?>"></i> 
+										        		&nbsp;&nbsp;<?php echo ucwords(str_ireplace('-', ' ', $unit_key)); ?>
+										        	</a>
+										        </li><?php
+												$pillCount++;
+											} ?>
+									    </ul>
+
+										<div class="tab-content tab-content">
+
+											<?php
+											//-- Unit Navigation --//
+											$panelCount = 1;
+											foreach($bucket_contents2 as $unit_key => $unit_contents){ ?>
+												<div class="tab-pane fade <?php if($panelCount == 1){ echo 'in active'; } ?>" id="unit-<?php echo $unit_key; ?>-contents">
+
+													<h3><?php echo '<i class="fa '.$icon_map[$unit_key].'"></i> &nbsp;'.ucwords(str_ireplace('-', ' ', $unit_key)); ?></h3>
+
+													<label for="innerTabs-<?php echo $unit_key; ?>">Curricular Units</label><br />
+													<select id="innerTabs-<?php echo $unit_key; ?>" class="lesson-nav form-control">
+														<option value="">Select Grade Level</option><?php
+															foreach($unit_contents as $folder => $folder_contents){ ?>
+																<option value="#folder-grade-<?php echo $folder; ?>"><?php echo $folder_contents[0]; ?></option><?php
+															} ?>
+													</select>
+
+													<div id="unit-<?php echo $unit_key; ?>-tab-nav" class="tab-content" style="margin: 15px 0 0; padding: 20px 0 0; border-top: 1px dashed #eaeaea;"><?php
+														//-- List out lessons by grade level --//
+														$num = 0;
+														foreach($unit_contents as $folder => $folder_contents){ ?>
+															<div class="tab-pane fade" id="folder-grade-<?php echo $folder; ?>">
+																<h4 style="padding-bottom: 8px; border-bottom: 2px solid #e1e1e1;"><?php echo $folder_contents[0]; ?></h4><?php
+																foreach($folder_contents[1] as $file){
+																    $fname = $file['name'];
+																    $furl = "http://athlos-tools-prepared-minds-".$unit_key."-grade-".$folder.".s3.amazonaws.com/".$fname;
+																	$fsize = $file['size'];
+																	$ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+
+																	//-- determine what class to use --//
+																	if($ext == 'doc' || $ext == 'docx'){
+																		$useClass = 'download-word';
+																	}else if($ext == 'zip'){
+																		$useClass = 'download-zip';
+																	}else if($ext == 'xls' || $ext == 'xlsx'){
+																		$useClass = 'download-xls';
+																	}else{
+																		$useClass = 'download-doc';
+																	}
+
+																    //-- Output link to file --//
+																	echo '<div class="download '.$useClass.'" style="margin: 0; padding: 18px 0 17px 60px; background-position: 0 10px; background-size: 40px;">';
+																    echo '<a href="'.$furl.'">'.$fname.'</a>';
+																	echo '<span style="margin: 0 0 0 10px; color: #808080;">('.round($fsize / 1024, 1).' KB)</span>';
+																	echo '<span class="btn btn-xs btn-primary delete-doc" data-name="'.$fname.'" data-level="'.$folder.'" data-unit="'.$unit_key.'" style="margin: 0 0 0 30px;"><i class="fa fa-times"></i> Remove</span>';
+																	
+																	echo '</div>';
+																} ?>
+
+															</div> <!-- /.tab-pane --><?php
+															$num++;
+														} ?>
+													</div> <!-- /.tab-content -->
+
+												</div> <!-- /.tab-pane --><?php
+												$panelCount++;
+											} ?>
+
+									      </div> <!-- /.tab-content -->
+
+									</div> <!-- /.col -->
+								</div> <!-- /.row --><?php
+							}
+						?>
+					</div>
+				</div><!-- /.tab-pane -->
+
+				<div class="tab-pane fade" id="upload-docs">
+					<div id="upload-documents">
+						<h3 class="heading"><i class="fa fa-upload"></i> Upload Files</h3>
+
+						<p>
+							Select the file that you would like to upload into the list of uploaded resource documents, Please ensure that the file you are uploading is a pdf, word document, excel spreadsheet or zip archive:
+						</p>
+
+						<div id="form-errors" class="alert alert-danger" style="display: none;"></div>
+
+						<!-- Upload PDF to Amazon Bucket Form -->
+						<form id="upload-resource-form" action="" method="post" enctype="multipart/form-data">
+							<input type="hidden" name="action" value="upload_resource" />
+							<p>
+								<span class="btn btn-primary fileinput-button">
+						        	<i class="glyphicon glyphicon-plus"></i>
+						        	<span>Select Document</span>
+						        	<!-- The file input field used as target for the file upload widget -->
+						        	<input id="resourceupload" type="file" name="theFile">
+						    	</span>
+								<span id="document-to-upload">
+									<span class="the-doc-name"></span>
+								</span>
+								<span id="res-up-err" class="alert alert-danger"></span>
+							</p>
+							<p>
+								<label for="curric-unit">Curricular Units</label>
+								<select name="curric-unit" id="curric-unit" class="form-control" style="margin-bottom: 20px; max-width: 200px;">
+									<option value="">Select Curricular Unit</option>
+									<?php
+										$units = array('science' => 'Science', 'social-studies' => 'Social Studies');
+										foreach($units as $unit => $unitname){
+											echo '<option value="'.$unit.'">'.$unitname.'</option>';
+										}
+									?>
+								</select>
+							</p>
+							<p>
+								<label for="gradelevel">Grade Level</label>
+								<select name="gradelevel" id="gradelevel" class="form-control" style="margin-bottom: 10px; max-width: 200px;">
+									<option value="">Select Grade Level</option>
+									<?php
+										$levels = array(100 => 'Kindergarten', 1 => '1st Grade', 2 => '2nd Grade', 3 => '3rd Grade', 4 => '4th Grade', 5 => '5th Grade', 6 => '6th Grade', 7 => '7th Grade', 8 => '8th Grade');
+										foreach($levels as $level => $name){
+											echo '<option value="'.$level.'">'.$name.'</option>';
+										}
+									?>
+								</select>
+							</p>
+						    <p>
+						    	<input type="submit" id="upload-doc" class="btn btn-primary" value="Upload" />
+							</p>
+						</form>
+
+
+					</div>
+				</div>
+
+			</div>
+
+		</div> <!-- /.col -->
+		
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/prepared-minds");
+	$this->partial("partials/footer-bottom");
+?>

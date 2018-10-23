@@ -1,0 +1,62 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Grade Students';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<h3 style="margin-bottom: 20px;">Please Assign a Numeric Value for Each Character Trait</h3>
+		
+		<!-- Legend -->
+		<div class="well col-sm-5" style="float: none; min-width: 400px;">
+			<h4>Legend</h4>
+			<p><span class="label label-tertiary" style="font-size: 11px;">1</span> - Very seldom or not at all for age</p>
+			<p><span class="label label-secondary" style="font-size: 11px;">2</span> - Occasionally but not consistent for age</p>
+			<p><span class="label label-secondary" style="font-size: 11px;">3</span> - Frequently occurring and average for age</p>
+			<p><span class="label label-primary" style="font-size: 11px;">4</span> - Consistently occurring and above average for age</p>
+			<p><span class="label label-primary" style="font-size: 11px;">5</span> - Very consistently occurring and outstanding for age</p>
+		</div>
+		
+		<div class="grading-form" style="clear: both; margin: 40px 0 0;">
+			<?php
+				//-- List out all the traits --//
+				foreach($traits as $trait){ ?>
+					<div class="form-group">
+						<div class="col-sm-12">
+							<label for="<?php echo $trait->url_name; ?>-grade"><i class="fa <?php echo $trait->icon; ?>"></i> <?php echo $trait->trait_name; ?></label>
+						</div>
+						<div class="col-sm-8">
+							<div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div>
+						</div>
+						<div class="col-sm-2">
+							<input type="text" onkeyup="this.value = this.value.replace(/[^0-5]/g,'');" class="form-control grade-input" name="<?php echo $trait->url_name; ?>_grade" id="<?php echo $trait->url_name; ?>-grade" maxlength="1" style="width: 34px;">
+						</div>
+						<div class="col-sm-8" style="float: none;">
+							<textarea class="form-control" name="<?php echo $trait->url_name; ?>_observation" id="<?php echo $trait->url_name; ?>-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea>
+						</div>
+					</div><?php
+				}
+			?>
+		</div>
+		
+	</div>
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/grading");
+	$this->partial("partials/footer-bottom");
+?>

@@ -1,0 +1,204 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Athletic: Contributions';
+
+if(!isset($errFound)){
+	$errFound = false;
+}
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="row">
+			<div class="col-md-3 col-sm-5">
+
+			    <ul id="myTab" class="nav nav-pills nav-stacked">
+			        <li <?php echo 'class="active"'; ?>>
+						<a href="#suggestion-form" data-toggle="tab"><i class="fa fa-star"></i> &nbsp;&nbsp;Make a Contribution</a>
+					</li>
+					<li>
+						<a href="#report-issue" data-toggle="tab"><i class="fa fa-bug"></i> &nbsp;&nbsp;Report an Issue</a>
+					</li>    
+			    </ul>
+				
+			</div> <!-- /.col -->
+			
+			<div class="col-md-9 col-sm-7">
+				<div id="myTabContent" class="tab-content stacked-content">
+					<div class="tab-pane fade in active" id="suggestion-form">
+						
+						<h2>Make a Contribution</h2>
+						
+						<!-- Suggestion Form -->
+						<form id="suggestionForm" class="parsley-form" action="" method="post">
+							<input type="hidden" name="form-action" value="submit-suggestion">
+							<input type="hidden" name="author_email" value="<?php echo $this->session->get("user-email"); ?>">
+							
+							<div class="form-group">
+								<label for="post-subject">Title or Subject</label>
+								<input type="text" name="post-subject" id="post-subject" class="form-control" value="<?php if($errFound){ echo $this->request->getPost("post-subject"); } ?>" data-required="true">
+							</div>
+							<div class="form-group">	
+								<label for="athletic-level">Athletic Curriculum Level</label>
+								<select id="athletic-level" name="athletic-level" class="form-control" data-required="true">
+									<option value="">Select One...</option>
+									<?php
+										$levels = array(1, 2, 3, 4);
+										foreach($levels as $level){
+											$sel = '';
+											if($errFound){ if($this->request->getPost("athletic-level") == $level){ $sel = 'selected="selected"'; } }
+											echo '<option '.$sel.' value="'.$level.'">Level '.$level.'</option>';
+										}
+									?>
+								</select>
+							</div>
+							<div class="form-group">	
+								<label for="lesson-topic">Lesson Topic</label>
+								<select id="lesson-topic" name="lesson-topic" class="form-control" data-required="true">
+									<option value="">Select One...</option>
+									<?php
+										if($errFound){
+											if($this->request->getPost("athletic-level") == 1){
+												$topics = $lv1_topics;
+											}else if($this->request->getPost("athletic-level") > 1 && $this->request->getPost("athletic-level") < 5){
+												$topics = $level_topics;
+											}
+										}
+										
+										if(isset($topics) && !empty($topics)){
+											foreach($topics as $topic){
+												$sel = '';
+												if($errFound){ if($this->request->getPost("lesson-topic") == $topic){ $sel = 'selected="selected"'; } }
+												echo '<option '.$sel.' value="'.$topic.'">'.$topic.'</option>';
+											}
+										}
+									?>
+								</select>
+							</div>
+							
+							<div class="form-group">
+								<label for="post-content">Content</label>
+								<textarea name="post_content" id="post-content" cols="10" rows="5" class="form-control" placeholder="Enter text ..." data-required="true"><?php if($errFound){ echo $this->request->getPost("post_content"); } ?></textarea>
+							</div>
+							<div class="form-group">
+								<input type="submit" id="submit-suggestion" class="btn btn-primary" value="Submit Contribution">
+							</div>
+							
+						</form>
+						
+					</div><!-- /.tab-pane -->
+					
+					<div class="tab-pane fade" id="report-issue">
+						
+						<h2>Report an Issue</h2>
+						
+						<!-- Suggestion Form -->
+						<form id="issueForm" class="parsley-form" action="/athletic/report" method="post">
+							<input type="hidden" name="form-action" value="submit-bug">
+							
+							<div class="form-group">
+								<label for="issue-subject">What's the problem?</label>
+								<input type="text" name="issue_subject" id="issue-subject" class="form-control" value="" data-required="true" maxlength="80">
+							</div>
+							
+							<div class="form-group">
+								<label for="issue-content">Details</label>
+								<textarea name="issue_content" id="issue-content" cols="10" rows="5" class="form-control" placeholder="Enter text ..." data-required="true"><?php if($errFound){ echo $this->request->getPost("post_content"); } ?></textarea>
+							</div>
+							<div class="form-group">
+								<input type="submit" id="submit-issue" class="btn btn-primary" value="Submit Issue">
+							</div>
+							
+						</form>
+						
+					</div><!-- /.tab-pane -->
+					
+				</div><!-- /#myTabContent -->
+			</div> <!-- /.col -->
+		</div><!-- /.row -->
+		
+	</div><!-- #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/default");
+?>
+
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Populate the Topic Dropdown on level change --//
+		$('#athletic-level').change(function(event){
+			//-- Remove all options except for default --//
+			$('#lesson-topic option:not([value=""])').remove();
+			//-- Add additional options --//
+			var level = $(this).val();
+			if(level == 1){
+				var topics = [<?php
+				//-- list out js array --//
+				$num = 0;
+				foreach($lv1_topics as $topic){
+					if($num != 0){ echo ", "; }
+					echo "'".$topic."'";
+					$num++;
+				} ?>];
+				for(var i=0; i < 4; i++){
+					$('#lesson-topic').append('<option value="'+ topics[i] +'">'+ topics[i] +'</option>');
+				}
+			}else if(level == 2){
+				var topics = [<?php
+				//-- list out js array --//
+				$num = 0;
+				foreach($lv2_topics as $topic){
+					if($num != 0){ echo ", "; }
+					echo "'".$topic."'";
+					$num++;
+				} ?>];
+				for(var i=0; i < 4; i++){
+					$('#lesson-topic').append('<option value="'+ topics[i] +'">'+ topics[i] +'</option>');
+				}
+			}else if(level == 3){
+				var topics = [<?php
+				//-- list out js array --//
+				$num = 0;
+				foreach($lv3_topics as $topic){
+					if($num != 0){ echo ", "; }
+					echo "'".$topic."'";
+					$num++;
+				} ?>];
+				for(var i=0; i < 9; i++){
+					$('#lesson-topic').append('<option value="'+ topics[i] +'">'+ topics[i] +'</option>');
+				}
+			}else if(level == 4){
+				var topics = [<?php
+				//-- list out js array --//
+				$num = 0;
+				foreach($lv4_topics as $topic){
+					if($num != 0){ echo ", "; }
+					echo "'".$topic."'";
+					$num++;
+				} ?>];
+				for(var i=0; i < 6; i++){
+					$('#lesson-topic').append('<option value="'+ topics[i] +'">'+ topics[i] +'</option>');
+				}
+			}
+		});
+	});
+</script>
+
+<?php
+	$this->partial("partials/footer-bottom");
+?>

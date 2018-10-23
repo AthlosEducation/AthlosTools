@@ -1,0 +1,807 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/magnific/jquery.magnific-popup.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/*-------------------------------------
+			Top Level Athletic Curriculum
+		--------------------------------------*/
+		$('#theOuterTabs').change(function(event){
+			var lessonID = $(this).val();
+			//-- hide all panels --//
+			$('#topTab-Content').children('.tab-pane.active').removeClass('in').removeClass('active');
+			if(lessonID){
+				//-- show correct panel --//
+				$('#topTab-Content').children(lessonID).addClass('in').addClass('active');
+			}
+		});
+		
+		
+		/*------------------------------------
+			View Athletic Curriculum
+		-------------------------------------*/
+		$('.lesson-nav').change(function(event){
+			var lessonID = $(this).val();
+			//-- hide all panels --//
+			$(this).siblings('.tab-content').children('.tab-pane.active').removeClass('in').removeClass('active');
+			if(lessonID){
+				//-- show correct panel --//
+				$(this).siblings('.tab-content').children(lessonID).addClass('in').addClass('active');
+			}
+		});
+		$('.subfolder-lesson-nav > li > a').click(function(event){
+			event.preventDefault();
+			var targetID = $(this).attr('href');
+			//-- hide all panels --//
+			$(this).parent('li').parent('ul').siblings('.tab-content').children('.tab-pane.active').removeClass('in').removeClass('active');
+			if(targetID){
+				//-- show correct panel --//
+				$(this).parent('li').parent('ul').siblings('.tab-content').children(targetID).addClass('in').addClass('active');
+			}
+		});
+		/*-- end view curriculum --*/
+		
+		/*--------------------------
+			Resource Upload Form
+		---------------------------*/
+		$('#upload-new-resource-form').submit(function(){
+			$('#form-errors').hide();
+			var level1 = $('#level1-folder').val();
+			var level2 = $('#level2-folder').val();
+			var files = $('#resourceupload')[0].files;
+			if(files.length){
+				//-- make sure level and topic are selected --//
+				if(level1 && level2){
+					for (var i = 0; i < files.length; i++)
+					{
+						var doc_url = files[i].name;
+						var doc_name = doc_url.substr(doc_url.lastIndexOf('\\') + 1);
+						var ext = doc_name.substr(doc_name.lastIndexOf('.') + 1).toLowerCase();
+						//-- Make sure is valid filetype --//
+						if(ext == 'pdf' || ext == 'doc' || ext == 'docx' || ext == 'zip' || ext == 'xls' || ext == 'xlsx'){
+							//-- no error --//
+							
+						}else{
+							//-- if invalid filetype --//
+							$('#form-errors').html('<strong>Wrong Filetype!</strong> <span>Only PDF, Word Docs, Excel Spreadsheets & Zip Archives Allowed.</span>').show();
+							return false;
+							//break;
+						}
+					}
+				}else{
+					//-- if invalid filetype --//
+					$('#form-errors').html('<strong>Missing Folders</strong> <span>Please select a parent folder along with subsequent sub folders.</span>').show();
+					return false;
+				}
+			}else{
+				//-- no file selected --//
+				$('#form-errors').html('<strong>No File Selected!</strong> <span>Select a file and then try again.</span>').show();
+				return false;
+			}
+		});
+		
+		$('#resourceupload').change(function(){
+			var files = $(this)[0].files;
+			if(files.length){
+				for (var i = 0; i < files.length; i++)
+				{
+					var doc_url = files[i].name;
+					var doc_name = doc_url.substr(doc_url.lastIndexOf('\\') + 1);
+					var ext = doc_name.substr(doc_name.lastIndexOf('.') + 1).toLowerCase();
+					
+					//-- Make sure is valid filetype --//
+					if(ext == 'pdf' || ext == 'doc' || ext == 'docx' || ext == 'zip' || ext == 'xls' || ext == 'xlsx'){
+						var upStr = '<p class="document-to-upload '+ ext +'"><span class="the-doc-name">'+ doc_name +'</span></p>';
+						$('#res-up-err').hide();
+						$('#documents-to-upload').append(upStr);
+					}else{
+						$('#documents-to-upload').html('').hide();
+						$('#res-up-err').html('<strong>Wrong Filetype!</strong> <span>Only PDF, Word Docs, Excel Spreadsheets & Zip Archives Allowed.</span>').show();
+						break;
+					}
+				}
+				$('#documents-to-upload, #documents-to-upload > .document-to-upload').show();
+			}else{
+				$('#documents-to-upload').html('').hide();
+				$('#res-up-err').html('<strong>Oh Snap!</strong> <span>No document selected.</span>').show();
+			}
+		});
+		
+		var folders = [];
+		<?php
+		//-- Format folders for JS Arrays --//
+		$levels = '';
+		$names = '';
+		$output = '';
+		if(isset($folders) && !empty($folders)){
+			foreach($folders as $folderID => $folder_contents){
+				$output.= 'folders['.$folderID.'] = {"name": "'.$folder_contents['name'].'",';
+				foreach($folder_contents as $subfolder => $subfolder_contents){
+					if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){
+						$output.= '"'.$subfolder.'": {"name": "'.$subfolder_contents['name'].'"},';
+					}
+				}
+				$output.= '};';
+			}
+		}
+		echo $output;
+		
+		?>
+		
+		//-- Populate Parent Folder Options --//
+		$.each(folders, function(index, value){
+			if(value !== undefined){
+				$('#level1-folder').append('<option value="'+ index +'" class="dynamic">'+ value["name"] +'</option>');
+			}
+		});
+		//-- Populate Subfolder Options --//
+		$('#level1-folder').change(function(){
+			var curFolder = $(this).val();
+			
+			//-- Replace Level 2 values --//
+			$('#level2-folder').children('option.dynamic').remove();
+			jQuery.each(folders[curFolder], function(index, value){
+				if(value !== undefined && index !== 'name'){
+					$('#level2-folder').append('<option value="'+ index +'" class="dynamic">'+ value["name"] +'</option>');
+				}
+			});
+			//-- Show Level 2 & Clear Value --//
+			$('#level2-folder').val('').parent('p').show(true);
+		});
+		/*-- end resource upload form --*/
+		
+		/*-------------------------------------
+			Delete Resource from S3 Storage
+		--------------------------------------*/
+		$('.delete-doc').click(function(){
+			var filename = $(this).attr('data-name');
+			var level = $(this).attr('data-level');
+			var unit = $(this).attr('data-unit');
+			var container = $(this).parent('div.download');
+			bootbox.confirm("Are you sure you want to delete <strong>"+ filename +"</strong>?", function(result) {
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/deleteresource";'."\n"; ?>
+					var data = {
+						action: "delete_resource",
+						filename: filename,
+						level: level,
+						unit: unit
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide document on page --//
+									container.delay(500).slideUp('fast');
+
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Document Deleted', 'The document was removed successfully from resources.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Document Not Removed', 'There was a problem removing the document, Please refresh the page and try again.', 7500, 'fa fa-ban', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		
+		$('.delete-doc-new').click(function(){
+			var filename = $(this).attr('data-name');
+			var folder = $(this).attr('data-folder');
+			var container = $(this).parent('div.download');
+			bootbox.confirm("Are you sure you want to delete <strong>"+ filename +"</strong>?", function(result) {
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/newdeleteresource";'."\n"; ?>
+					var data = {
+						action: "delete_resource",
+						filename: filename,
+						folder: folder
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide document on page --//
+									container.delay(500).slideUp('fast', function(){
+										jQuery(this).remove();
+									});
+
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Document Deleted', 'The document was removed successfully from resources.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Document Not Removed', 'There was a problem removing the document, Please refresh the page and try again.', 7500, 'fa fa-ban', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*-- end delete resource --*/
+		
+		/* Manage Folders Scripts
+		---------------------------*/
+		//-- hide accordion pieces --//
+		$('#folder-table tr.child, #folder-table tr.grandchild, #folder-table tr.great-grandchild').hide();
+		
+		//-- instantiate accordion functionality --//
+		$('#folder-table tr.parent > td > .fa').on("click", function(){
+			var row = $(this).parent('td').parent('tr').attr('data-row');
+			if($(this).hasClass('open')){
+				$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+				$(this).removeClass('open');
+				//-- close child sections --//
+				$('.c-'+ row +' .fa.open, .gc-'+ row +' .fa.open').removeClass('fa-toggle-down open').addClass('fa-toggle-right');
+				$('.c-'+ row +', .gc-'+ row +', .ggc-'+ row).slideUp(100);
+			}else{
+				$('.c-'+ row).slideDown(100);
+				$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+				$(this).addClass('open');
+			}
+		});
+		/*$('#folder-table tr.child > td > .fa').on("click", function(){
+			var row = $(this).parent('td').parent('tr').attr('data-row');
+			if($(this).hasClass('open')){
+				$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+				$(this).removeClass('open');
+				//-- close child sections --//
+				$('.c-'+ row +' .fa.open').removeClass('fa-toggle-down open').addClass('fa-toggle-right');
+				$('.c-'+ row +', .gc-'+ row).slideUp(100);
+			}else{
+				$('.c-'+ row).slideDown(100);
+				$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+				$(this).addClass('open');
+			}
+		});*/
+		/*$('#folder-table tr.grandchild > td > .fa').on("click", function(){
+			var row = $(this).parent('td').parent('tr').attr('data-row');
+			if($(this).hasClass('open')){
+				$('.c-'+ row).slideUp(100);
+				$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+				$(this).removeClass('open');
+			}else{
+				$('.c-'+ row).slideDown(100);
+				$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+				$(this).addClass('open');
+			}
+		});*/
+		
+		//-- Allow to select icon --//
+		$('#icon-select > div').click(function(){
+			$('#icon-select > div').removeClass('active');
+			$(this).addClass('active');
+		});
+		//-- Allow to select icon while Editing --//
+		$('#icon-select-edit > div').click(function(){
+			$('#icon-select-edit > div').removeClass('active');
+			$(this).addClass('active');
+		});
+		
+		//-- Add Permissions - All Campus Checkbox --//
+		$('#add-all-campuses').change(function(){
+			if($(this).prop("checked")){
+				$('#addFolderForm').find('.add-state-permission').prop('checked', true);
+			}else{
+				$('#addFolderForm').find('.add-state-permission').prop('checked', false);
+			}
+		});
+		//-- Edit Permissions - All Campus Checkbox --//
+		$('#edit-all-campuses').change(function(){
+			if($(this).prop("checked")){
+				$('#editFolderForm').find('.edit-state-permission').prop('checked', true);
+			}else{
+				$('#editFolderForm').find('.edit-state-permission').prop('checked', false);
+			}
+		});
+		
+		//-- Add Permissions - Single State Checkboxes --//
+		$('.add-state-permission').change(function(){
+			if($(this).prop("checked")){
+				//-- if all campuses are checked = Check "All Campus Checkbox" --//
+				if(!$(this).parent('.checkbox-inline').parent('.form-group').find('.add-state-permission').is(':not(:checked)')){
+					$('#add-all-campuses').prop('checked', true);
+				}
+			}else{
+				//-- If any state is unchecked = Uncheck "All Campus Checkbox" --//
+				$('#add-all-campuses').prop('checked', false);
+			}
+		});
+		//-- Edit Permissions - Single State Checkboxes --//
+		$('.edit-state-permission').change(function(){
+			if($(this).prop("checked")){
+				//-- if all campuses are checked = Check "All Campus Checkbox" --//
+				if(!$(this).parent('.checkbox-inline').parent('.form-group').find('.edit-state-permission').is(':not(:checked)')){
+					$('#edit-all-campuses').prop('checked', true);
+				}
+			}else{
+				//-- If any state is unchecked = Uncheck "All Campus Checkbox" --//
+				$('#edit-all-campuses').prop('checked', false);
+			}
+		});
+		
+		//-- Auto-Compose Folder URL --//
+		$('#add-name').blur(function(){
+			var url = $(this).val().replace(/\s+/g, '-').replace(/[|&;$%@"<>()+,']/g, "").replace(/-and-/g, "-").replace(/--/g, "-").toLowerCase();
+			$('#add-url').val(url);
+		});
+		
+		/* Show Add Folder Modal
+		-------------------------*/
+		$('.addFolder').click(function(){
+			//-- grab folder ID --//
+			var fid = $(this).parent('td').parent('tr').attr('data-row');
+			
+			//-- Clear / Set Field Values --//
+			$('#add-name, #add-url').val('');
+			if(fid){ $('#add-parent').val(fid); }else{ $('#add-parent').val(''); }
+			$('#add-all-campuses, .add-state-permission').prop('checked', true);
+			$('#icon-select > div').removeClass('active');
+			$('#icon-select > div:first').addClass('active');
+			
+			//-- Show Modal --//
+			$('#addFolderModal').modal('show');
+		});
+		
+		$('.createFolder').click(function(){
+			//-- Grab Variables --//
+			var fname = $('#add-name').val();
+			var url = $('#add-url').val();
+			var fparent = $('#add-parent').val();
+			var icon = $('#icon-select > div.active').attr('data-icon');
+			if($('#add-all-campuses').is(':checked')){
+				var permissions = ['all'];
+			}else{
+				var permissions = [];
+				$.each($('.add-state-permission:checked'), function(index, item){
+					permissions.push($(item).val());
+				});
+			}
+			if(fparent == ""){ fparent = 0; }
+			
+			if(fname && url && icon && permissions.length > 0){
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/addfolder";'."\n"; ?>
+				var data = {
+					action: "add_folder",
+					folder: fname,
+					url: url,
+					fparent: fparent,
+					icon: icon,
+					permissions: permissions
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Hide Modal --//
+								$('#addFolderModal').modal('hide');
+								
+								//-- grab child classes --//
+								if(fparent){
+									var parentrow = $('#folder-table').find('tr[data-row="'+ fparent +'"]');
+									if($(parentrow).hasClass('parent')){
+										var childClasses = 'child c-'+ fparent;
+										var mleft = 25;
+										var iclass = 'fa-folder-open';
+									}/*else if($(parentrow).hasClass('child')){
+										var childClasses = 'grandchild gc-'+ results.parents[0] +' c-'+ fparent;
+										var mleft = 45;
+										var iclass = 'fa-toggle-right';
+									}else if($(parentrow).hasClass('grandchild')){
+										var childClasses = 'great-grandchild ggc-'+ results.parents[1] +' gc-'+ results.parents[0] +' c-'+ fparent;
+										var mleft = 65;
+										var iclass = 'fa-folder-open';
+									}*/
+									$(parentrow).after('<tr class="'+ childClasses +'" data-row="'+ results.newid +'"><td><i class="fa '+ iclass +'" style="margin-left: '+ mleft +'px; cursor: pointer;"></i> &nbsp; '+ fname +'</td><td>'+ results.visible +'</td><td></td></tr>');
+								}else{
+									var childClasses = 'parent';
+									var iclass = 'fa-toggle-right';
+									$('#folder-table tbody').append('<tr class="'+ childClasses +'" data-row="'+ results.newid +'"><td><i class="fa '+ iclass +'" style="margin-left: 5px; cursor: pointer;"></i> &nbsp; '+ fname +'</td><td>'+ results.visible +'</td><td></td></tr>');
+								}
+								
+								//-- Instantiate Accordion classes again --//
+								$('#folder-table tr.parent > td > .fa').off("click").on("click", function(){
+									var row = $(this).parent('td').parent('tr').attr('data-row');
+									if($(this).hasClass('open')){
+										$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+										$(this).removeClass('open');
+										//-- close child sections --//
+										$('.c-'+ row +' .fa.open, .gc-'+ row +' .fa.open').removeClass('fa-toggle-down open').addClass('fa-toggle-right');
+										$('.c-'+ row +', .gc-'+ row +', .ggc-'+ row).slideUp(100);
+									}else{
+										$('.c-'+ row).slideDown(100);
+										$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+										$(this).addClass('open');
+									}
+								});
+								/*$('#folder-table tr.child > td > .fa').off("click").on("click", function(){
+									var row = $(this).parent('td').parent('tr').attr('data-row');
+									if($(this).hasClass('open')){
+										$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+										$(this).removeClass('open');
+										//-- close child sections --//
+										$('.c-'+ row +' .fa.open').removeClass('fa-toggle-down open').addClass('fa-toggle-right');
+										$('.c-'+ row +', .gc-'+ row).slideUp(100);
+									}else{
+										$('.c-'+ row).slideDown(100);
+										$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+										$(this).addClass('open');
+									}
+								});
+								$('#folder-table tr.grandchild > td > .fa').off("click").on("click", function(){
+									var row = $(this).parent('td').parent('tr').attr('data-row');
+									if($(this).hasClass('open')){
+										$('.c-'+ row).slideUp(100);
+										$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+										$(this).removeClass('open');
+									}else{
+										$('.c-'+ row).slideDown(100);
+										$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+										$(this).addClass('open');
+									}
+								});*/
+								
+								//-- Success Message --//
+								howlerMsg('success', 'Folder Added', 'The folder was added successfully', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}else{
+				bootbox.alert("<strong>Something is Missing: </strong> Enter a folder name, select an icon and give the folder permissions. (FYI: the folder has to be viewable by someone.)", function(){ });
+			}
+			
+		});
+		
+		
+		/*-----------------
+			Edit Folder
+		------------------*/
+		$('.editFolder').click(function(e){
+			//-- Retrieve User --//
+			var theID = $(this).parent('td').parent('tr').attr('data-row');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/editfolder";'."\n"; ?>
+			var data = {
+				action: "grab_folder",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#editFolderForm .form-control').val('');
+							$('#edit-all-campuses, .edit-state-permission').prop('checked', false);
+							$('#icon-select-edit > div').removeClass('active');
+							
+							//-- Populate Modal --//
+							var newID = results.id;
+							$('#edit-name').val(results.name);
+							$('#edit-url').val(results.url);
+							$('#edit-parent').val(results.parent);
+							$('#icon-select-edit > div[data-icon="'+ results.icon +'"]').addClass('active');
+							if(results.permissions[0] == 'all'){
+								$('#edit-all-campuses, .edit-state-permission').prop('checked', true);
+							}else{
+								$.each(results.permissions, function(i, val){
+									$('.edit-state-permission[value="'+ val +'"]').prop('checked', true);
+								});
+							}
+							
+							//-- Show modal --//
+							$('#editFolderModal .modal-header h3 .insert-foldername').text(results.name);
+							$('#editFolderModal').modal('show');
+							
+							//-- validate form --//
+							$('#editFolderSubmit').off().click(function(event){
+								event.preventDefault();
+								//-- Check for any failed ajax checks --//
+								if(!$('#editFolderForm .failed').get(0)){
+									//-- Passed Validation - Run Edit Script --//
+
+									var fname = $('#edit-name').val();
+									var fparent = $('#edit-parent').val();
+									var icon = $('#icon-select-edit > div.active').attr('data-icon');
+									if($('#edit-all-campuses').is(':checked')){
+										var permissions = ['all'];
+									}else{
+										var permissions = [];
+										$.each($('.edit-state-permission:checked'), function(index, item){
+											permissions.push($(item).val());
+										});
+									}
+									if(fparent == ""){ fparent = 0; }
+
+									var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/editfolder";'."\n"; ?>
+									var info = {
+										action: "edit_folder",
+										folder_id: newID,
+										folder: fname,
+										fparent: fparent,
+										icon: icon,
+										permissions: permissions
+									};
+									jQuery.post(ajaxurl, info, function(json){
+										if(typeof json != 'undefined'){
+											var results = jQuery.parseJSON(json);
+											if(typeof results.result != 'undefined'){
+												if(results.result == 'success'){
+													//-- Hide Modal --//
+													$('#editFolderModal').modal('hide');
+
+													//-- Success Message --//
+													howlerMsg('success', 'Folder Updated', 'The folder was updated successfully', 7500, 'fa fa-check', false);
+												}else if(results.result == 'failed'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+												}
+											}
+										}
+									});
+
+								}
+								
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the folder data, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*---------------------
+			end Edit Folder
+		----------------------*/
+		
+		
+		/*--------------------
+			Delete Folder
+		---------------------*/
+		$('.delFolder').click(function(e){
+		    var theID = $(this).parent('td').parent('tr').attr('data-row');
+			var theName = $(this).attr('data-folder-name');
+			var container = $(this).parent('td').parent('tr');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/delfolder";'."\n"; ?>
+			var data = {
+				action: "delete_folder",
+				theID: theID
+				};
+			//-- Ask to confirm "Do you really want to delete this?" --//
+			bootbox.confirm("Are you sure you want to delete the <span style='font-weight: bold;'>"+ theName +"</span> Folder?", function(result) {
+				if(result){
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- hide folder and all child folders --//
+									$(container).delay(500).slideUp('fast', function(){
+										$(this).remove();
+									});
+									$('.c-'+ theID +', .gc-'+ theID +', .ggc-'+ theID).delay(500).slideUp('fast', function(){
+										$(this).remove();
+									});
+									
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Folder Deleted', 'The folder was deleted successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*-----------------------
+			end Delete Folder
+		------------------------*/
+		
+	});
+</script>
+
+<!-- Add Folder Modal -->
+<div id="addFolderModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Add Folder</h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Add Student Form -->
+				<form id="addFolderForm" class="parsley-form" method="post">
+					
+					<div class="form-group">
+						<label for="add-name">Folder Name</label>
+						<input type="text" name="name" id="add-name" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-url">Folder URL</label>
+						<input type="text" name="url" id="add-url" class="form-control" value="" data-required="true" disabled="disabled">
+					</div>
+					<div class="form-group">
+						<label for="add-parent">Parent Folder</label> &nbsp;<em class="field-msg"></em>
+						<select name="parent" id="add-parent" class="form-control">
+							<option value="">No Parent Folder</option>
+							<?php
+								//-- Iterate through folders --//
+								if(isset($folders) && !empty($folders)){
+									foreach($folders as $folderID => $folder_contents){
+										echo '<option value="'.$folderID.'">'.$folder_contents['name'].'</option>';
+										foreach($folder_contents as $subfolder => $subfolder_contents){
+											if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){
+												echo '<option value="'.$subfolder.'"> &nbsp;&nbsp; '.$subfolder_contents['name'].'</option>';
+												foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+													if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){
+														echo '<option value="'.$subfolder2.'"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '.$subfolder2_contents['name'].'</option>';
+													}
+												}
+											}
+										}
+									}
+								}
+							?>
+						</select>
+					</div>
+					
+					<?php //-- Select Folder Icon --//
+						if(isset($icons) && !empty($icons)){ ?>
+							<div class="form-group">	
+								<label for="add-icon">Folder Icon</label>
+								<div id="icon-select">
+									<div class="active" data-icon="fa-folder-open"><i class="fa fa-folder-open"></i></div>
+									<?php
+										foreach($icons as $icon){
+											echo '<div data-icon="'.$icon.'" style="padding: 5px; font-size: 16px; display: inline; cursor: pointer;"><i class="fa '.$icon.'"></i></div>';
+										}
+									?>
+								</div>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Permissions --//
+						if(isset($districts) && !empty($districts)){ ?>
+							<div class="form-group">
+								<label>Permissions (districts)</label><br />
+								<label class="checkbox-inline">
+									<input type="checkbox" id="add-all-campuses" value="all" data-group="viewable" checked="checked" /> All Campuses
+								</label><?php
+								//-- List out all states --//
+								foreach($districts as $district){ ?>
+									<label class="checkbox-inline">
+										<input type="checkbox" class="add-state-permission" value="<?php echo $district->id; ?>" data-group="viewable" checked="checked" /> <?php echo $district->abbreviation; ?>
+									</label><?php
+								} ?>
+							</div><?php
+						}
+					?>
+					
+				</form>
+				
+			</div><!-- /.modal-body -->
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary createFolder">Add Folder</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit Folder Modal -->
+<div id="editFolderModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Edit Folder: <span class="insert-foldername"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit Folder Form -->
+				<form id="editFolderForm" method="post">
+					
+					<div class="form-group">
+						<label for="edit-name">Folder Name</label>
+						<input type="text" name="name" id="edit-name" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="edit-url">Folder URL</label>
+						<input type="text" name="edit-url" id="edit-url" class="form-control" value="" disabled="disabled">
+					</div>
+					<div class="form-group">
+						<label for="edit-parent">Parent Folder</label>
+						<select name="parent" id="edit-parent" class="form-control">
+							<option value="">No Parent Folder</option>
+							<?php
+								//-- Iterate through folders --//
+								if(isset($folders) && !empty($folders)){
+									foreach($folders as $folderID => $folder_contents){
+										echo '<option value="'.$folderID.'">'.$folder_contents['name'].'</option>';
+										foreach($folder_contents as $subfolder => $subfolder_contents){
+											if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){
+												echo '<option value="'.$subfolder.'"> &nbsp;&nbsp; '.$subfolder_contents['name'].'</option>';
+												foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+													if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){
+														echo '<option value="'.$subfolder2.'"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '.$subfolder2_contents['name'].'</option>';
+													}
+												}
+											}
+										}
+									}
+								}
+							?>
+						</select>
+					</div>
+					
+					<?php //-- Select Folder Icon --//
+						if(isset($icons) && !empty($icons)){ ?>
+							<div class="form-group">	
+								<label for="edit-icon">Folder Icon</label>
+								<div id="icon-select-edit">
+									<?php
+										foreach($icons as $icon){
+											echo '<div data-icon="'.$icon.'" style="padding: 5px; font-size: 16px; display: inline; cursor: pointer;"><i class="fa '.$icon.'"></i></div>';
+										}
+									?>
+								</div>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Permissions --//
+						if(isset($districts) && !empty($districts)){ ?>
+							<div class="form-group">
+								<label>Permissions (districts)</label><br />
+								<label class="checkbox-inline">
+									<input type="checkbox" id="edit-all-campuses" value="all" data-group="viewable"> All Campuses
+								</label><?php
+								//-- List out all states --//
+								foreach($districts as $district){ ?>
+									<label class="checkbox-inline">
+										<input type="checkbox" class="edit-state-permission" value="<?php echo $district->id; ?>" data-group="viewable"> <?php echo $district->abbreviation; ?>
+									</label><?php
+								} ?>
+							</div><?php
+						}
+					?>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="editFolderSubmit">Update Folder</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

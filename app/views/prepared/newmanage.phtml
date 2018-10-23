@@ -1,0 +1,316 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Manage Prepared Minds Curriculum';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="col-md-3 col-sm-5">
+			<!-- Stacked Tabs - Navigation -->
+			<ul class="nav nav-pills nav-stacked">
+				<!--<li class="active">
+					<a href="#manage-docs" data-toggle="tab"><i class="fa fa-download"></i> &nbsp;&nbsp;Manage Downloads</a>
+				</li>-->
+				<li class="active">
+					<a href="#manage-docs-2" data-toggle="tab"><i class="fa fa-download"></i> &nbsp;&nbsp;Manage Downloads</a>
+				</li>
+				<li>
+					<a href="#upload-docs" data-toggle="tab"><i class="fa fa-upload"></i> &nbsp;&nbsp;Upload Files</a>
+				</li>
+				<li>
+					<a href="#manage-folders" data-toggle="tab"><i class="fa fa-folder-open"></i> &nbsp;&nbsp;Manage Folders</a>
+				</li>
+			</ul>
+
+		</div><!-- /.col -->
+
+		<div class="col-md-9 col-sm-7">
+
+			<div class="tab-content stacked-content">
+				
+				<div class="tab-pane fade in active" id="manage-docs-2">
+					<div id="manage-downloads">
+						<h3 class="heading"><i class="fa fa-download"></i> Manage Downloads</h3>
+
+						<?php
+						//if($this->session->get('user-school') === null || in_array($this->session->get("campus-state"), $folder_contents['permissions'])){
+							//-- Echo out contents of Amazon Bucket --//
+							if(isset($folders) && !empty($folders)){
+								/*foreach($folders as $folder){
+									print_r($folder); echo '<br><br><br>';
+								}*/ ?>
+									<div class="row">
+										<div class="col-md-12">
+											
+											<?php if($cap['prepared-mind']['manage']){ ?>
+												<div style="position: relative; bottom: 10px; margin-bottom: 10px;">
+													<label for="theOuterTabs">Top Curriculum Folder</label><br />
+													<select id="theOuterTabs" class="top-folder-nav form-control"><?php
+														$x = 0;
+														foreach($folders as $folderID => $folder_contents){ ?>
+															<option value="#top-folder-unit-<?php echo $folderID; ?>" <?php if($x == 0){ echo 'selected="selected"'; } ?>><?php echo $folder_contents['name']; ?></option><?php
+															$x++;
+														} ?>
+													</select>
+												</div><?php
+												}
+											?>
+											
+											<div id="topTab-Content" class="tab-content">
+												<?php
+													$top_panel = 0;
+													foreach($folders as $folderID => $folder_contents){
+														//-- Allow Administrators in - or those that have folders assigned for their viewing --//
+														if(($cap['prepared-mind']['manage']) || ($this->session->get("campus-state") !== null && in_array($this->session->get("campus-state"), $folder_contents['permissions']))){ ?>
+															<div class="tab-pane fade <?php if($top_panel == 0){ echo 'in active'; } ?>" id="top-folder-unit-<?php echo $folderID; ?>">
+															
+															
+															    <ul id="myTab" class="nav nav-pills">
+																	<?php
+																	$pillCount = 1;
+																	foreach($folder_contents as $subfolder => $subfolder_contents){
+																		if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){ ?>
+																			<li <?php if($pillCount == 1){ echo 'class="active"'; } ?>>
+																	        	<a href="#unit-<?php echo $subfolder; ?>-contents" data-toggle="tab">
+																	        		<i class="fa <?php if(isset($subfolder_contents['icon'])){ echo $subfolder_contents['icon']; } ?>"></i> 
+																	        		&nbsp;&nbsp;<?php if(isset($subfolder_contents['name'])){ echo $subfolder_contents['name']; } ?>
+																	        	</a>
+																	        </li><?php
+																			$pillCount++;
+																		}
+																	} ?>
+															    </ul>
+
+																<div class="tab-content">
+
+																	<?php
+																	//-- Unit Navigation --//
+																	$panelCount = 1;
+																	if(!empty($folder_contents)){
+																		foreach($folder_contents as $subfolder => $subfolder_contents){
+																			if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){ ?>
+																				<div class="tab-pane fade <?php if($panelCount == 1){ echo 'in active'; } ?>" id="unit-<?php echo $subfolder; ?>-contents">
+																					<h3><?php echo '<i class="fa '.$subfolder_contents['icon'].'"></i> &nbsp;'.$subfolder_contents['name']; ?></h3>
+
+																					<label for="innerTabs-<?php echo $subfolder; ?>">Sub-Folder</label><br />
+																					<select id="innerTabs-<?php echo $subfolder; ?>" class="lesson-nav form-control">
+																						<option value="">Select Folder</option><?php
+																							if(!empty($subfolder_contents)){
+																								foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+																									if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){ ?>
+																										<optgroup label="<?php echo $subfolder2_contents['name']; ?>"><?php
+																											//-- Iterate through child folders --//
+																											foreach($subfolder2_contents as $subfolder3 => $subfolder3_contents){
+																												if($subfolder3 != 'name' && $subfolder3 != 'url' && $subfolder3 != 'icon' && $subfolder3 != 'permissions'){ ?>
+																													<option value="#folder-unit-<?php echo $subfolder3; ?>"><?php echo $subfolder3_contents['name']; ?></option><?php
+																												}
+																											} ?>
+																										</optgroup><?php
+																									}
+																								}
+																							} ?>
+																					</select>
+
+																					<div id="unit-<?php echo $subfolder; ?>-tab-nav" class="tab-content" style="margin: 15px 0 0; padding: 20px 0 0; border-top: 1px dashed #eaeaea;"><?php
+																						//-- List out lessons by grade level --//
+																						$num = 0;
+																						foreach($folder_contents as $subfolder => $subfolder_contents){
+																							if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){
+																								foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+																									if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){
+																										foreach($subfolder2_contents as $subfolder3 => $subfolder3_contents){
+																											if($subfolder3 != 'name' && $subfolder3 != 'url' && $subfolder3 != 'icon' && $subfolder3 != 'permissions'){ ?>
+																												<div class="tab-pane fade" id="folder-unit-<?php echo $subfolder3; ?>">
+																													<h4 style="padding-bottom: 8px; border-bottom: 2px solid #e1e1e1;"><?php echo $subfolder3_contents['name']; ?></h4><?php
+																													foreach($subfolder3_contents[0] as $file){
+																													    $fname = $file['name'];
+																														$fileNameArr = explode('/', $file['name']);
+																														$trimmedName = array_pop($fileNameArr);
+																													    $furl = "http://athlos-tools.s3.amazonaws.com/".$fname;
+																														$fsize = $file['size'];
+																														$ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+
+																														//-- determine what class to use --//
+																														if($ext == 'doc' || $ext == 'docx'){
+																															$useClass = 'download-word';
+																														}else if($ext == 'zip'){
+																															$useClass = 'download-zip';
+																														}else if($ext == 'xls' || $ext == 'xlsx'){
+																															$useClass = 'download-xls';
+																														}else{
+																															$useClass = 'download-doc';
+																														}
+
+																													    //-- Output link to file --//
+																														echo '<div class="download '.$useClass.'" style="margin: 0; padding: 18px 0 17px 60px; background-position: 0 10px; background-size: 40px;">';
+																													    echo '<a href="'.$furl.'">'.$trimmedName.'</a>';
+																														echo '<span style="margin: 0 0 0 10px; color: #808080;">('.round($fsize / 1024, 1).' KB)</span>';
+																														echo '<span class="btn btn-xs btn-primary delete-doc-new" data-name="'.$trimmedName.'" data-folder="'.$subfolder3.'" style="margin: 0 0 0 30px;"><i class="fa fa-times"></i> Remove</span>';
+																	
+																														echo '</div>';
+																													} ?>
+
+																												</div> <!-- /.tab-pane --><?php
+																											}
+																										}
+																									}
+																								}
+																							}
+																							$num++;
+																						} ?>
+																					</div> <!-- /.tab-content -->
+
+																				</div> <!-- /.tab-pane --><?php
+																				$panelCount++;
+																			}
+																		}
+																	} ?>
+												
+																</div> <!-- /.tab-content -->
+															
+															
+															
+															</div><!-- /.tab-pane --><?php
+															$top_panel++;
+														}
+													}
+												?>
+											</div><!-- /.tab-content -->
+											
+										</div> <!-- /.col -->
+									</div> <!-- /.row --><?php
+							}
+						?>
+					</div>
+				</div><!-- /.tab-pane -->
+
+				<div class="tab-pane fade" id="upload-docs">
+					<div id="upload-documents">
+						<h3 class="heading"><i class="fa fa-upload"></i> Upload Files</h3>
+
+						<p>
+							Select the file that you would like to upload into the list of uploaded resource documents, Please ensure that the file you are uploading is a pdf, word document, excel spreadsheet or zip archive:
+						</p>
+
+						<div id="form-errors" class="alert alert-danger" style="display: none;"></div>
+
+						<!-- Upload PDF to Amazon Bucket Form -->
+						<form id="upload-new-resource-form" action="" method="post" enctype="multipart/form-data">
+							<input type="hidden" name="action" value="upload_resource" />
+							<p>
+								<span class="btn btn-primary fileinput-button">
+						        	<i class="glyphicon glyphicon-plus"></i>
+						        	<span>Select Document</span>
+						        	<!-- The file input field used as target for the file upload widget -->
+						        	<input id="resourceupload" type="file" name="theFile">
+						    	</span>
+								<span id="document-to-upload">
+									<span class="the-doc-name"></span>
+								</span>
+								<span id="res-up-err" class="alert alert-danger"></span>
+							</p>
+							<p class="level1-folder" style="margin-bottom: 5px;">
+								<label for="level1-folder">Top Folder</label>
+								<select name="level1-folder" id="level1-folder" class="form-control" style="max-width: 400px;">
+									<option value="">Select Folder</option>
+								</select>
+							</p>
+							<p class="level2-folder" style="margin-left: 20px; margin-bottom: 5px; display: none;">
+								<label for="level2-folder" style="margin-left: 5px;"><i class="fa fa-level-up" style="-ms-transform: rotate(90deg); -webkit-transform: rotate(90deg); transform: rotate(90deg);"></i> &nbsp; Sub-Folder</label>
+								<select name="level2-folder" id="level2-folder" class="form-control" style="max-width: 400px;">
+									<option value="">Select Sub-Folder</option>
+								</select>
+							</p>
+							<p class="level3-folder" style="margin-left: 40px; margin-bottom: 5px; display: none;">
+								<label for="level3-folder" style="margin-left: 5px;"><i class="fa fa-level-up" style="-ms-transform: rotate(90deg); -webkit-transform: rotate(90deg); transform: rotate(90deg);"></i> &nbsp; 2nd Sub-Folder</label>
+								<select name="level3-folder" id="level3-folder" class="form-control" style="max-width: 400px;">
+									<option value="">Select Sub-Folder</option>
+								</select>
+							</p>
+							<p class="level4-folder" style="margin-left: 60px; margin-bottom: 5px; display: none;">
+								<label for="level4-folder" style="margin-left: 5px;"><i class="fa fa-level-up" style="-ms-transform: rotate(90deg); -webkit-transform: rotate(90deg); transform: rotate(90deg);"></i> &nbsp; 3rd Sub-Folder</label>
+								<select name="level4-folder" id="level4-folder" class="form-control" style="max-width: 400px;">
+									<option value="">Select Sub-Folder</option>
+								</select>
+							</p>
+						    <p style="margin-top: 20px;">
+						    	<input type="submit" id="upload-doc" class="btn btn-primary" value="Upload" />
+							</p>
+						</form>
+
+					</div>
+				</div><!-- /.tab-pane -->
+				
+				<div class="tab-pane fade" id="manage-folders">
+					<div id="folder-manage">
+						<h3 class="heading"><i class="fa fa-folder-open"></i> Manage Folders <a href="" style="float: right;" class="btn btn-sm btn-success"><i class="fa fa-refresh"></i> &nbsp; Refresh Folders</a></h3>
+
+						<div id="folder-errors" class="alert alert-danger" style="display: none;"></div>
+
+						<table id="folder-table" class="table table-hover table-condensed">
+							<thead>
+								<tr>
+									<th>Folder</th>
+									<th>Campus</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php
+									//-- Iterate through folders --//
+									if(isset($folders) && !empty($folders)){
+										foreach($folders as $folderID => $folder_contents){
+											echo '<tr class="parent" data-row="'.$folderID.'"><td><i class="fa fa-toggle-right" style="margin-left: 5px; cursor: pointer;"></i> &nbsp; '.$folder_contents['name'].'</td><td>'.implode(',', $folder_contents['permissions']).'</td><td><span class="label label-info addFolder"><i class="fa fa-plus"></i> Add</span> <span class="label label-secondary editFolder"><i class="fa fa-pencil"></i> Edit</span> <span class="label label-tertiary delFolder" data-folder-name="'.$folder_contents['name'].'"><i class="fa fa-ban"></i> Delete</span></td></tr>';
+											foreach($folder_contents as $subfolder => $subfolder_contents){
+												if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){
+													echo '<tr class="child c-'.$folderID.'" data-row="'.$subfolder.'"><td><i class="fa fa-toggle-right" style="margin-left: 25px; cursor: pointer;"></i> &nbsp; '.$subfolder_contents['name'].'</td><td>'.implode(',', $subfolder_contents['permissions']).'</td><td><span class="label label-info addFolder"><i class="fa fa-plus"></i> Add</span> <span class="label label-secondary editFolder"><i class="fa fa-pencil"></i> Edit</span> <span class="label label-tertiary delFolder" data-folder-name="'.$subfolder_contents['name'].'"><i class="fa fa-ban"></i> Delete</span></td></tr>';
+													foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+														if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){
+															echo '<tr class="grandchild gc-'.$folderID.' c-'.$subfolder.'" data-row="'.$subfolder2.'"><td><i class="fa fa-toggle-right" style="margin-left: 45px; cursor: pointer;"></i> &nbsp; '.$subfolder2_contents['name'].'</td><td>'.implode(',', $subfolder2_contents['permissions']).'</td><td><span class="label label-info addFolder"><i class="fa fa-plus"></i> Add</span> <span class="label label-secondary editFolder"><i class="fa fa-pencil"></i> Edit</span> <span class="label label-tertiary delFolder" data-folder-name="'.$subfolder2_contents['name'].'"><i class="fa fa-ban"></i> Delete</span></td></tr>';
+															foreach($subfolder2_contents as $subfolder3 => $subfolder3_contents){
+																if($subfolder3 != 'name' && $subfolder3 != 'url' && $subfolder3 != 'icon' && $subfolder3 != 'permissions'){
+																	echo '<tr class="great-grandchild ggc-'.$folderID.' gc-'.$subfolder.' c-'.$subfolder2.'" data-row="'.$subfolder3.'"><td><i class="fa fa-folder-open" style="margin-left: 65px;"></i> &nbsp; '.$subfolder3_contents['name'].'</td><td>'.implode(',', $subfolder3_contents['permissions']).'</td><td><span class="label label-secondary editFolder"><i class="fa fa-pencil"></i> Edit</span> <span class="label label-tertiary delFolder" data-folder-name="'.$subfolder3_contents['name'].'"><i class="fa fa-ban"></i> Delete</span></td></tr>';
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								?>
+							</tbody>
+						</table>
+
+					</div>
+				</div><!-- /.tab-pane -->
+				
+			</div><!-- /.tab-content -->
+
+		</div> <!-- /.col -->
+		
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/prepared-minds");
+	$this->partial("partials/footer-bottom");
+?>

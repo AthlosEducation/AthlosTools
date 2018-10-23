@@ -1,0 +1,153 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js"); 
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/magnific/jquery.magnific-popup.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js"); ?>
+	<script type="text/javascript">
+		jQuery(document).ready(function($){
+			/*-----------------------
+				Lazy Image Loader
+			-----------------------*/
+			/*for(var i=2; i < 13; i++) {
+				$(".lazy-"+ i).each(function(){
+					var thisSource = $(this).data('src');
+					$(this).replaceWith('<img src="'+ thisSource +'" style="width: 100%" alt="Gallery Image" />');
+				});
+			}*/
+			/*-- end lazy loader --*/
+			
+			/*-------------------------
+				Set Control Bindings
+			--------------------------*/
+			$.fn.resetViews = function() {
+				//-- Gather info for modal on curriculum content pages --//
+				$(".viewPlain").off().click(function(){
+					var theTitle = $(this).parent('p').parent('div').prev('div.portlet-header').children('h3').html();
+					var theContent = $(this).parent('p').prev('div.curr-modal-content').html();
+					$('#basicModal h3.modal-title').html(theTitle);
+					$('#basicModal div.modal-body').html(theContent);
+					$('#basicModal').modal('show');
+				});
+				//-- Gather info for more complex modal --//
+				$(".viewComplex").off().click(function(){
+					var theTitle = $(this).parent('p').siblings('h3.curr-display-head').html();
+					var theContent = $(this).parent('p').siblings('div.curr-display-content').html();
+					$('#basicModal h3.modal-title').html(theTitle);
+					$('#basicModal div.modal-body').html(theContent);
+					$('#basicModal').modal('show');
+				});
+			};
+			//-- Bind Events --//
+			$('body').resetViews();
+			
+			/*-- Lightbox Init Function --*/
+			$.fn.resetLightbox = function() {
+				$('.ui-lightbox').off().magnificPopup({
+					type: 'image',
+					closeOnContentClick: false,
+					closeBtnInside: true,
+					fixedContentPos: true,
+					mainClass: 'mfp-no-margins mfp-with-zoom', // class to remove default margin from left and right side
+					image: {
+						verticalFit: true,
+						tError: '<a href="%url%">The image #%curr%</a> could not be loaded.'
+					}
+				});
+
+				$('.ui-lightbox-video, .ui-lightbox-iframe').off().magnificPopup({
+					disableOn: 700,
+					type: 'iframe',
+					mainClass: 'mfp-fade',
+					removalDelay: 160,
+					preloader: false,
+					fixedContentPos: false
+				});
+			};
+			
+			/*---------------------------------
+				Pagination for Content Tabs
+			----------------------------------*/
+			$('.curriculum-pager li > a').click(function(e){
+				e.preventDefault();
+				//-- make sure button isn't disabled --//
+				if($(this).parent('li').hasClass('disabled') || $(this).parent('li').hasClass('active')){ return false; }
+				
+				//-- Figure out what the active page is based on the button clicked --//
+				if($(this).parent('li').hasClass('prev')){
+					var activeItem = $(this).parent('li').siblings('li.active').prev('li').children('a');
+				}else if($(this).parent('li').hasClass('next')){
+					var activeItem = $(this).parent('li').siblings('li.active').next('li').children('a');
+				}else{
+					var activeItem = $(this);
+				}
+				
+				//-- Fade out content and show loading bar --//
+				var progBar = '<div id="the-progress-bar" class="progress progress-striped active"><div class="progress-bar progress-bar-secondary" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%;"><span class="sr-only">100% Complete</span></div></div>';
+				$(activeItem).parent('li').parent('ul').parent('div.curriculum-pager').siblings('div.result-container').animate({ opacity:0 }, 400).before(progBar);
+				$('#the-progress-bar').animate({ opacity:1 }, 400);
+				
+				//-- Get Values --//
+				var page = $(activeItem).attr('data-page');
+				var limit = $(activeItem).parent('li').parent('ul').attr('data-limit');
+				var type = $(activeItem).parent('li').parent('ul').attr('data-type');
+				var total = $(activeItem).parent('li').parent('ul').attr('data-total');
+				//-- Set / Remove Active & Disabled Classes --//
+				$(activeItem).parent('li').siblings('li').removeClass('active').removeClass('disabled');
+				$(activeItem).parent('li').addClass('active');
+				if($(activeItem).parent('li').hasClass('firstPage')){
+					$(activeItem).parent('li').siblings('li.prev').addClass('disabled');
+				}
+				if($(activeItem).parent('li').hasClass('lastPage')){
+					$(activeItem).parent('li').siblings('li.next').addClass('disabled');
+				}
+				//-- Remove / Set Scrunch Class --//
+				$(activeItem).parent('li').siblings('li').not('.prev, .next, .firstPage, .lastPage').addClass('scrunch');
+				$(activeItem).parent('li').prev('li').removeClass('scrunch').prev('li').removeClass('scrunch');
+				$(activeItem).parent('li').next('li').removeClass('scrunch').next('li').removeClass('scrunch');
+				
+				
+				//-- Result Calculations --//
+				var curMin = ((page - 1) * limit) + 1;
+				var curMax = page * limit;
+				if(curMax > total){ curMax = total; }
+				
+				//-- Perform ajax call --//
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/breaks/page";'; ?>
+				var data = {
+					action: "get_new_page",
+					thePage: page,
+					theLimit: limit,
+					theType: type
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Show New Content --//
+								$('#the-progress-bar').animate({ opacity:0 }, 400).delay(400).remove();
+								$(activeItem).parent('li').parent('ul').parent('div.curriculum-pager').siblings('div.result-container').html(results.content).animate({ opacity:1 }, 400);
+								//-- Change out result numbers --//
+								$(activeItem).parent('li').parent('ul').siblings('span.page-count').children('span.curMin').text(curMin);
+								$(activeItem).parent('li').parent('ul').siblings('span.page-count').children('span.curMax').text(curMax);
+								//-- Reset Lightbox event handlers --//
+								$(activeItem).resetLightbox();
+								$('body').resetViews();
+							}else if(results.result == 'failed'){
+								//-- Failed or Invalid - Howler MSG --//
+								howlerMsg('danger', 'Could Not Retrieve Next Page', 'Something went wrong, and we can\'t grab the page. Refresh the page and try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+				
+			});
+			/*--------------------
+				end pagination
+			---------------------*/
+		});
+	</script>

@@ -1,0 +1,282 @@
+<?php
+/*
+*	Widget: Athletic Assessments Graded Portlet
+*/
+?>
+<div class="portlet">
+	<div class="portlet-header">
+		<h3>
+			<i class="fa fa-clock-o"></i> Athletic Assessments
+		</h3>
+		<ul class="portlet-tools pull-right">
+			<li>
+				<span id="show-athletic-report-filters" class="btn btn-sm btn-secondary"><i class="fa fa-filter"></i> &nbsp;Filters</span>
+			</li>
+		</ul>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content" style="padding-top: 15px;">
+		<div id="athletic-grade-report-filters">
+			
+			<?php
+				//-- Widget Filters --//
+				if(!$this->session->get("user-school")){ ?>
+					<div class="form-group" style="margin: 0 0 10px;">
+						<label for="aagw-filter-school">School Campus</label>
+						<select id="aagw-filter-school" class="form-control">
+							<option value="">Select Campus</option>
+							<?php
+								//-- List Out School Campuses --//
+								$curState = '';
+								foreach($schools as $school){
+									if($school->state != $curState){
+										if($curState){
+											echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+										}else{
+											echo '<optgroup label="'.$states[$school->state].'">';
+										}
+										$curState = $school->state;
+									}
+									if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+									echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+								}
+								echo '</optgroup>';
+							?>
+						</select>
+					</div><?php
+				}else{ ?>
+					<input type="hidden" name="aagw-filter-school" id="aagw-filter-school" value="<?php echo $this->session->get("user-school"); ?>" /><?php
+				}
+			?>
+			<div class="form-group" style="margin: 0 0 10px;">
+				<label for="aagw-filter-interval">Testing Phase</label>
+				<select id="aagw-filter-interval" class="form-control">
+					<!--<option value="">Select Phase</option>-->
+					<?php
+						foreach($newIntervals as $interval){
+							echo '<option value="'.$interval['id'].'">'.$interval['intervalName'].'</option>';
+						}
+					?>
+				</select>
+			</div>
+			<div class="form-group" style="margin: 0;">
+				<label for="aagw-filter-period">Class Period</label>
+				<select id="aagw-filter-period" class="form-control">
+					<option value="">Select Period</option>
+					<?php
+						$x = 1;
+						while($x < 10){
+							echo '<option value="'.$x.'">Period '.$x.'</option>';
+							$x++;
+						} ?>
+						<option value="0">Unassigned</option>
+					?>
+				</select>
+			</div><hr>
+		</div><!-- END: #athletic-grade-report-filters -->
+		<?php
+			if(!$this->session->get("user-school")){ ?>
+				<div id="aagw-alert" class="alert alert-danger">
+					<a class="close" data-dismiss="alert" href="#" aria-hidden="true">×</a>
+					<strong>Select School Campus</strong> Can not run this report without a school campus selected.
+				</div><?php
+			}
+		?>
+		<div id="display-assessments-graded" <?php if(!$this->session->get("user-school")){ echo 'style="display: none;"'; } ?>>
+			
+			<?php
+				//-- zero out & initiate counts and percentages --//
+				$count_bmi = $count_sprint = $count_hex = $count_vjump = $count_pacer = $count_pushup = $count_balance = $count_plank = $count_slraise = 0;
+				$per_bmi = $per_sprint = $per_hex = $per_vjump = $per_pacer = $per_pushup = $per_balance = $per_plank = $per_slraise = 0;
+				//$count_sjump = $count_shuttle = $count_curlup = $count_trunklift = $count_sitreach = 0;
+				//$per_sjump = $per_shuttle = $per_curlup = $per_trunklift = $per_sitreach = 0;
+				$total_students = 0;
+				
+				if($this->session->get("user-school")){
+					/*-------------------
+						Gather Report
+					-------------------*/
+					$staff_grading_title = $theSchool->schoolName;
+					$bind = array('school' => $schoolID);
+					$extra_conditions = "school = :school:";
+					if(isset($periodID) && $periodID != ''){
+						$all_students = Students::find(array("school = :schoolid: AND turf_period = :turf: AND active = 1", "bind" => array("schoolid" => $schoolID, "turf" => $periodID)));
+						//-- gather list of students for sql queries --//
+						$id_str = '';
+						foreach($all_students as $student){
+							if($id_str == ''){
+								$id_str.= $student->id;
+							}else{
+								$id_str.= ','.$student->id;
+							} 
+						}
+						//-- Run Grade Counting Queries --//
+						if($id_str != ''){
+							$extra_conditions.= " AND student IN(".$id_str.")";
+						}
+					}else{
+						$all_students = Students::find(array("school = :schoolid: AND active = 1", "bind" => array("schoolid" => $schoolID)));
+					}
+					$total_students = count($all_students);
+			
+					if(isset($semesterID)){
+						$extra_conditions.= " AND semester = :sem:";
+						//$bind['sem'] = $semesterID;
+						$bind['sem'] = $this->session->get("current-semester");
+					}
+					if(isset($intervalID) && $intervalID){
+						$extra_conditions.= " AND interval = :phase:";
+						$bind['phase'] = $intervalID;
+					}else{
+						$extra_conditions.= " AND interval = 1";
+					}
+			
+					if($total_students > 0){
+						//-- Count Assessments --//
+						$count_bmi = AthleticGrading::count(array($extra_conditions." AND bmi != 0.00", "bind" => $bind));
+						$count_sprint = AthleticGrading::count(array($extra_conditions." AND sprint != 0.00", "bind" => $bind));
+						$count_hex = AthleticGrading::count(array($extra_conditions." AND hex != 0.00", "bind" => $bind));
+						$count_vjump = AthleticGrading::count(array($extra_conditions." AND vjump != 0.00", "bind" => $bind));
+						//$count_sjump = AthleticGrading::count(array($extra_conditions." AND sjump != 0.00", "bind" => $bind));
+						//$count_shuttle = AthleticGrading::count(array($extra_conditions." AND shuttle != 0", "bind" => $bind));
+						$count_pacer = AthleticGrading::count(array($extra_conditions." AND pacer != 0", "bind" => $bind));
+						$count_pushup = AthleticGrading::count(array($extra_conditions." AND pushup != 0", "bind" => $bind));
+						//$count_curlup = AthleticGrading::count(array($extra_conditions." AND curlup != 0", "bind" => $bind));
+						//$count_trunklift = AthleticGrading::count(array($extra_conditions." AND trunklift != 0.00", "bind" => $bind));
+						//$count_sitreach = AthleticGrading::count(array($extra_conditions." AND sitreach != 0.00", "bind" => $bind));
+						$count_balance = AthleticGrading::count(array($extra_conditions." AND balance != 0.00", "bind" => $bind));
+						$count_plank = AthleticGrading::count(array($extra_conditions." AND plank != 0.00", "bind" => $bind));
+						$count_slraise = AthleticGrading::count(array($extra_conditions." AND slraise != 0.00", "bind" => $bind));
+				
+						//-- Get Percentages --//
+						$per_bmi = round(($count_bmi / $total_students) * 100);
+						$per_sprint = round(($count_sprint / $total_students) * 100);
+						$per_hex = round(($count_hex / $total_students) * 100);
+						$per_vjump = round(($count_vjump / $total_students) * 100);
+						//$per_sjump = round(($count_sjump / $total_students) * 100);
+						//$per_shuttle = round(($count_shuttle / $total_students) * 100);
+						$per_pacer = round(($count_pacer / $total_students) * 100);
+						$per_pushup = round(($count_pushup / $total_students) * 100);
+						//$per_curlup = round(($count_curlup / $total_students) * 100);
+						//$per_trunklift = round(($count_trunklift / $total_students) * 100);
+						//$per_sitreach = round(($count_sitreach / $total_students) * 100);
+						$per_balance = round(($count_balance / $total_students) * 100);
+						$per_plank = round(($count_plank / $total_students) * 100);
+						$per_slraise = round(($count_slraise / $total_students) * 100);
+					}
+				}
+			?>
+			
+			<h5 style="font-weight: 600;"><?php
+				echo '<span id="aagw-school">'.$staff_grading_title.'</span>';
+				//-- trait name --//
+				if(isset($newIntervals)){ ?>
+					<br><br><span id="aagw-interval" class="text-primary"><?php echo $newIntervals[0]['intervalName']; ?></span><?php
+				} ?>
+			</h5>
+		
+			<!-- BMI -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Body Mass Index</div> <!-- /.stat-label -->
+					<div class="stat-value count-bmi"><?php echo $count_bmi.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-primary progress-bmi" role="progressbar" aria-valuenow="<?php echo $per_bmi; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_bmi; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Sprint -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Sprint</div> <!-- /.stat-label -->
+					<div class="stat-value count-sprint"><?php echo $count_sprint.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-secondary progress-sprint" role="progressbar" aria-valuenow="<?php echo $per_sprint; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_sprint; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- HEX TEST -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Hex Test</div> <!-- /.stat-label -->
+					<div class="stat-value count-hex"><?php echo $count_hex.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-info progress-hex" role="progressbar" aria-valuenow="<?php echo $per_hex; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_hex; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Vertical Jump -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Vertical Jump</div> <!-- /.stat-label -->
+					<div class="stat-value count-vjump"><?php echo $count_vjump.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-tertiary progress-vjump" role="progressbar" aria-valuenow="<?php echo $per_vjump; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_vjump; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- PACER -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Pacer</div> <!-- /.stat-label -->
+					<div class="stat-value count-pacer"><?php echo $count_pacer.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-primary progress-pacer" role="progressbar" aria-valuenow="<?php echo $per_pacer; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_pacer; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Pushups -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Pushups</div> <!-- /.stat-label -->
+					<div class="stat-value count-pushup"><?php echo $count_pushup.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-secondary progress-pushup" role="progressbar" aria-valuenow="<?php echo $per_pushup; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_pushup; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Balance -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Balance</div> <!-- /.stat-label -->
+					<div class="stat-value count-balance"><?php echo $count_balance.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-info progress-balance" role="progressbar" aria-valuenow="<?php echo $per_balance; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_balance; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Plank -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Plank</div> <!-- /.stat-label -->
+					<div class="stat-value count-plank"><?php echo $count_plank.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-tertiary progress-plank" role="progressbar" aria-valuenow="<?php echo $per_plank; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_plank; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<!-- Straight Leg Raise -->
+			<div class="progress-stat" style="margin: 0 0 10px;">
+				<div class="stat-header">
+					<div class="stat-label">Straight Leg Raise</div> <!-- /.stat-label -->
+					<div class="stat-value count-slraise"><?php echo $count_slraise.'/'.$total_students; ?></div> <!-- /.stat-value -->
+				</div> <!-- /stat-header -->
+				<div class="progress progress-striped active">
+					<div class="progress-bar progress-bar-primary progress-slraise" role="progressbar" aria-valuenow="<?php echo $per_slraise; ?>" aria-valuemin="0" aria-valuemax="100" style="width: <?php echo $per_slraise; ?>%;"></div>
+				</div> <!-- /.progress -->
+			</div> <!-- /.progress-stat -->
+		
+			<p style="clear: both; margin: 0 0 5px; text-align: center;">
+				<a href="/athletic/grading" class="btn btn-secondary" style="margin: 20px 0 0;">Go To Assessments</a>
+			</p>
+		</div><!-- /#display-assessments-graded -->
+
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

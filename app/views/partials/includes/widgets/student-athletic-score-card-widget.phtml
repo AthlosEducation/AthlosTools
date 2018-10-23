@@ -1,0 +1,194 @@
+<?php
+/*
+*	Widget: Athletic Assessments Graded Portlet
+*/
+?>
+<div class="portlet">
+	<div class="portlet-header">
+		<h3>
+			<i class="fa fa-flag"></i> Athletic Score Card
+		</h3>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content" style="padding-top: 15px;">
+		
+		<?php //-- school filter --//
+		if($schools && (!isset($schoolID) || !$schoolID)){ ?>
+			<label for="asc-filter-schools">School Filter</label>
+			<select id="asc-filter-schools" class="form-control" style="margin: 0 0 10px 0;">
+				<option value="">Select School</option>
+				<?php
+					//-- List Out Schools --//
+					$curState = '';
+					foreach($schools as $school){
+						if($school->state != $curState){
+							if($curState){
+								echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+							}else{
+								echo '<optgroup label="'.$states[$school->state].'">';
+							}
+							$curState = $school->state;
+						}
+						if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+						echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+					}
+					echo '</optgroup>';
+				?>
+			</select><?php
+		}else if(isset($schoolID) || $schoolID){ ?>
+			<input type="hidden" id="asc-filter-schools" value="<?php echo $schoolID; ?>" /><?php
+		} ?>
+		
+		<div class="asc-search-student" style="margin: 0 0 10px 0;">
+			<label for="asc-student-search">Find Student</label>
+			<div class="input-group">
+				<input type="text" id="asc-student-search" class="form-control" placeholder="Student Name" value="" />
+				<div class="input-group-btn">
+					<button type="button" class="btn btn-tertiary" id="asc-search-students"><i class="fa fa-search" id="asc-search-students-txt"></i></button>
+				</div><!-- /input-group-btn -->
+			</div>
+			<ul id="asc-student-results"></ul>
+		</div><hr>
+		
+		<div id="score-card-details">
+			<h4 style="font-weight: 600;">Athletic Scores: <span class="asc-sname" style="text-transform: uppercase;"></span></h4>
+			
+			<div class="score-assess-section fitness">
+				<h2 style="font-weight: 900; letter-spacing: -1px;">Fitness Assessment</h2>
+				<?php
+					$fitnessArr = array(
+						'trunklift' => array('name' => 'Trunk Lift', 'unit' => 'inches (XX.X)'),
+						'pushup' => array('name' => '90&deg; Push-Up', 'unit' => 'number completed'),
+						'sitreach' => array('name' => 'Sit &amp; Reach', 'unit' => 'inches (XX.X) to nearest 1/2 inch'),
+						'curlup' => array('name' => 'Curl-Up', 'unit' => 'number completed'),
+						'pacer' => array('name' => 'PACER Test', 'unit' => 'number of laps completed'),
+						'bmi' => array('name' => 'BMI', 'unit' => 'Body Mass Index')
+					);
+					
+					foreach($fitnessArr as $url => $itemArr){
+						if($url == 'trunklift' || $url == 'curlup'){ ?>
+							<div class="half-score-section" <?php if($url == 'trunklift'){ echo 'style="margin-right: 2%;"'; } ?>>
+								<div class="score-column-headers">
+									<div class="score-col-left">Most Recent Score</div>
+									<div class="score-col-right">Personal Record</div>
+									<div class="clearBoth"></div>
+								</div><?php
+						}
+						
+						if($url != 'bmi'){ ?>
+							<div class="score-card-item">
+								<div class="card-item-assessment"><?php echo $itemArr['name']; ?></div>
+								<div class="card-item-unit"><?php echo $itemArr['unit']; ?></div>
+								<div class="card-item-scores">
+									<div class="score-col-left">
+										<span class="asc-<?php echo $url; ?>"></span>
+									</div>
+									<div class="score-col-right">
+										<span class="asc-<?php echo $url; ?>-pr"></span>
+									</div>
+									<div class="clearBoth"></div>
+								</div>
+							</div><?php
+						}
+						
+						if($url == 'sitreach' || $url == 'bmi'){ ?>
+							</div><?php
+						}
+					}
+				?>
+				
+				<div class="clearBoth"></div>
+			</div>
+			
+			
+			<div class="score-assess-section performance">
+				<h2 style="font-weight: 900; letter-spacing: -1px;">Performance Assessment</h2>
+				<?php
+					$performanceArr = array(
+						'sjump' => array('name' => 'Standing Long Jump', 'unit' => 'inches (XX.X)'),
+						'vjump' => array('name' => 'Vertical Jump', 'unit' => 'inches (XX.X)'),
+						'hex' => array('name' => 'HEX Agility', 'unit' => 'seconds (XX.XX)'),
+						'sprint' => array('name' => '20 Yard Sprint', 'unit' => 'seconds (XX.XX)'),
+						'shuttle' => array('name' => '300 Yard Shuttle', 'unit' => 'seconds (XX.XX)')
+					);
+					
+					foreach($performanceArr as $url => $itemArr){
+						if($url == 'sjump' || $url == 'sprint'){ ?>
+							<div class="half-score-section" <?php if($url == 'sjump'){ echo 'style="margin-right: 2%;"'; } ?>>
+								<div class="score-column-headers">
+									<div class="score-col-left">Most Recent Score</div>
+									<div class="score-col-right">Personal Record</div>
+									<div class="clearBoth"></div>
+								</div><?php
+						} ?>
+						
+						<div class="score-card-item">
+							<div class="card-item-assessment"><?php echo $itemArr['name']; ?></div>
+							<div class="card-item-unit"><?php echo $itemArr['unit']; ?></div>
+							<div class="card-item-scores">
+								<div class="score-col-left">
+									<span class="asc-<?php echo $url; ?>"></span>
+								</div>
+								<div class="score-col-right">
+									<span class="asc-<?php echo $url; ?>-pr"></span>
+								</div>
+								<div class="clearBoth"></div>
+							</div>
+						</div><?php
+						
+						if($url == 'hex' || $url == 'shuttle'){ ?>
+							</div><?php
+						}
+					}
+				?>
+				
+				<div class="clearBoth"></div>
+			</div>
+			
+			
+			<?php /*
+			<!-- BMI -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Body Mass Index (BMI)</span></h5>
+			<span class="asc-bmi" style="font-size: 30px;">12.54</span><span class="asc-bmi-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Sprint -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Sprint</span></h5>
+			<span class="asc-sprint" style="font-size: 30px;">12.54</span><span class="asc-sprint-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Hex -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Hex Test</span></h5>
+			<span class="asc-hex" style="font-size: 30px;">12.54</span><span class="asc-hex-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Vertical Jump -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Vertical Jump</span></h5>
+			<span class="asc-vjump" style="font-size: 30px;">12.54</span><span class="asc-vjump-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Standing Long Jump -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Standing Long Jump</span></h5>
+			<span class="asc-sjump" style="font-size: 30px;">12.54</span><span class="asc-sjump-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Pacer -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Pacer</span></h5>
+			<span class="asc-pacer" style="font-size: 30px;">12.54</span><span class="asc-pacer-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Shuttle -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Shuttle</span></h5>
+			<span class="asc-shuttle" style="font-size: 30px;">12.54</span><span class="asc-shuttle-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Pushup -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Pushups</span></h5>
+			<span class="asc-pushup" style="font-size: 30px;">12.54</span><span class="asc-pushup-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Curlup -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Curlups</span></h5>
+			<span class="asc-curlup" style="font-size: 30px;">12.54</span><span class="asc-curlup-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Trunk Lift -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Trunk Lift</span></h5>
+			<span class="asc-trunklift" style="font-size: 30px;">12.54</span><span class="asc-trunklift-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			<!-- Sit Reach -->
+			<h5 style="margin-top: 10px; font-weight: 600;"><span class="text-primary">Sit and Reach</span></h5>
+			<span class="asc-sitreach" style="font-size: 30px;">12.54</span><span class="asc-sitreach-pr" style="margin-left: 20px; font-size: 14px;">PR: 11.52</span>
+			*/ ?>
+			
+			<p style="clear: both; margin: 0 0 5px; text-align: center;">
+				<span class="btn btn-info" style="margin: 20px 0 0;" onclick="jQuery('#scorecards-form').submit();">Print Score Card</a>
+				<form id="scorecards-form" action="/athletic/scorecard" method="post" target="_blank" style="display: inline;">
+					<input type="hidden" name="action" value="generate-scorecard" />
+					<input type="hidden" name="cards" id="card-ids" value="" />
+				</form>
+			</p>
+		</div><!-- /#score-card-details -->
+
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

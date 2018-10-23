@@ -1,0 +1,171 @@
+<?php
+
+/*--------------------------------------------------------------------------------------------------------------------
+
+	Just a sample report card that you can make changes to, and then take the changes and push to the database...
+	** Only thing is there is a good chance this version will be out of sync with the database version.
+	**** So you may want to check with that -- its in the site-options table in the DB
+
+---------------------------------------------------------------------------------------------------------------------*/
+
+//-- Page Vars --//
+$page_title = 'Report Cards';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div id="report-card-container" style="padding: 20px 50px; color: #000; font-family: helvetica,arial,sans-serif;">
+			<div class="inner-container" style="width: 815px;">
+				<!-- REPORT CARD HEADER -->
+				<div id="report-card-header">
+					<div style="float: left; width: 150px; text-align: center;">
+						<p style="font-family: helvetica,arial,sans-serif; font-size: 16px; margin: 0 0 8px;">
+							<strong>Athlos Report Card</strong>
+						</p>
+						<img src="/img/logos/ilt-logo.png" alt="School Logo" width="100%" style="max-width: 114px;" />
+					</div>
+					<div id="report-title" style="float: left; margin: 16px 20px 0; padding: 14px; background-color: #edebe0; border: 1px solid #000;">
+						<p style="margin: 5px 0;">
+							<span style="font-family: helvetica,arial,sans-serif; font-weight: bold; font-size: 34px;">Athlos Cumulative Grade</span>
+						</p>
+						<p style="margin: 5px 0 10px;">
+							<span style="font-size: 14px;">Combined average of all performance character trait grades</span>
+						</p>
+					</div>
+					<div id="athlos-grade" style="float: left; margin: 20px 0; padding: 5px; width: 150px; text-align: center; border: 1px solid #000;">
+						<span style="font-family: helvetica,arial,sans-serif; font-weight: bold; font-size: 64px; color: #000; line-height: 80px;">3.68</span>
+					</div>
+				</div>
+				<!-- END HEADER -->
+				
+				<!-- STUDENT INFO -->
+				<div id="student-information" style="clear: both; float: left; margin: 20px 0; font-size: 16px; width: 100%;">
+					<div class="student-info" style="float: left; width: 40%;">
+						<p style="margin: 0;">
+							Student Name: <span id="student-name">David Sample</span>
+						</p>
+					</div>
+					<div class="student-info" style="float: left; width: 20%; text-align: center;">
+						<p style="margin: 0;">
+							Grade Level: <span id="student-grade-level">8th</span>
+						</p>
+					</div>
+					<div class="student-info" style="float: left; width: 40%; text-align: right;">
+						<p style="margin: 0;">
+							Homeroom Teacher: <span id="teacher-name">Smith</span>
+						</p>
+					</div>
+				</div>
+				<!-- END STUDENT INFO -->
+				
+				<!-- GRADES -->
+				<div id="student-grades" style="float: left; width: 100%;">
+					<div style="margin: 0 0 20px;">
+						<table style="width: 100%; text-align: center; border: 1px solid #000;">
+							<tr style="font-size: 16px; font-weight: bold; background-color: #f79546;">
+								<th width="25%" style="text-align: center;">Grit</th>
+								<th width="25%" style="text-align: center;">Focus / Self Control</th>
+								<th width="25%" style="text-align: center;">Optimism</th>
+								<th width="25%" style="text-align: center;">Curiosity</th>
+							</tr>
+							<tr style="font-size: 36px;">
+								<td height="56px" width="25%">4.0</td>
+								<td height="56px" width="25%">2.6</td>
+								<td height="56px" width="25%">4.6</td>
+								<td height="56px" width="25%">3.9</td>
+							</tr>
+						</table>
+					</div>
+					
+					<div style="margin: 0 0 20px;">
+						<table style="width: 100%; text-align: center; border: 1px solid #000;">
+							<tr style="font-size: 16px; font-weight: bold; background-color: #d9d9d9;">
+								<th width="25%" style="text-align: center;">Leadership</th>
+								<th width="25%" style="text-align: center;">Energy / Zest</th>
+								<th width="25%" style="text-align: center;">Courage</th>
+								<th width="25%" style="text-align: center;">Initiative</th>
+							</tr>
+							<tr style="font-size: 36px;">
+								<td height="56px" width="25%">4.0</td>
+								<td height="56px" width="25%">2.6</td>
+								<td height="56px" width="25%">4.6</td>
+								<td height="56px" width="25%">3.9</td>
+							</tr>
+						</table>
+					</div>
+					
+					<div style="margin: 0 0 40px;">
+						<table style="width: 100%; text-align: center; border: 1px solid #000;">
+							<tr style="font-size: 16px; font-weight: bold; background-color: #f83c16;">
+								<th width="25%" style="text-align: center;">Social Intelligence</th>
+								<th width="25%" style="text-align: center;">Humility</th>
+								<th width="25%" style="text-align: center;">Integrity</th>
+								<th width="25%" style="text-align: center;">Creativity</th>
+							</tr>
+							<tr style="font-size: 36px;">
+								<td height="56px" width="25%">4.0</td>
+								<td height="56px" width="25%">2.6</td>
+								<td height="56px" width="25%">4.6</td>
+								<td height="56px" width="25%">3.9</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+				<!-- END GRADES -->
+				
+				<!-- COMMENTS -->
+				<div id="staff-comments" style="float: left; margin: 0 0 20px; padding: 10px; width: 100%; border: 1px solid #000;">
+					<h3 style="font-size: 18px; font-weight: bold;">Comments:</h3>
+					<p style="margin: 0 0 5px; padding: 0 0 5px; font-size: 14px; border-bottom: 1px dashed #7d7d7d;">
+						<span class="staff-comment">"David showed great curiosity with his science project by going the extra mile. He made a solar system and it was very well done."</span>
+						<span class="staff-name" style="color: #5b5b5b;">- Home Room Teacher</span>
+					</p>
+					<p style="margin: 0 0 5px; padding: 0 0 5px; font-size: 14px;">
+						<span class="staff-comment">"David struggles during our athletic module, but he does seem to respond when we decide to play basketball or volleyball."</span>
+						<span class="staff-name" style="color: #5b5b5b;">- Turf Coach</span>
+					</p>
+				</div>
+				<!-- END COMMENTS -->
+				
+				<!-- SIGNATURES -->
+				<div id="student-signatures" style="float: left; padding: 10px; font-size: 18px; width: 100%;">
+					<p style="margin: 0 0 20px;">
+						Student Signature:
+						<img src="/img/blank.png" height="20" width="320" style="margin: 0 40px 0 0; border-bottom: 1px solid #000;" />
+						<!--<input type="text" style="margin: 0 40px 0 0; width: 320px; border: none; border-bottom: 1px solid #000;">-->
+						Date:
+						<input type="text" style="width: 220px; border: none; border-bottom: 1px solid #000;">
+					</p>
+					<p style="margin: 0 0 20px;">
+						Parent Signature:
+						<input type="text" style="margin: 0 40px 0 0; width: 330px; border: none; border-bottom: 1px solid #000;">
+						Date:
+						<input type="text" style="width: 220px; border: none; border-bottom: 1px solid #000;">
+					</p>
+					<p style="padding: 10px; font-size: 14px; line-height: 18px;"><span style="font-weight: bold;">Parents:</span> The Athlos Score is provided to encourage conversation between you and your student. Performance Character Trait scoring is subjective and is intended to give you an opportunity to see your student focus on improving and to encourage conversation between you and your student on what traits they excel at and what traits may need improvement. The Athlos Score is not provided for comparative value against other students. Continued improvement is the goal of Athlos Performance Character Traits.</p>
+				</div>
+				<!-- END SIGNATURES -->
+			</div>
+			<div style="clear: both;"></div>
+		</div><!-- end #report-card-container -->
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/grading");
+	$this->partial("partials/footer-bottom");
+?>

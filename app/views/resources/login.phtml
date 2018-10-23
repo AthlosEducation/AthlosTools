@@ -1,0 +1,39 @@
+<?php
+
+//-- Libraries --//
+use Phalcon\Tag;
+
+//-- Page Vars --//
+$page_title = 'Student Resources';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/resources-login-header");
+
+		//-- Page Content --// ?>
+		<div id="login">
+
+		<?php //-- Messages --//
+			$this->flashSession->output(); ?>
+
+			<h3>Athlos Student Resources</h3>
+
+			<h5>Please sign in to get access.</h5>
+			
+			<form id="login-form" action="" class="form" method="post">
+
+				<div class="form-group">
+					<label for="login-password">Password</label>
+					<input type="password" name="password" class="form-control" id="resource-passcode" placeholder="Password" maxlength="32" />
+				</div>
+
+				<div class="form-group">
+					<button type="submit" id="login-btn" class="btn btn-primary btn-block">Login &nbsp; <i class="fa fa-play-circle"></i></button>
+				</div>
+				
+			</form>
+
+		</div> <!-- /#login -->
+
+<?php $this->partial("partials/resources-login-footer"); ?>

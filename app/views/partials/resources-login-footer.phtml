@@ -1,0 +1,29 @@
+	</div> <!-- /#login-container -->
+
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/Login.js");	
+?>
+
+<script type="text/javascript" src="https://s3.amazonaws.com/assets.freshdesk.com/widget/freshwidget.js"></script>
+<script type="text/javascript">
+	FreshWidget.init("", {"queryString": "&widgetType=popup", "widgetType": "popup", "buttonType": "text", "buttonText": "Support", "buttonColor": "white", "buttonBg": "#222222", "alignment": "3", "offset": "70px", "formHeight": "500px", "url": "https://athlos.freshdesk.com"} );
+</script>
+
+<script>
+	//-- Google Analytics Tracking --//
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-48101675-2', 'athlosacademies.org');
+  ga('send', 'pageview');
+</script>
+
+</body>
+</html>

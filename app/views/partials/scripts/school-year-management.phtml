@@ -1,0 +1,212 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/*------------------
+			Add Semester
+		-------------------*/
+		$('#createSemester').click(function(e){
+			var semName = $('#new-semester').val();
+			if(semName){
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/administration/addsemester";'."\n"; ?>
+				var data = {
+					action: "add_semester",
+					theName: semName
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Add to semester list --//
+								if(results.semesterID){
+									$('#semester-list').prepend('<div class="checkbox"><label><input type="checkbox" class="setSemester" value="'+ results.semesterID +'"> <span class="bold semester-name">'+ results.semesterName +'</span></label><span class="text-primary editSemester" data-sem-val="'+ results.semesterID +'"><i class="fa fa-pencil"></i></span><span class="text-primary delSemester" data-sem-val="'+ results.semesterID +'"><i class="fa fa-times"></i></span></div>');	
+								}
+								//-- Set Event Listeners --//
+								$('body').off("change", ".setSemester").on("change", ".setSemester", function(){ $(this).setCurrentSemester(); });
+								$('body').off("click", ".delSemester").on("click", ".delSemester", function(){ $(this).deleteSemester(); });
+								$('body').off("click", ".editSemester").on("click", ".editSemester", function(){ $(this).renameSemester(); });
+								//-- Failed - Howler MSG --//
+								howlerMsg('success', 'School Year Added', 'The school year was created successfully.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Add Year Failed', 'There was a problem adding the school year. Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		/*---------------------
+			end add semester
+		----------------------*/
+		
+		$.fn.setCurrentSemester = function(){
+			if(!$(this).hasClass('active')){
+				if($(this).prop('checked')){
+					var semesterID = $(this).val();
+					var semesterName = $(this).next('span.semester-name').text();
+					var thisItem = $(this);
+					if(semesterID){
+						bootbox.confirm("Are you sure you want to set <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ semesterName +"</span> as the current school year?", function(result){
+							if(result){
+								var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/administration/setsemester";'."\n"; ?>
+								var data = {
+									action: "set_semester",
+									theID: semesterID
+									};
+								jQuery.post(ajaxurl, data, function(json){
+									if(typeof json != 'undefined'){
+										var results = jQuery.parseJSON(json);
+										if(typeof results.result != 'undefined'){
+											if(results.result == 'success'){
+												//-- clear the old active semester --//
+												if(results.cleared == 'success'){
+													$('.setSemester').prop('checked', false).removeClass('active');
+													$(thisItem).prop('checked', true).addClass('active');
+												}
+												//-- Success - Howler MSG --//
+												howlerMsg('success', 'Set to Current Year', 'The current school year was changed to '+ semesterName, 7500, 'fa fa-check', false);
+											}else if(results.result == 'failed'){
+												//-- Failed - Howler MSG --//
+												howlerMsg('danger', 'Set Year Failed', 'Something went wrong, the current school year was not changed.', 7500, 'fa fa-exclamation', false);
+											}
+										}
+									}
+								});
+
+							}
+						});
+					}
+				}
+			}else{
+				$(this).prop('checked', true);
+			}	
+		} //-- end setCurrentSemester() --//
+		
+		$.fn.renameSemester = function(){
+			var semesterID = $(this).attr('data-sem-val');
+			var semesterName = $(this).siblings('label').children('span.semester-name').text();
+			var nameContainer = $(this).siblings('label').children('span.semester-name');
+			if(semesterID){
+				//-- Display Modal --//
+				$('#renameSemesterModal .modal-header h3 .insert-semestername').text(semesterName);
+				$('#rename-semester').val(semesterName);
+				$('#renameSemesterModal').modal('show');
+				
+				$('#renameSemester').off().click(function(event){
+					//-- Grab New Name --//
+					var newName = $('#rename-semester').val();
+					
+					//-- run ajax call to update Semester Name --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/administration/renamesemester";'."\n"; ?>
+					var data = {
+						action: "rename_semester",
+						theID: semesterID,
+						theName: newName
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Replace Display Name --//
+									$(nameContainer).text(results.semesterName);
+									//-- hide modal --//
+									$('#renameSemesterModal').modal('hide');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'School Year Renamed', 'The school year name was changed successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				});
+
+			}
+		} //-- end renameSemester --//
+		
+		$.fn.deleteSemester = function(){
+			var thisCheck = $(this).siblings('label').children('input');
+			if(!$(thisCheck).hasClass('active')){
+				var semesterID = $(this).attr('data-sem-val');
+				var semesterName = $(this).siblings('label').children('span.semester-name').text();
+				var thisItem = $(this);
+				if(semesterID){
+					bootbox.confirm("Are you sure you want to delete <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ semesterName +"</span>?", function(result){
+						if(result){
+							var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/administration/delsemester";'."\n"; ?>
+							var data = {
+								action: "delete_semester",
+								theID: semesterID
+								};
+							jQuery.post(ajaxurl, data, function(json){
+								if(typeof json != 'undefined'){
+									var results = jQuery.parseJSON(json);
+									if(typeof results.result != 'undefined'){
+										if(results.result == 'success'){
+											//-- remove checkbox section --//
+											$(thisItem).parent('div.checkbox').remove();
+											//-- Success - Howler MSG --//
+											howlerMsg('success', 'School Year Removed', 'The school year was successfully deleted', 7500, 'fa fa-check', false);
+										}else if(results.result == 'failed'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+										}else if(results.result == 'invalid'){
+											//-- Invalid - Howler MSG --//
+											howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+										}
+									}
+								}
+							});
+
+						}
+					});
+				}
+			}else{
+				bootbox.alert("You can't delete the current school year.", function(){ /*- do nothing -*/ });
+			}	
+		} //-- end deleteSemester() --//
+		
+		//-- Set Event Listeners --//
+		$('body').off("change", ".setSemester").on("change", ".setSemester", function(){ $(this).setCurrentSemester(); });
+		$('body').off("click", ".delSemester").on("click", ".delSemester", function(){ $(this).deleteSemester(); });
+		$('body').off("click", ".editSemester").on("click", ".editSemester", function(){ $(this).renameSemester(); });
+		
+	});
+</script>
+
+<!-- Rename Semester Modal -->
+<div id="renameSemesterModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">New Name For: <span class="insert-semestername"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<div id="rename-the-semester" class="form-group">
+					<label for="rename-semester">Enter Name For School Year</label><br>
+					<input type="text" id="rename-semester" class="form-control" value="" maxLength="64">
+					<span class="btn btn-primary" id="renameSemester">Rename</span>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

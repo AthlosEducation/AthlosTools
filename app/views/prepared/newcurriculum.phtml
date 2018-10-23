@@ -1,0 +1,176 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Prepared Mind';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/athletic-curriculum");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div id="manage-downloads" style="margin: 40px;">
+			<?php
+				
+				if(isset($folders) && $folders){
+					$folderCount = count($folders);
+					$missedFolders = 0;
+					foreach($folders as $folderID => $folder_contents){
+						//-- Validate view -- only views state or all folder --//
+						if((['prepared-mind']['view']) || ($this->session->get("campus-state") !== null && (in_array($this->session->get("campus-state"), $folder_contents['permissions']) || in_array('all', $folder_contents['permissions'])))){ ?>
+							
+							<div class="row">
+								<div class="col-md-3 col-sm-4">
+
+								    <ul id="myTab" class="nav nav-pills nav-stacked">
+										<?php
+										$pillCount = 1;
+										foreach($folder_contents as $subfolder => $subfolder_contents){
+											if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){ ?>
+												<li <?php if($pillCount == 1){ echo 'class="active"'; } ?>>
+										        	<a href="#unit-<?php echo $subfolder; ?>-contents" data-toggle="tab">
+										        		<i class="fa <?php if(isset($subfolder_contents['icon'])){ echo $subfolder_contents['icon']; }else{ echo 'fa-folder-open'; } ?>"></i> 
+										        		&nbsp;&nbsp;<?php echo $subfolder_contents['name']; ?>
+										        	</a>
+										        </li><?php
+												$pillCount++;
+											}
+										} ?>
+								    </ul>
+							
+								</div> <!-- /.col -->
+						
+								<div class="col-md-9 col-sm-8">
+								      <div class="tab-content stacked-content">
+
+										<?php
+										//-- Lesson Navigation --//
+										$panelCount = 1;
+										foreach($folder_contents as $subfolder => $subfolder_contents){
+											if($subfolder != 'name' && $subfolder != 'url' && $subfolder != 'icon' && $subfolder != 'permissions'){ ?>
+												<div class="tab-pane fade <?php if($panelCount == 1){ echo 'in active'; } ?>" id="unit-<?php echo $subfolder; ?>-contents">
+										
+													<div class="col-md-12">
+													    <h3><?php echo '<i class="fa '.$subfolder_contents['icon'].'"></i> &nbsp;'.$subfolder_contents['name'].' &nbsp; ('.$folder_contents['name'].')'; ?></h3>
+											
+														<label for="innerTabs-<?php echo $subfolder; ?>">Curricular Units</label><br />
+														<select id="innerTabs-<?php echo $subfolder; ?>" class="lesson-nav form-control">
+															<option value="">Select Grade Level</option><?php
+																foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+																	if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){ ?>
+																		<option value="#folder-unit-<?php echo $subfolder2; ?>"><?php echo $subfolder2_contents['name']; ?></option><?php
+																	}
+																} ?>
+														</select>
+											
+														<div id="unit-<?php echo $subfolder; ?>-tab-nav" class="tab-content" style="margin: 15px 0 0; padding: 20px 0 0; border-top: 1px dashed #eaeaea;"><?php
+															//-- List out lessons by topic --//
+															$num = 0;
+															foreach($subfolder_contents as $subfolder2 => $subfolder2_contents){
+																if($subfolder2 != 'name' && $subfolder2 != 'url' && $subfolder2 != 'icon' && $subfolder2 != 'permissions'){ ?>
+																	<div class="tab-pane fade" id="folder-unit-<?php echo $subfolder2; ?>">
+															
+																		<!-- Another Folder Level (TABS) -->
+																		<ul id="folder-unit-<?php echo $subfolder2; ?>-tabs" class="nav nav-pills subfolder-lesson-nav">
+																			<?php
+																				$tab = 0;
+																				foreach($subfolder2_contents as $subfolder3 => $subfolder3_contents){
+																					if($subfolder3 != 'name' && $subfolder3 != 'url' && $subfolder3 != 'icon' && $subfolder3 != 'permissions'){
+																						if($tab == 0){ $exClass = 'class="active"'; }else{ $exClass = ''; }
+																						echo '<li '.$exClass.'><a href="#folder-unit-'.$subfolder3.'" data-toggle="tab">'.$subfolder3_contents['name'].'</a></li>';
+																						$tab++;
+																					}
+																				}
+																			?>
+																		</ul>
+															
+																		<div id="unit-<?php echo $subfolder2; ?>-tab-nav" class="tab-content">
+																		<?php
+															
+																		$pane = 0;
+																		foreach($subfolder2_contents as $subfolder3 => $subfolder3_contents){
+																			if($subfolder3 != 'name' && $subfolder3 != 'url' && $subfolder3 != 'icon' && $subfolder3 != 'permissions'){
+																				if($pane == 0){ $exClass = 'active in'; }else{ $exClass = ''; } ?>
+																					<div class="tab-pane fade <?php echo $exClass; ?>" id="folder-unit-<?php echo $subfolder3; ?>">
+																						<h4 style="padding-bottom: 8px; border-bottom: 2px solid #e1e1e1;"><?php echo $subfolder3_contents['name']; ?></h4>
+																					<?php
+																					foreach($subfolder3_contents[0] as $file){
+																					    $fname = $file['name'];
+																						$fileNameArr = explode('/', $file['name']);
+																						$trimmedName = array_pop($fileNameArr);
+																					    $furl = "http://athlos-tools.s3.amazonaws.com/".$fname;
+																						$fsize = $file['size'];
+																						$ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+
+																						//-- determine what class to use --//
+																						if($ext == 'doc' || $ext == 'docx'){
+																							$useClass = 'download-word';
+																						}else if($ext == 'zip'){
+																							$useClass = 'download-zip';
+																						}else if($ext == 'xls' || $ext == 'xlsx'){
+																							$useClass = 'download-xls';
+																						}else{
+																							$useClass = 'download-doc';
+																						}
+
+																					    //-- Output link to file --//
+																						echo '<div class="'.$useClass.'" style="margin: 0; padding: 18px 0 17px 60px; background-position: 0 10px; background-size: 40px;">';
+																					    echo '<a href="'.$furl.'">'.$trimmedName.'</a>';
+																						echo '<span style="margin: 0 0 0 10px; color: #808080;">('.round($fsize / 1024, 1).' KB)</span>';
+																						echo '<span onclick="location.href = \''.$furl.'\'" class="btn btn-xs btn-primary" style="margin: 0 0 0 30px;"><i class="fa fa-download"></i> &nbsp;Download</span>';
+																						echo '</div>';
+																					} ?>
+																					</div><!-- /.tab-pane --><?php
+																				$pane++;
+																			}
+																		}
+																		?>
+																		</div><!-- /.tab-content -->
+																	</div> <!-- /.tab-pane --><?php
+																	$num++;
+																}
+															} ?>
+														</div> <!-- /.tab-content -->
+													</div> <!-- /.col -->
+										
+												</div> <!-- /.tab-pane --><?php
+												$panelCount++;
+											}
+										} ?>
+									
+								      </div> <!-- /.stacked-content -->
+
+								</div> <!-- /.col -->
+							</div> <!-- /.row --><?php
+							//-- run foreach 1 time for one valid folder and then break out --//
+							break;
+						}else{
+							//-- increase count of missed folders --//
+							$missedFolders++;
+							if($missedFolders == $folderCount){ ?>
+								<div class="alert alert-danger">
+									<strong>Curriculum Not Available!</strong> Looks like the Prepared Minds Curriculum has not been made available to your campus yet.
+								</div><?php
+							}
+						} //-- end if --//
+					} //-- end foreach --//
+				} ?>
+		</div>
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/prepared-minds");
+	$this->partial("partials/footer-bottom");
+?>

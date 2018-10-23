@@ -1,0 +1,510 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+if(isset($assessmentName)){
+	$page_title = $assessmentName;
+}else{
+	$page_title = 'Athletic Assessment';
+}
+if(isset($intervalID) && $intervalID){
+	//-- Grab Interval / Phase Name --//
+	$theInterval = AthleticIntervals::findFirst(array("id = :id:", "columns" => "intervalName", "bind" => array('id' => $intervalID)));
+	if(!empty($theInterval)){
+		if(isset($periodID) && $periodID){
+			$page_title.= ': Period '.$periodID.' ('.$theInterval->intervalName.')';
+		}else if(isset($intervalID) && $intervalID && isset($periodID) && $periodID == 0){
+			$page_title.= ': Period "Unassigned" ('.$theInterval->intervalName.')';
+		}else{
+			$page_title.= ': All Periods ('.$theInterval->intervalName.')';
+		}
+	}
+}
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<?php
+			//-- Determine if Interval and Class Period are set --//
+			if(isset($intervalID) && $intervalID && isset($schoolID) && $schoolID){ ?>
+				
+				<div id="controlBar" class="col-md-12">
+					
+					<span id="change-interval" class="btn btn-primary" title="Change Interval / Period" style="margin-right: 5px;"><i class="fa fa-clock-o"></i> <span>Interval</span></span>
+					
+					<?php
+					//-- Show / Hide Filters --//
+					if(isset($searchTerm) && $cap['assessments']['view'] || isset($gradeID) || (isset($teacherID) && $teacherID) || (isset($periodID) && $periodID != '') || isset($coachID)){
+						$filterText = 'Hide Filters';
+						$showFilters = 'style="display: block;"';
+					}else{
+						$filterText = 'Show Filters';
+						$showFilters = '';
+					}
+					if($cap['assessments']['view']){ ?>
+						<div id="show-user-filters" class="btn-group" title="Filters" style="margin-right: 5px;">
+							<a href="#" class="btn btn-secondary"><i class="fa fa-filter"></i> <span><?php echo $filterText; ?></span></a>
+						</div><?php
+					} ?>
+					
+					<!-- Athletic Assessments -->
+					<div id="assessments" class="btn-group" title="Assessments" style="margin-right: 5px;">
+						<button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+							<i class="fa fa-pencil"></i> <span class="test-txt">Testing</span> <span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu"><?php
+							if(isset($assessments) && !empty($assessments)){
+								foreach($assessments as $test){
+									echo '<li><a href="javascript:;" data-test-val="'.$test->id.'" class="change-assessment">'.$test->assessment_name.'</a></li>';
+								}
+							} ?>
+						</ul>
+					</div>
+					
+					<!-- Refresh Button -->
+					<div class="btn-group" title="Refresh" style="margin-right: 5px;">
+						<form id="refresh-page" action="" method="post">
+							<span class="btn btn-success" id="refresh-ctrl-btn" onclick="jQuery('#refresh-page').submit();"><i class="fa fa-refresh"></i> <span>Refresh</span></span>
+							<?php echo $inputs.$filters; ?>
+						</form>
+					</div>
+					
+					<?php if($cap['assessments']['scorecard']){ ?>
+						<!-- Report Cards -->
+						<span id="generate-score-cards" class="btn btn-tertiary" title="Athletic Score Cards" style="margin-right: 5px;"><i class="fa fa-tasks"></i> <span>Score Cards</span></span>
+						<form id="scorecards-form" action="/athletic/scorecard" method="post" target="_blank" style="display: inline;">
+							<input type="hidden" name="action" value="generate-scorecard" />
+							<input type="hidden" name="cards" id="card-ids" value="" />
+						</form>
+					<?php } ?>
+
+					<!-- Filters -->
+					<div id="user-filters" class="well" <?php echo $showFilters; ?>>
+						<?php
+						//-- Select Class Period --// ?>
+						<div class="filter-period col-sm-6">
+							<form id="periodFilter" action="" method="post">
+								<label for="class-period">Class Period</label>
+								<select name="class-period" id="class-period" class="form-control" onchange="jQuery('#periodFilter').submit();">
+									<option value="">Show All Periods</option><?php
+									$x = 1;
+									while($x < 11){
+										if(isset($periodID) && $periodID == $x){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$x.'" '.$sel.'>Period '.$x.'</option>';
+										$x++;
+									} ?>
+									<option value="0" <?php if(isset($periodID) && $periodID == 0){ echo 'selected="selected"'; } ?>>Unassigned</option>
+									
+								</select>
+								<?php echo $inputs.$schoolFilter.$searchFilter.$intervalFilter.$assessmentFilter.$coachFilter.$gradeFilter; ?>
+							</form>
+						</div>
+						
+						<?php
+						//-- grade filter --//
+						if(isset($grade_level) && $grade_level){ ?>
+							<div class="filter-grade col-sm-6">
+								<form id="gradeFilter" action="" method="post">
+									<label for="filter-grade">Grade Level Filter</label>
+									<select name="filterGrade" id="filter-grade" class="form-control" onchange="jQuery('#gradeFilter').submit();">
+										<option value="">Select Grade Level</option>
+										<?php
+											//-- List Out Grade Levels --//
+											foreach($grade_level as $grade){
+												if(isset($gradeID) && $grade->id == $gradeID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+												echo '<option value="'.$grade->id.'" '.$sel.'>'.$grade->gradeName.'</option>';
+											}
+										?>
+									</select>
+									<?php echo $inputs.$schoolFilter.$searchFilter.$periodFilter.$intervalFilter.$assessmentFilter.$coachFilter; ?>
+								</form>
+							</div><?php
+						}
+						
+						//-- teacher filter --//
+						if(isset($teacherList) && !isset($csList)){ ?>
+							<div class="filter-teacher col-sm-6" style="margin-top: 8px;">
+								<form id="teacherFilter" action="" method="post">
+									<label for="filter-teacher">Teacher Filter</label>
+									<select name="filterTeacher" id="filter-teacher" class="form-control" onchange="jQuery('#teacherFilter').submit();">
+										<option value="">Select Teacher</option>
+										<?php
+											//-- List Out Teachers --//
+											foreach($teacherList as $teacher){
+												if(isset($teacherID) && $teacher->id == $teacherID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+												echo '<option value="'.$teacher->id.'" '.$sel.'>'.$teacher->lname.', '.$teacher->fname.'</option>';
+											}
+										?>
+									</select>
+									<?php echo $inputs.$schoolFilter.$intervalFilter.$periodFilter.$assessmentFilter.$gradeFilter.$searchFilter; ?>
+								</form>
+							</div><?php
+						}else{
+							//-- coach filter --// ?>
+							<div class="filter-coach col-sm-6" style="margin-top: 8px;">
+								<form id="coachFilter" action="" method="post">
+									<label for="filter-coach">Coach Filter</label>
+									<select name="filterCoach" id="filter-coach" class="form-control" onchange="jQuery('#coachFilter').submit();">
+										<option value="">Select Coach</option>
+										<?php
+											if(isset($csList) && $csList){
+												$coachList = Users::find(array($csList, "order" => "lname ASC, fname ASC"));
+												//-- List Out Coaches --//
+												foreach($coachList as $coach){
+													if(isset($coachID) && $coach->id == $coachID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+													echo '<option value="'.$coach->id.'" '.$sel.'>'.$coach->lname.', '.$coach->fname.'</option>';
+												}
+											}
+										?>
+									</select>
+									<?php echo $inputs.$schoolFilter.$intervalFilter.$periodFilter.$assessmentFilter.$gradeFilter.$searchFilter; ?>
+								</form>
+							</div><?php
+						} ?>
+						
+						<!-- Search Filter -->
+						<div id="filter-search" class="col-sm-6" style="margin-top: 8px;">
+							<form id="searchFilter" action="" method="post">
+								<label for="searchTerm">Search Students Filter</label>
+								<div class="input-group">
+									<input type="text" name="filterSearch" id="searchTerm" class="form-control" placeholder="Enter First or Last Name" value="<?php if(isset($searchTerm) && $searchTerm != ''){ echo $searchTerm; } ?>">
+									<div class="input-group-btn">
+										<button type="button" id="quick-search" class="btn btn-tertiary"><i class="fa fa-search"></i> Search</button>
+									</div><!-- /input-group-btn -->
+								</div><!-- /input-group -->
+								<?php echo $inputs.$schoolFilter.$intervalFilter.$periodFilter.$assessmentFilter.$gradeFilter.$teacherFilter.$coachFilter; ?>
+							</form>
+						</div>
+						<!-- End Search Filter -->
+						<div class="clear"></div>
+					</div>
+					<!-- end filters -->
+
+				</div><!-- /#controlBar -->
+				
+				<div id="display-results" class="col-md-12">
+					
+					<table class="table table-hover table-bordered table-striped">
+						<thead>
+							<tr>
+								<th style="width: 30px;">
+									<input type="checkbox" id="check-all" />
+								</th>
+								<th>
+									<form id="form1" action="" method="post">
+										<input type="hidden" name="field" value="firstname" />
+										<span onclick="jQuery('#form1').submit();">First Name</span>
+										<?php
+										echo $lastField;
+										if($field == 'firstname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+										?>
+									</form>
+								</th>
+								<th>
+									<form id="form2" action="" method="post">
+										<input type="hidden" name="field" value="lastname" />
+										<span onclick="jQuery('#form2').submit();">Last Name</span>
+										<?php
+										echo $lastField;
+										if($field == 'lastname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+										?>
+									</form>
+								</th>
+								<th class="hideable">
+									<form id="form3" action="" method="post">
+										<input type="hidden" name="field" value="grade_level" />
+										<span onclick="jQuery('#form3').submit();">Grade Level</span>
+										<?php
+										echo $lastField;
+										if($field == 'grade_level'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+										?>
+									</form>
+								</th>
+								<?php
+								if($assessmentUrl == 'bmi'){ ?>
+									<th>
+										<form id="form4" action="" method="post">
+											<input type="hidden" name="field" value="data-height" />
+											<span onclick="jQuery('#form4').submit();">Height</span>
+											<?php echo $lastField;
+											if($field == 'data-height'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter up to 2 decimal places. Note your entry will be rounded down to the nearest 1/4 inch. (.25, .5, .75)" data-original-title="Height (Inches)"></i>
+										</form>
+									</th>
+									<th>
+										<form id="form5" action="" method="post">
+											<input type="hidden" name="field" value="data-weight" />
+											<span onclick="jQuery('#form5').submit();">Weight</span>
+											<?php echo $lastField;
+											if($field == 'data-weight'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter up to the 1st decimal place. Example: '125.4'" data-original-title="Weight (Pounds)"></i>
+										</form>
+									</th>
+									<th class="displayBMI">
+										<form id="form6" action="" method="post">
+											<input type="hidden" name="field" value="data" />
+											<span onclick="jQuery('#form6').submit();">BMI</span>
+											<?php echo $lastField;
+											if($field == 'data'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 bmi-key" onclick="jQuery('#bmiKeyModal').modal('show');" style="cursor: pointer;"></i>
+										</form>
+									</th><?php
+								}else if($assessmentUrl == 'balance'){ ?>
+									<th>
+										<form id="form4" action="" method="post">
+											<input type="hidden" name="field" value="data-reach" />
+											<span onclick="jQuery('#form4').submit();">Reach Distance</span>
+											<?php echo $lastField;
+											if($field == 'data-reach'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter up to 2 decimal places. Note your entry will be rounded down to the nearest 1/2 centimeter. (.5, 0)" data-original-title="Absolute Reach Distance (Centimeters)"></i>
+										</form>
+									</th>
+									<th>
+										<form id="form5" action="" method="post">
+											<input type="hidden" name="field" value="data-limb" />
+											<span onclick="jQuery('#form5').submit();">Limb Length</span>
+											<?php echo $lastField;
+											if($field == 'data-limb'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter up to 2 decimal places. Note your entry will be rounded down to the nearest 1/2 centimeter. (.5, 0)" data-original-title="Limb Length (Centimeters)"></i>
+										</form>
+									</th>
+									<th class="displayBalance">
+										<form id="form6" action="" method="post">
+											<input type="hidden" name="field" value="data" />
+											<span onclick="jQuery('#form6').submit();">Balance %</span>
+											<?php echo $lastField;
+											if($field == 'data'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+										</form>
+									</th><?php
+								}else if($assessmentUrl == 'slraise'){ ?>
+									<th>
+										<form id="form4" action="" method="post">
+											<input type="hidden" name="field" value="data-sl-left" />
+											<span onclick="jQuery('#form4').submit();">Left Leg</span>
+											<?php echo $lastField;
+											if($field == 'data-sl-left'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter value from 1 - 9 for the left leg raise."></i>
+										</form>
+									</th>
+									<th>
+										<form id="form5" action="" method="post">
+											<input type="hidden" name="field" value="data-sl-right" />
+											<span onclick="jQuery('#form5').submit();">Right Leg</span>
+											<?php echo $lastField;
+											if($field == 'data-sl-right'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+											<i class="fa fa-question-circle text-info font16 ui-popover" data-toggle="tooltip" data-placement="top" data-trigger="hover" data-content="Enter value from 1 - 9 for the right leg raise."></i>
+										</form>
+									</th>
+									<th class="displayBalance">
+										<form id="form6" action="" method="post">
+											<input type="hidden" name="field" value="data" />
+											<span onclick="jQuery('#form6').submit();"><?php echo $assessmentName; ?></span>
+											<?php echo $lastField;
+											if($field == 'data'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; } ?>
+										</form>
+									</th><?php
+								}else{ ?>
+									<th>
+										<form id="form4" action="" method="post">
+											<input type="hidden" name="field" value="data" />
+											<span onclick="jQuery('#form4').submit();"><?php echo $assessmentName; ?></span>
+											<?php
+											echo $lastField;
+											if($field == 'data'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+											?>
+										</form>
+									</th><?php
+								} ?>
+							</tr>
+						</thead>
+						<tbody>
+							<?php
+							$studentCount = count($students);
+							if($studentCount > 0){
+								foreach($students as $student){ ?>
+									<tr class="student-entry" <?php if(isset($searchTerm) && $searchTerm != ''){ echo 'style="display: none;"'; } ?>>
+										<td style="width: 30px;">
+											<input type="checkbox" class="select-check" name="select-user[]" value="<?php echo $student->id; ?>" />
+										</td>
+										<td class="first-name"><?php echo $student->fname; ?></td>
+										<td class="last-name"><?php echo $student->lname; ?></td>
+										<?php
+										if(isset($grade_level) && $grade_level){ ?>
+											<td class="hideable"><?php echo $grade_level[$student->grade]->gradeName; ?></td><?php
+										}else{ ?>
+											<td class="hideable"><?php echo $student->grade; ?></td><?php
+										}
+										
+										//-- Check for grade (student/semester/interval) --//
+										$conditions = "semester = :sem: AND student = :studentID: AND interval = :intID:";
+										$bindArray = array('sem' => $this->session->get("current-semester"), 'studentID' => $student->id, 'intID' => $intervalID);
+										$theGrade = AthleticGrading::findFirst(array($conditions, "bind" => $bindArray));
+										
+										if($assessmentUrl == 'bmi'){
+											//-- Height & Weight --// ?>
+											<td class="submit-athletic-test">
+												<!-- Height -->
+												<div class="input-group <?php if(!empty($theGrade) && $theGrade->height != 0){ echo 'entered'; } ?>">
+													<span class="input-group-addon">In.</span>
+													<input type="text" class="form-control data-entry data-inches" value="<?php if(!empty($theGrade) && $theGrade->height != 0){ echo $theGrade->height; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="height" data-format="inches" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="submit-athletic-test">
+												<!---Weight -->
+												<div class="input-group <?php if(!empty($theGrade) && $theGrade->weight != 0){ echo 'entered'; } ?>">
+													<span class="input-group-addon">lbs.</span>
+													<input type="text" class="form-control data-entry data-pounds" value="<?php if(!empty($theGrade) && $theGrade->weight != 0){ echo $theGrade->weight; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="weight" data-format="pounds" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="displayBMI">
+											<?php if(!empty($theGrade) && $theGrade->bmi != 0){
+												if($theGrade->bmi > 29.9){ $bmiclass = 'primary'; }else if($theGrade->bmi > 24.9){ $bmiclass = 'secondary'; }else if($theGrade->bmi > 18.5){ $bmiclass = 'success'; }else{ $bmiclass = 'info'; }
+												echo '<span class="label label-'.$bmiclass.'">'.$theGrade->bmi.'</span>';
+											} ?></td><?php
+										}else if($assessmentUrl == 'balance'){
+										//-- Absolute Reach Distance & Limb Length --// ?>
+											<td class="submit-athletic-test">
+												<!-- Reach Distance -->
+												<div class="input-group <?php if(!empty($theGrade) && !empty($theGrade->absolute_reach)){ echo 'entered'; } ?>">
+													<span class="input-group-addon">Cm.</span>
+													<input type="text" class="form-control data-entry data-centimeters" value="<?php if(!empty($theGrade) && $theGrade->absolute_reach != 0){ echo $theGrade->absolute_reach; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="absolute_reach" data-format="centimeters" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="submit-athletic-test">
+												<!-- Limb Length -->
+												<div class="input-group <?php if(!empty($theGrade) && !empty($theGrade->limb_length)){ echo 'entered'; } ?>">
+													<span class="input-group-addon">Cm.</span>
+													<input type="text" class="form-control data-entry data-centimeters" value="<?php if(!empty($theGrade) && $theGrade->limb_length != 0){ echo $theGrade->limb_length; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="limb_length" data-format="centimeters" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="displayBalance">
+											<?php if(!empty($theGrade) && $theGrade->balance != 0){
+												echo '<span class="label label-info">'.$theGrade->balance.'</span>';
+											} ?></td><?php
+										}else if($assessmentUrl == 'slraise'){ ?>
+											<td class="submit-athletic-test">
+												<!-- Straight Left Leg -->
+												<div class="input-group <?php if(!empty($theGrade) && !empty($theGrade->sl_left)){ echo 'entered'; } ?>">
+													<span class="input-group-addon">1-9</span>
+													<input type="text" class="form-control data-entry data-whole data-length-1" value="<?php if(!empty($theGrade) && $theGrade->sl_left != 0){ echo $theGrade->sl_left; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="sl_left" data-format="whole" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="submit-athletic-test">
+												<!-- Straight Right Leg -->
+												<div class="input-group <?php if(!empty($theGrade) && !empty($theGrade->sl_right)){ echo 'entered'; } ?>">
+													<span class="input-group-addon">1-9</span>
+													<input type="text" class="form-control data-entry data-whole data-length-1" value="<?php if(!empty($theGrade) && $theGrade->sl_right != 0){ echo $theGrade->sl_right; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="sl_right" data-format="whole" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td>
+											<td class="displayBalance">
+											<?php if(!empty($theGrade) && $theGrade->slraise != 0){
+												if($theGrade->sl_left != 0 && $theGrade->sl_right){ $slclass = 'info'; }else{ $slclass = 'tertiary'; }
+												echo '<span class="label label-'.$slclass.'">'.$theGrade->slraise.'</span>';
+											} ?></td><?php
+										}else{ ?>
+											<td class="submit-athletic-test">
+												<div class="input-group <?php if(!empty($theGrade) && $theGrade->{$assessmentUrl} != 0){ echo 'entered'; } ?>">
+													<span class="input-group-addon"><?php echo $assessmentLabel; ?></span>
+													<input type="text" class="form-control data-entry data-<?php echo $assessmentData; ?>" value="<?php if(!empty($theGrade) && $theGrade->{$assessmentUrl} != 0){ echo $theGrade->{$assessmentUrl}; } ?>" />
+													<?php if($cap['assessments']['enter']){ ?>
+														<span class="input-group-btn">
+															<button class="btn btn-secondary submit-entry" type="button" data-test-url="<?php echo $assessmentUrl; ?>" data-format="<?php echo $assessmentData; ?>" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>" data-interval="<?php echo $intervalID; ?>" <?php if(!empty($theGrade)){ echo 'data-grade-val="'.$theGrade->id.'"'; } ?>>
+																<i class="fa fa-arrow-right"></i>
+															</button>
+														</span>
+													<?php } ?>
+												</div>
+											</td><?php
+										} ?>
+									</tr><?php
+								}
+							}else{
+								if($assessmentUrl == 'bmi' || $assessmentUrl == 'balance'){ ?>
+									<tr><td colspan="7">No Results</td></tr><?php
+								}else{ ?>
+									<tr><td colspan="5">No Results</td></tr><?php
+								} 
+							} ?>
+						</tbody>
+					</table>
+					
+					<?php
+						echo $studentCount.' Students in ';
+						if(isset($periodID) && $periodID){
+							echo 'Period '.$periodID;
+						}else if(isset($periodID) && $periodID == 0){
+							echo "Period Unassigned";
+						}else{
+							echo "All Periods";
+						}
+					?>
+					
+				</div><!-- /#display-results -->
+				
+				<?php
+			}
+		?>
+
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/athletic-grading");
+	$this->partial("partials/footer-bottom");
+?>

@@ -1,0 +1,131 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Prepared Mind: Contributions';
+
+if(!isset($errFound)){
+	$errFound = false;
+}
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="row">
+			<div class="col-md-3 col-sm-5">
+
+			    <ul id="myTab" class="nav nav-pills nav-stacked">
+			        <li <?php echo 'class="active"'; ?>>
+						<a href="#suggestion-form" data-toggle="tab"><i class="fa fa-star"></i> &nbsp;&nbsp;Make a Contribution</a>
+					</li>
+					<li>
+						<a href="#report-issue" data-toggle="tab"><i class="fa fa-bug"></i> &nbsp;&nbsp;Report an Issue</a>
+					</li>    
+			    </ul>
+				
+			</div> <!-- /.col -->
+			
+			<div class="col-md-9 col-sm-7">
+				<div id="myTabContent" class="tab-content stacked-content">
+					<div class="tab-pane fade in active" id="suggestion-form">
+						
+						<h2>Make a Contribution</h2>
+						
+						<!-- Suggestion Form -->
+						<form id="suggestionForm" class="parsley-form" action="" method="post">
+							<input type="hidden" name="form-action" value="submit-suggestion">
+							<input type="hidden" name="author_email" value="<?php echo $this->session->get("user-email"); ?>">
+							
+							<div class="form-group">
+								<label for="post-subject">Submission Title</label>
+								<input type="text" name="post-subject" id="post-subject" class="form-control" value="<?php if($errFound){ echo $this->request->getPost("post-subject"); } ?>" data-required="true">
+							</div>
+							<div class="form-group">	
+								<label for="curric-unit">Curricular Unit</label>
+								<select id="curric-unit" name="curric-unit" class="form-control" data-required="true">
+									<option value="">Select One...</option>
+									<?php
+										foreach($units as $unit){
+											$sel = '';
+											if($errFound){ if($this->request->getPost("curric-unit") == $unit){ $sel = 'selected="selected"'; } }
+											echo '<option '.$sel.' value="'.$unit.'">'.ucwords(str_ireplace('-', ' ', $unit)).'</option>';
+										}
+									?>
+								</select>
+							</div>
+							<div class="form-group">	
+								<label for="gradelevel">Grade Level</label>
+								<select id="gradelevel" name="gradelevel" class="form-control" data-required="true">
+									<option value="">Select One...</option>
+									<?php
+										if(isset($grades) && !empty($grades)){
+											foreach($grades as $grade => $gradeName){
+												$sel = '';
+												if($errFound){ if($this->request->getPost("gradelevel") == $grade){ $sel = 'selected="selected"'; } }
+												echo '<option '.$sel.' value="'.$grade.'">'.$gradeName.'</option>';
+											}
+										}
+									?>
+								</select>
+							</div>
+							
+							<div class="form-group">
+								<label for="post-content">Description</label>
+								<textarea name="post_content" id="post-content" cols="10" rows="5" class="form-control" placeholder="Enter text ..." data-required="true"><?php if($errFound){ echo $this->request->getPost("post_content"); } ?></textarea>
+							</div>
+							<div class="form-group">
+								<input type="submit" id="submit-suggestion" class="btn btn-primary" value="Submit Contribution">
+							</div>
+							
+						</form>
+						
+					</div><!-- /.tab-pane -->
+					
+					<div class="tab-pane fade" id="report-issue">
+						
+						<h2>Report an Issue</h2>
+						
+						<!-- Suggestion Form -->
+						<form id="issueForm" class="parsley-form" action="/prepared/report" method="post">
+							<input type="hidden" name="form-action" value="submit-bug">
+							
+							<div class="form-group">
+								<label for="issue-subject">What's the problem?</label>
+								<input type="text" name="issue_subject" id="issue-subject" class="form-control" value="" data-required="true" maxlength="80">
+							</div>
+							
+							<div class="form-group">
+								<label for="issue-content">Details</label>
+								<textarea name="issue_content" id="issue-content" cols="10" rows="5" class="form-control" placeholder="Enter text ..." data-required="true"><?php if($errFound){ echo $this->request->getPost("post_content"); } ?></textarea>
+							</div>
+							<div class="form-group">
+								<input type="submit" id="submit-issue" class="btn btn-primary" value="Submit Issue">
+							</div>
+							
+						</form>
+						
+					</div><!-- /.tab-pane -->
+					
+				</div><!-- /#myTabContent -->
+			</div> <!-- /.col -->
+		</div><!-- /.row -->
+		
+	</div><!-- #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/default");
+	$this->partial("partials/footer-bottom");
+?>

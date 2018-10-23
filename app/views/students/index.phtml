@@ -1,0 +1,403 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Manage Students';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php //if(isset($output)){ print_r($output); } ?>
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div id="controlBar" class="col-md-12">
+			<?php if($cap['students']['add']){ ?>
+				<!-- add User Btn -->
+				<span class="btn btn-primary" onclick="jQuery('#addStudentModal').modal('show'); jQuery('#add-email').blur();" title="Add Student" style="margin-right: 5px;"><i class="fa fa-plus"></i></span>
+			<?php } ?>
+			
+			<?php if($cap['administration']['manage']){ ?>
+				<div id="bulk-actions" class="btn-group" title="Bulk Actions" style="margin-right: 5px;">
+					<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+						<i class="fa fa-reorder"></i> <span class="bulk-txt">Bulk Actions</span> <span class="caret"></span>
+					</button>
+					<ul class="dropdown-menu" role="menu">
+						<li><a href="javascript:;" onclick="$('#CSVonlyAltIDs').val(''); $(this).getCSV();">Export CSV File</a></li>
+						<li><a href="javascript:;" onclick="$('#CSVonlyAltIDs').val(1); $(this).getCSV();">Export CSV of Students Without Alt ID</a></li>
+						<li><a href="javascript:;" onclick="jQuery('#importCSVModal').modal('show');">Import CSV File</a></li>
+						<?php
+						/*if($this->session->get("user-role") == 1){ ?>
+							<li><a href="javascript:;" onclick="jQuery('#importCoachCSVModal').modal('show');">Import Coach Assignments CSV File</a></li><?php
+						}*/
+						if(isset($activeID) && $activeID == 0){ ?>
+							<li><a href="javascript:;" onclick="$(this).enrollStudents();">Enroll Selected Students</a></li><?php
+						}else{ ?>
+							<li><a href="javascript:;" onclick="$(this).unenrollStudents();">Mark Selected Students as Not Enrolled</a></li><?php
+						}
+						//-- Option to assign students to Gym Period --//
+						if(isset($schoolID) && $schoolID){ ?>
+							<li><a href="javascript:;" onclick="jQuery('#assignTurfModal').modal('show');">Assign Selected Students to Turf Period</a></li><?php
+						} ?>	
+					</ul>
+				</div><!-- /#bulk-actions -->
+			<?php } ?>
+			
+			<?php
+			//-- Show / Hide Filters --//
+			if(((isset($schoolID) && $schoolID) && $this->session->get("user-role") <= 3) || isset($gradeID) || (isset($teacherID) && $teacherID) || (isset($coachID) && $coachID) || (isset($searchTerm) && $searchTerm)){
+				$filterText = 'Hide Filters';
+				$showFilters = 'style="display: block;"';
+			}else{
+				$filterText = 'Show Filters';
+				$showFilters = '';
+			} ?>
+			<div id="show-user-filters" class="btn-group" title="Filters" style="margin-right: 5px;">
+				<a href="#" class="btn btn-secondary"><i class="fa fa-filter"></i> <span><?php echo $filterText; ?></span></a>
+			</div>
+			
+			<!-- Refresh Button -->
+			<div class="btn-group" title="Refresh Page" style="margin-right: 5px;">
+				<form id="refresh-page" action="" method="post">
+					<span class="btn btn-success" id="refresh-ctrl-btn" onclick="jQuery('#refresh-page').submit();"><i class="fa fa-refresh"></i> <span>Refresh</span></span>
+					<?php echo $inputs.$filters; ?>
+				</form>
+			</div>
+			
+			<!-- Resources / Helpers -->
+			<div id="helps" class="btn-group" title="Helps" style="margin-right: 5px;">
+				<button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+					<i class="fa fa-info"></i> <span class="helps-txt">Helps</span> <span class="caret"></span>
+				</button>
+				<ul class="dropdown-menu" role="menu">
+					<!--<li><a href="javascript:;" id="teachRefList">Teacher Reference List</a></li>-->
+					<li><a href="javascript:;" id="coachRefList">Coach Reference List</a></li>
+				</ul>
+			</div><!-- /#helps -->
+			
+			<div class="limit-results" title="Display Limit" style="float: right;">
+				<form id="changeLimit" action="" method="post">
+					<div class="btn-group">
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+							<span id="limit-display-txt">Display &nbsp;</span><span class="badge badge-tertiary"><?php echo $limit; ?></span> <span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<?php
+								$numRes = array(10, 25, 50, 100, 150);
+								foreach($numRes as $num){ ?>
+									<li><a href="#" data-val="<?php echo $num; ?>"><?php echo $num; ?></a></li><?php
+								}
+							?>
+						</ul>
+						<input type="hidden" name="limit" id="theLimit" class="form-control" value="<?php echo $limit; ?>" />
+					</div>
+					<?php echo $inputs.$schoolFilter.$gradeFilter.$teacherFilter.$coachFilter.$activeFilter.$searchFilter; ?>
+				</form>
+			</div><!-- /.limit-results -->
+			
+			<!-- Filters -->
+			<div id="user-filters" class="well" <?php echo $showFilters; ?>>
+				<?php //-- school filter --//
+				if($schools && $this->session->get("user-role") <= 3){ ?>
+					<div class="filter-school col-sm-6">
+						<form id="schoolFilter" action="" method="post">
+							<label for="filter-schools">School Filter</label>
+							<select name="filterSchool" id="filter-schools" class="form-control" onchange="jQuery('#schoolFilter').submit();">
+								<option value="">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									foreach($schools as $school){
+										if($school->state != $curState){
+											if($curState){
+												echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+											}else{
+												echo '<optgroup label="'.$states[$school->state].'">';
+											}
+											$curState = $school->state;
+										}
+										if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+									}
+									echo '</optgroup>';
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$gradeFilter.$activeFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}
+				//-- grade filter --//
+				if(isset($grade_level) && $grade_level){ ?>
+					<div class="filter-grade col-sm-6">
+						<form id="gradeFilter" action="" method="post">
+							<label for="filter-grade">Grade Level Filter</label>
+							<select name="filterGrade" id="filter-grade" class="form-control" onchange="jQuery('#gradeFilter').submit();">
+								<option value="">Select Grade Level</option>
+								<?php
+									//-- List Out Grade Levels --//
+									foreach($grade_level as $grade){
+										if(isset($gradeID) && $grade->id == $gradeID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$grade->id.'" '.$sel.'>'.$grade->gradeName.'</option>';
+									}
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$schoolFilter.$coachFilter.$activeFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}
+				//-- teacher filter --//
+				/*if(isset($teacherList)){ ?>
+					<div class="filter-teacher col-sm-6">
+						<form id="teacherFilter" action="" method="post">
+							<label for="filter-teacher">Teacher Filter</label>
+							<select name="filterTeacher" id="filter-teacher" class="form-control" onchange="jQuery('#teacherFilter').submit();">
+								<option value="">Select Teacher</option>
+								<?php
+									//-- List Out Teachers --//
+									foreach($teacherList as $teacher){
+										if(isset($teacherID) && $teacher->id == $teacherID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$teacher->id.'" '.$sel.'>'.$teacher->lname.', '.$teacher->fname.'</option>';
+									}
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$schoolFilter.$gradeFilter.$activeFilter.$coachFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}*/
+				//-- coach filter --//
+				if(isset($coachList)){ ?>
+					<div class="filter-coach col-sm-6" <?php if($this->session->get("user-role") <= 3){ echo 'style="margin-top: 10px;"'; } ?>>
+						<form id="coachFilter" action="" method="post">
+							<label for="filter-coach">Athletic Coach Filter</label>
+							<select name="filterCoach" id="filter-coach" class="form-control" onchange="jQuery('#coachFilter').submit();">
+								<option value="">Select Coach</option>
+								<?php
+									//-- List Out Coaches --//
+									foreach($coachList as $coach){
+										if(isset($coachID) && $coach->id == $coachID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$coach->id.'" '.$sel.'>'.$coach->lname.', '.$coach->fname.'</option>';
+									}
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$schoolFilter.$gradeFilter.$activeFilter.$teacherFilter.$searchFilter; ?>
+						</form>
+					</div><?php
+				}
+				//-- Enrollment filter --// ?>
+					<div class="filter-enrollment col-sm-6" style="margin-top: 10px;">
+						<form id="enrollFilter" action="" method="post">
+							<label for="filter-enrollment">Student Enrollment Filter</label>
+							<select name="filterActive" id="filter-enrollment" class="form-control" onchange="jQuery('#enrollFilter').submit();">
+								<?php
+									//-- Active / Enrolled Students -- or Un-Enrolled students --//
+									$activeArray = array(0 => 'Not Enrolled / Inactive', 1 => 'Enrolled / Active');
+									foreach($activeArray as $key => $status){
+										if(isset($activeID) && $key == $activeID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$key.'" '.$sel.'>'.$status.'</option>';
+									}
+								?>
+							</select>
+							<?php echo $inputs.$limitFilter.$schoolFilter.$teacherFilter.$coachFilter.$gradeFilter.$searchFilter; ?>
+						</form>
+					</div>
+					<!-- Search Filter -->
+					<div id="filter-search" class="col-sm-6" style="margin-top: 10px;">
+						<form id="searchFilter" action="" method="post">
+							<label for="searchTerm">Search Students Filter</label>
+							<div class="input-group">
+								<input type="text" name="filterSearch" id="searchTerm" class="form-control" placeholder="Enter First or Last Name" value="<?php if(isset($searchTerm) && $searchTerm != ''){ echo $searchTerm; } ?>">
+								<div class="input-group-btn">
+									<button type="button" id="quick-search" class="btn btn-tertiary" onclick="jQuery('#searchFilter').submit();"><i class="fa fa-search"></i> Search</button>
+								</div><!-- /input-group-btn -->
+							</div><!-- /input-group -->
+							<?php echo $inputs.$limitFilter.$schoolFilter.$teacherFilter.$coachFilter.$gradeFilter; ?>
+						</form>
+					</div>
+					<!-- End Search Filter -->
+				<div class="clear"></div>
+			</div>
+			<!-- end filters -->
+			
+		</div><!-- /#controlBar -->
+		
+		<div id="display-results" class="col-md-12">
+			<div class="table-responsive">
+				
+				<table class="table table-hover table-bordered">
+					<thead>
+						<tr>
+							<th style="width: 30px;">
+								<input type="checkbox" id="check-all" />
+							</th>
+							<th>
+								<form id="form1" action="" method="post">
+									<input type="hidden" name="field" value="firstname" />
+									<span onclick="jQuery('#form1').submit();">First Name</span>
+									<?php
+									echo $lastField;
+									if($field == 'firstname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th>
+								<form id="form2" action="" method="post">
+									<input type="hidden" name="field" value="lastname" />
+									<span onclick="jQuery('#form2').submit();">Last Name</span>
+									<?php
+									echo $lastField;
+									if($field == 'lastname'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form3" action="" method="post">
+									<input type="hidden" name="field" value="grade_level" />
+									<span onclick="jQuery('#form3').submit();">Grade Level</span>
+									<?php
+									echo $lastField;
+									if($field == 'grade_level'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form4" action="" method="post">
+									<input type="hidden" name="field" value="school" />
+									<span onclick="jQuery('#form4').submit();">School</span>
+									<?php
+									echo $lastField;
+									if($field == 'school'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th class="hideable">
+								<form id="form5" action="" method="post">
+									<input type="hidden" name="field" value="coach" />
+									<span onclick="jQuery('#form5').submit();">Coach</span>
+									<?php
+									echo $lastField;
+									if($field == 'coach'){ echo '<i class="fa fa-sort-'.$dir.'"></i>'; }
+									?>
+								</form>
+							</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php
+						if(count($students) > 0){
+							foreach($students as $student){ ?>
+								<tr>
+									<td style="width: 30px;">
+										<input type="checkbox" class="select-check" name="select-user[]" value="<?php echo $student->id; ?>" />
+									</td>
+									<td><?php echo $student->fname; ?></td>
+									<td><?php echo $student->lname; ?></td>
+									<?php
+									if(isset($grade_level) && $grade_level){ ?>
+										<td class="hideable"><?php echo $grade_level[$student->grade]->gradeName; ?></td><?php
+									}else{ ?>
+										<td class="hideable"><?php echo $student->grade; ?></td><?php
+									}
+								
+									//-- Teacher Name --//
+									/*if(isset($teacherRef) && $teacherRef){ ?>
+										<td class="hideable"><?php echo $teacherRef[$student->teacher]; ?></td><?php
+									}else{ ?>
+										<td class="hideable"><?php echo $student->teacher; ?></td><?php
+									}*/
+									
+									//-- School Name Abbreviation --//
+									if(isset($school_abbreviations) && isset($school_abbreviations[$student->school])){ ?>
+										<td class="hideable"><?php echo $school_abbreviations[$student->school]; ?></td><?php
+									}else{ ?>
+										<td class="hideable">N/A</td><?php
+									}
+								
+									//-- Coach Name --//
+									if(isset($coachRef) && !empty($coachRef) && isset($coachRef[$student->coach])){ ?>
+										<td class="hideable"><?php echo $coachRef[$student->coach]; ?></td><?php
+									}else{ ?>
+										<td class="hideable"><?php echo $student->coach; ?></td><?php
+									} ?>
+								
+									<td style="min-width: 180px;">
+										<?php if($cap['students']['edit']){ ?>
+											<span class="label label-secondary editStudent" data-student-val="<?php echo $student->id; ?>"><i class="fa fa-pencil"></i> Edit</span>
+										<?php } ?>
+										<?php if($cap['students']['delete']){ ?>
+											<span class="label label-tertiary delStudent" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>"><i class="fa fa-ban"></i> Delete</span>
+										<?php } ?>
+										<?php if($cap['administration']['manage']){ ?>
+											<span class="label label-info assignParents" data-student-val="<?php echo $student->id; ?>" data-student-name="<?php echo $student->fname.' '.$student->lname; ?>"><i class="fa fa-user"></i> Parent</span>
+										<?php } ?>
+									</td>
+								</tr><?php
+							}
+						}else{ ?>
+							<tr><td colspan="7">No Results</td></tr><?php
+						} ?>
+					</tbody>
+				</table>
+				
+			</div><!-- /.table-responsive -->
+		</div><!-- /#display-results -->
+		
+		<div class="col-md-12">
+			
+			<?php
+			//-- Create Pager --//
+			if($totalStudents > $limit){
+				//-- Calculations --//
+				$numLimit = $totalStudents / $limit;
+				$curMin = (($pageNum - 1) * $limit) + 1;
+				$curMax = $pageNum * $limit;
+				if($curMax > $totalStudents){ $curMax = $totalStudents; }
+				
+				echo '<div class="users-pager">';
+				echo '<span class="page-count">Showing <span class="curMin">'.$curMin.'</span> - <span class="curMax">'.$curMax.'</span> of '.$totalStudents.' Students</span>';
+				echo '<ul class="pagination" data-limit="'.$limit.'" data-total="'.$totalStudents.'">';
+				if($pageNum == 1){ $prevClass = 'disabled'; }else{ $prevClass = ''; }
+				echo '<li class="prev '.$prevClass.'"><a href="#">← Previous</a></li>';
+				$i = 0;
+				while($i < $numLimit){
+					$i++;
+					if($i == $pageNum){ $theClass = 'active '; }else{ $theClass = ''; }
+					if($i == 1){ $theClass.= 'firstPage '; }
+					if($i >= $numLimit){ $theClass.= 'lastPage '; }
+					if(!$theClass && $numLimit > 5 && ($i > ($pageNum + 2) || $i < ($pageNum - 2))){ $theClass.= 'scrunch '; }
+					echo '<li class="'.$theClass.'"><a href="#" data-page="'.$i.'">'.$i.'</a></li>';
+				}
+				if($curMax == $totalStudents){ $nextClass = 'disabled'; }else{ $nextClass = ''; }
+				echo '<li class="next '.$nextClass.'"><a href="#">Next → </a></li></ul>';
+				echo '</div>'; ?>
+				
+				<form id="pagerForm" action="" method="post">
+					<input type="hidden" name="pageNum" id="pageNumber" value="<?php echo $pageNum; ?>" />
+					<?php echo $inputs.$limitFilter.$schoolFilter.$gradeFilter.$teacherFilter.$activeFilter; ?>
+				</form><?php
+			}else{
+				echo '<div class="users-pager"><span class="page-count">Showing '.$totalStudents.' Students</span></div>';
+			} ?>
+			
+		</div>
+		
+	</div><!-- end #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/student-management");
+	$this->partial("partials/footer-bottom");
+?>
