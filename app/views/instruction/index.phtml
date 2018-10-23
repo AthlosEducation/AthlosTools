@@ -1,0 +1,133 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Curriculum Instruction';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/traits");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="row">
+
+	    	<div class="col-md-3 col-sm-4">
+	    
+			    <ul id="myTab" class="nav nav-pills nav-stacked">
+					<li class="active">
+			        	<a href="#instruction-tab" data-toggle="tab">
+			        		<i class="fa fa-file-text"></i> &nbsp;Instruction
+			        	</a>
+			        </li>
+					<li>
+			        	<a href="#strategies" data-toggle="tab">
+			        		<i class="fa fa-refresh"></i> &nbsp;Strategies for Teaching PCT
+			        	</a>
+			        </li>
+			    </ul>
+
+			</div> <!-- /.col -->
+
+			<div class="col-md-9 col-sm-8">
+			      <div class="tab-content stacked-content">
+					
+					<div class="tab-pane fade in active" id="instruction-tab">
+						<h3 class="heading">Performance Character Trait Curriculum Preparation Instructions</h3>
+						<p>Athlos Academies has provided this web-based curriculum support site to help you facilitate and prepare lesson plans for Character Huddles and presentations. In order to most effectively use this website we would suggest the following steps as you prepare a lesson plan:</p>
+						<br>
+						<p>
+							<span class="instructionEmphasis">Step One:</span>
+							Determine the needs of your students for the Huddle and if appropriate select Media, Activities, Quotes and Questions to use for the Huddle.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Two:</span>
+							Select an approved video from the Character Trait &#8220;Video&#8221; tab if needed for the lesson plan.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Three:</span>
+							If appropriate for the Huddle select an approved Activity from the Character Trait &#8220;Activity&#8221; Tab.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Four:</span>
+							Select the Quotes and Questions you would like to use to engage the students in conversation about the Performance Character Trait.
+						</p>
+						<p>
+							<span class="instructionEmphasis">Step Five:</span>
+							Work to engage the students in an open conversation about the Trait and what it means in their life, examples from their own life, and how they can improve and use the Trait.
+						</p>
+						<br>
+						
+						<!-- Reminders -->
+						<h4>Reminders:</h4>
+						<ol>
+							<li>Only use approved Videos, Activities, and Quotes included on this website for your lesson plan.</li>
+							<li>We encourage you to submit any Videos, Activities, and Quotes you would like included in the database of curriculum.  Click on the &#8220;Suggestions&#8221; tab to submit material</li>
+							<li>Your school Character Coach is your resource for support on lesson plan preparation and processes.</li>
+							<li>Don&#8217;t forget to grade each student on each Trait as the module is completed.</li>
+						</ol>
+						<br>
+						
+						<p><em>* If you would like to view a sample Huddle please click on the &#8220;Sample Huddles&#8221; Tab.</em></p>
+					</div><!-- /.tab-pane -->
+					
+					<div class="tab-pane fade" id="strategies">
+						<h3 class="heading">Instructional Strategies for Teaching Athlos Performance Character Traits</h3>
+						<h4>Develop the Proper Learning Environment.</h4>
+						<ol>
+							<li>Create an environment where students are active participants in the sharing and learning process and all ideas and thoughts regarding Athlos PCT are encouraged and considered valuable.</li>
+							<li>Motivate students to show compassion and respect for all input and discussion regarding Athlos PCT.</li>
+							<li>Establish routines and scheduled time to focus on Athlos PCT.  The students should be aware of those times and schedules so they are prepared to participate.</li>
+							<li>Establish clear expectations of student involvement, responsibilities, and requirements for the study of Athlos PCT.</li>
+						</ol>
+						<hr>
+						
+						<h4>Teachers Responsibilities</h4>
+						<ol>
+							<li>Teachers should be an example of and emulate the highest standards of all 12 Athlos Performance Character Traits in their personal life and their teaching skills.</li>
+							<li>Teachers should use multiple methods to access the students understanding of the Athlos PCT.  These methods may include completion of homework assignments, visual observations in class, observing students in turf huddles, individual conversations with a student about PCT’s, and assessment of students participation during Athlos PCT study time.</li>
+							<li>Provide timely and regular feedback to the students and the parents regarding progress and achievement as it relates to Athlos PCT.</li>
+							<li>Actively participate in sharing learning strategies with the school character coach and other teachers to provide for a collaborative learning and improvement environment in the schools.</li>
+							<li>Use the Athlos PCT rubric and grading system to actively track student progress.</li>
+							<li>Encourage conversations with students and parents on all Athlos Performance Character Traits.</li>
+							<li>Facilitate student efforts for self-assessment on Athlos PCT.</li>
+							<li>Provide meaningful learning opportunities.</li>
+						</ol>
+						<hr>
+						
+						<h4>Instructional Strategies</h4>
+						<ol>
+							<li>Provide open and public recognition for students that accomplish and/or represent an Athlos PCT well in the classroom or school setting.</li>
+							<li>In the event a student exhibits a negative example of Athlos PCT the teacher will provide feedback in a private one-on-one method with the intent of the conversation and feedback to help the student to recognize and change the behavior.  Once such feedback has been provided the teacher will find ample opportunity to positively encourage the student to improve and recognize with praise any effort the student makes at improvement.</li>
+							<li>Link life experiences and examples to each of the 12 Athlos PCT.</li>
+							<li>Use a variety of methods to teach the value of Athlos PCT.  These may include technology, activities, life experiences, examples from history, videos, and open forum discussion.</li>
+							<li>Review each of the students Athlos PCT goal with them on a periodic basis and provide feedback on efforts to achieve the goal.</li>
+							<li>Incorporate the vocabulary of Athlos PCT by using the 12 PCT in educational strategies and daily classroom conversation.</li>
+							<li>Provide “case study” opportunities for students to participate and learn from well planned case studies on issues of PCT.</li>
+							<li>Encourage family and parent involvement in the achievement of PCT goals and objectives.</li>
+							<li>Monitor and encourage the student portfolio of PCT homework to be updated, valued, and referenced as needed.</li>
+							<li>Frequently check for understanding of PCT concepts and applications.</li>
+						</ol>
+					</div><!-- /.tab-pane -->
+						
+			 	</div>
+			</div> <!-- /.col -->
+
+		</div> <!-- /.row -->
+		
+	</div><!-- #content-container -->
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/traits");
+	$this->partial("partials/footer-bottom");
+?>

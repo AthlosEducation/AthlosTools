@@ -1,0 +1,221 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		
+		/*----------------------------
+			Validate / Submit Form
+		----------------------------*/
+		$('#updateProfile').click(function(e){
+			//-- validate form --//
+			if($('#editProfileForm').parsley('validate')){
+				//-- Check for any failed ajax checks --//
+				if(!$('#editProfileForm .failed').get(0)){
+					//-- stip non numeric characters form phone --//
+					var phone = $('#edit-phone').val().replace(/[^0-9]/g,'');
+					$('#edit-phone').val(phone);
+					//-- Update hidden field - to send email --//
+					if($('#sendEmail:checked').get(0)){
+						$('#send-email').val(1);
+					}
+					//-- Submit Form --//
+					$('#editProfileForm').submit();
+				}
+			}
+		});
+			//-- Student Profile --//
+		$('#updateStudentProfile').click(function(e){
+			//-- validate form --//
+			if($('#editProfileForm').parsley('validate')){
+				//-- Check for any failed ajax checks --//
+				if(!$('#editProfileForm .failed').get(0)){
+					//-- Update hidden field - to send email --//
+					if($('#sendEmail:checked').get(0)){
+						$('#send-email').val(1);
+					}
+					//-- Submit Form --//
+					$('#editProfileForm').submit();
+				}
+			}
+		});
+		/*---------------------
+			end submit form
+		----------------------*/
+		
+		/*--------------------
+			Validate Email
+		---------------------*/
+		$('#edit-email').blur(function(e){
+			var emailVal = $(this).val();
+			var thisInput = $(this);
+			var userID = <?php if($this->session->get("user-id")){ echo $this->session->get("user-id"); }else{ echo $this->session->get("student-id"); } ?>;
+			var userType = 'student';
+			var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+			if(emailVal.length > 4){
+				//-- Make sure its formatted like an email --//
+				if(emailVal == '' || !re.test(emailVal)){
+				    $(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+					$(this).parent('div').removeClass('successful').addClass('failed');
+				}else{
+					
+					//-- setup ajax request --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/parents/validemail";'."\n"; ?>
+					var data = {
+						action: "validate_email",
+						email: emailVal,
+						user_id: userID,
+						type: userType
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Email is valid');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Email already in use - Email Address has to be unique - pick a new one');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+					
+				}
+				
+			}else{
+				$(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+				$(this).parent('div').removeClass('successful').addClass('failed');
+			}
+		});
+		/*-- end email --*/
+		
+		/*--------------------
+			Validate Phone
+		---------------------*/
+		$('#edit-phone').blur(function(e){
+			var countInt = $(this).val().replace(/[^0-9]/g,'').length;
+			if(!$(this).val()){
+				$(this).prev('em').text('');
+				$(this).parent('div').removeClass('failed').removeClass('successful');
+			}else if(countInt < 10 || countInt > 10){
+				$(this).prev('em').text('The phone number needs to contain 10 numbers. Ex: (801) 555-5555');
+				$(this).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(this).prev('em').text('Phone is valid - it has 10 numbers');
+				$(this).parent('div').removeClass('failed').addClass('successful');
+			}
+		});
+		/*-- end phone --*/
+		
+		/*-----------------------
+			Validate Username
+		------------------------*/
+		$('#edit-username').blur(function(e){
+			var username = $(this).val();
+			var userID = <?php if($this->session->get("user-id")){ echo $this->session->get("user-id"); }else{ echo $this->session->get("student-id"); } ?>;
+			var thisInput = $(this);
+			if(username){
+				if(username.length > 4){
+					//-- setup ajax request --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/parents/validname";'."\n"; ?>
+					var data = {
+						action: "validate_username",
+						user_name: username,
+						user_id: userID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Username is available');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Username already in use - pick new username');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+				}else{
+					$(thisInput).prev('em').text('Minimum length of 5 characters');
+					$(thisInput).parent('div').removeClass('successful').addClass('failed');
+				}
+			}else{
+				$(thisInput).prev('em').text('');
+				$(thisInput).parent('div').removeClass('failed').removeClass('successful');
+			}
+		});
+		/*-- end validate username --*/
+		
+		/*-----------------------
+			Validate Password
+		------------------------*/
+		$.fn.validatePassword = function(pass, confirm, clear) {
+			var passVal = $(pass).val();
+			var confirmVal = $(confirm).val();
+			
+			//-- Check Password - at least 8 characters long --//
+			if(passVal.length == 0 && clear == true){
+				$(pass).prev('em').text('');
+				$(pass).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal.length < 8){
+				$(pass).prev('em').text('Password needs to be at least 8 characters long');
+				$(pass).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(pass).prev('em').text('Good Password');
+				$(pass).parent('div').removeClass('failed').addClass('successful');
+			}
+			
+			//-- Confirm Password --//
+			if(confirmVal.length == 0 && clear == true){
+				$(confirm).prev('em').text('');
+				$(confirm).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal !== confirmVal){
+				$(confirm).prev('em').text('Passwords do not match');
+				$(confirm).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(confirm).prev('em').text('Password Confirmed');
+				$(confirm).parent('div').removeClass('failed').addClass('successful');
+			}
+		};
+		
+		$('#confirm-edit-pass, #edit-pass').blur(function(e){
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end valid password --*/
+		
+		/*-----------------------
+			Generate password
+		------------------------*/
+		$('.edit-generate').click(function(e){
+			var randStr = generatePassword();
+			$('#edit-pass, #confirm-edit-pass').val(randStr);
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end generate pass --*/
+		
+	});
+	
+	function generatePassword() {
+	    var length = 10,
+	        charset = "abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+	        retVal = "";
+	    for (var i = 0, n = charset.length; i < length; ++i) {
+	        retVal += charset.charAt(Math.floor(Math.random() * n));
+	    }
+	    return retVal;
+	}
+</script>

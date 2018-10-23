@@ -1,0 +1,30 @@
+<?php
+
+//-- Libraries --//
+use Phalcon\Tag;
+
+//-- Page Vars --//
+$page_title = 'Login';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/login-header");
+
+		//-- Page Content --// ?>
+		<div id="login">
+
+		<?php //-- Messages --//
+			$this->flashSession->output(); ?>
+
+			<!--<h3><i class="fa fa-warning text-primary"></i> Athlos Tools Is Under Maintenance</h3>
+
+			<h5 style="line-height: 20px;">Athlos Tools is temporarily unavailable. Check back later to be able to access the site.</h5>-->
+			
+			<h3 style="font-size: 21px;"><i class="fa fa-star text-primary"></i> Athlos Tools Will Be Available Shortly</h3>
+
+			<h5 style="line-height: 20px;">Check back in the next 2 hours to access the site.</h5>
+
+		</div> <!-- /#login -->
+		
+<?php $this->partial("partials/login-footer"); ?>

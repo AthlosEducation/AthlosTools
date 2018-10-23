@@ -1,0 +1,250 @@
+<?php
+
+//-- PHP Includes --//
+include "inc/states.php";
+
+//-- Page Vars --//
+$page_title = 'Dashboard';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<?php
+			//-- Limit Dashboard to Faculty and Staff --//
+			if($this->session->get("user-role") < 9){
+				//-- statistics title --//
+				if(isset($schoolID) && $schoolID){
+					$theSchool = Schools::findFirst(array("id = :schoolid:", "bind" => array("schoolid" => $schoolID)));
+					$stat_title = 'Statistics for "'.$theSchool->schoolName.'"';
+					$theSchoolName = $theSchool->schoolName;
+				}else{
+					$stat_title = 'Site-wide Statistics for Athlos Tools';
+				}
+				//-- Grab Term Title --//
+				if(isset($semesterID) && $semesterID){
+					$theSemester = Semesters::findFirst(array("id = :semid:", "bind" => array("semid" => $semesterID)));
+					$stat_subtitle = 'Term: "'.$theSemester->semesterName.'"';
+				}else{
+					$theSemester = Semesters::findFirst("id = ".$this->session->get("current-semester"));
+					$stat_subtitle = 'Term: "'.$theSemester->semesterName.'"';
+				}
+				
+				/*---------------------------------
+					MAIN FILTERS: School & Term
+				----------------------------------*/
+				if($this->session->get("user-role") <= 2){ ?>
+					<!--<div class="col-sm-12">
+						<h3 class="heading-inline"><?php echo $stat_title; ?><br><small><?php echo $stat_subtitle; ?></small></h3>
+					</div>-->
+					<div class="col-sm-12 well" style="float: none; margin-top: 5px; padding: 10px 10px 20px;">
+						<div class="col-sm-6">
+							<?php //-- school filter --//
+							if($schools){ ?>
+								<form id="schoolFilter" action="" method="post">
+									<label for="filter-schools">School Filter</label>
+									<select name="filterSchool" id="filter-schools" class="form-control" onchange="jQuery('#schoolFilter').submit();">
+										<option value="">Select School</option>
+										<?php
+											//-- List Out Schools --//
+											$curState = '';
+											foreach($schools as $school){
+												if($school->state != $curState){
+													if($curState){
+														echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+													}else{
+														echo '<optgroup label="'.$states[$school->state].'">';
+													}
+													$curState = $school->state;
+												}
+												if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+												echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+											}
+											echo '</optgroup>';
+										?>
+									</select>
+									<?php echo $termFilter; ?>
+								</form><?php
+							} ?>
+						</div>
+						<div class="col-sm-6"><?php
+							//-- School Term Filter --//
+							if($semesters){ ?>
+								<form id="termFilter" action="" method="post">
+									<label for="filter-semesters">Term Filter</label>
+									<select name="filterTerm" id="filter-semesters" class="form-control" onchange="jQuery('#termFilter').submit();">
+										<?php
+											//-- List Out Semesters --//
+											foreach($semesters as $term){
+												if(isset($semesterID) && $term->id == $semesterID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+												echo '<option value="'.$term->id.'" '.$sel.'>'.$term->semesterName.'</option>';
+											}
+										?>
+									</select>
+									<?php echo $schoolFilter; ?>
+								</form><?php
+							} ?>
+						</div>
+						<div style="clear: both;"></div>
+					</div><?php
+				}else if($this->session->get("user-role") == 2){ ?>
+					<div class="col-sm-12" style="margin: 0 0 20px;">
+						<h3 class="heading-inline"><?php echo $stat_title; ?><br><small><?php echo $stat_subtitle; ?></small></h3>
+					</div><?php
+				} //-- end Main Filters --// ?>
+
+
+				<?php
+					if($this->session->get('user-id') !== null){
+						/* Customize Dashboard
+						-------------------------*/ 
+						$userDash = UserDash::findFirst(array("user_id = :uid:", "bind" => array("uid" => $this->session->get('user-id')), "columns" => "widgets"));
+						if(!empty($userDash)){
+							$userWidgets = unserialize($userDash->widgets);
+							if(!is_array($userWidgets)){
+								$userWidgets = NULL;
+							}
+						}else{
+							$userWidgets = NULL;
+						}
+						$widgets = DashboardWidgets::find(array(""));
+						//-- Build out basic array --//
+						$widgetInfo = array();
+						foreach($widgets as $key => $widget){
+							if(empty($widget->user_role)){ $roles = array('all'); }else{ $roles = explode(',', $widget->user_role); }
+							$widgetInfo[$widget->id] = array('name' => $widget->name, 'key' => $key, 'path' => $widget->path, 'group' => $widget->group, 'role' => $roles);
+						} ?>
+						
+						<div id="customize-widgets">
+							<div class="row">
+								<div class="col-sm-12 text-center">
+									<h3>Customize Dashboard</h3>
+								</div><!-- /.col -->
+								<div class="col-sm-6">
+									<h5 style="font-weight: 600;">Widgets In Use:</h5>
+									<ul id="selected-widgets" class="connectedSortable">
+										<?php
+											//-- show widgets selected by user --//
+											$widgetIdList = array();
+											if(!empty($userWidgets)){
+												foreach($userWidgets as $widget){
+													if(in_array('all', $widgetInfo[$widget['id']]['role']) || in_array($this->session->get("user-role"), $widgetInfo[$widget['id']]['role'])){
+														if($widget['width'] == 6){ $sc = 'class="half-width"'; }else{ $sc = ''; }
+														echo '<li data-widget="'.$widget['id'].'" data-width="'.$widget['width'].'" '.$sc.'>'.$widgetInfo[$widget['id']]['name'].'</li>';
+														$widgetIdList[] = $widget['id'];
+													}
+												}
+											}
+										?>
+									</ul>
+								</div><!-- /.col -->
+								<div class="col-sm-6">
+									<h5 style="font-weight: 600;">Available Widgets:</h5>
+									<ul id="available-widgets" class="connectedSortable">
+										<?php
+											//-- Show the rest of the widgets --//
+											foreach($widgets as $widget){
+												if(!in_array($widget->id, $widgetIdList)){
+													if(in_array('all', $widgetInfo[$widget->id]['role']) || in_array($this->session->get("user-role"), $widgetInfo[$widget->id]['role'])){
+														echo '<li data-widget="'.$widget->id.'">'.$widget->name.'</li>';
+													}
+												}
+											}
+										?>
+									</ul>
+								</div><!-- /.col -->
+							</div><!-- /.row -->
+							<div class="row">
+								<div class="col-sm-12 text-center">
+									<span id="apply-dashboard-customizations" class="btn btn-info"><i class="fa fa-floppy-o"></i> &nbsp;Apply Changes</span>
+								</div><!-- /.col -->
+							</div><!-- /.row -->
+						</div><!-- /#customize_widgets --><?php
+						/*-- end customize dashboard --*/
+					}
+				?>
+				
+
+				<?php /*<div class="row">
+					<?php
+						//-- Figure out how many new students --//
+						$conditions = "date_added > 1406851200";
+						$bind = array();
+						if(isset($schoolID) && $schoolID){
+							$conditions.= " AND school = :schoolid:";
+							$bind['schoolid'] = $schoolID;
+						}
+						$newStudents = Students::count(array($conditions, "bind" => $bind));
+					?>
+					<div class="col-md-3 col-sm-6">
+						<a href="javascript:;" class="dashboard-stat primary">
+							<div class="visual">
+								<i class="fa fa-star"></i>
+							</div> <!-- /.visual -->
+
+							<div class="details">
+								<span class="content">New Students</span>
+								<span class="value"><?php echo $newStudents; ?></span>
+							</div> <!-- /.details -->
+
+							<i class="fa fa-play-circle more"></i>
+
+						</a> <!-- /.dashboard-stat -->
+
+					</div> <!-- /.col-md-3 -->
+
+				</div> <!-- /.row --> */ ?>
+				
+				<h3 class="heading"><i class="fa fa-cogs"></i>&nbsp; Dashboard Widgets</h3>
+				<?php
+				
+				//-- show widgets selected by user --//
+				if(!empty($userWidgets)){
+					$curSize = $x = 0;
+					foreach($userWidgets as $widget){
+						if(in_array('all', $widgetInfo[$widget['id']]['role']) || in_array($this->session->get("user-role"), $widgetInfo[$widget['id']]['role'])){
+							if($widget['width'] == 12 || ($curSize == 12 && $widget['width'] == 6) || ($widget['width'] == 6 && ($x == 0 || $x == 2))){
+								if($x != 0){ echo '</div><!-- /.row -->'; }
+								echo '<div class="row">';
+								$curSize = $widget['width'];
+								$x = 0;
+							}
+						
+							echo '<div class="col-sm-'.$widget['width'].'">';
+							$this->partial("partials/includes/widgets/".$widgetInfo[$widget['id']]['path']);
+							echo '</div><!-- /.col -->';
+							$x++;
+						}
+					}
+					echo '</div><!-- /.row -->';
+				}else{
+					//-- If Not Customized... add "Add Widgets Btn" --//
+					if($this->session->get("user-role") != 8){ ?>
+						<p class="text-center"><span id="add-widgets" class="btn btn-primary"><i class="fa fa-plus"></i>&nbsp; Add Widgets to Dashboard</span></p><?php
+					}else{ ?>
+						<div class="alert alert-info">
+							<strong>No Available Widgets</strong> There are currently no widgets available to you at this time.
+						</div><?php
+					}
+				}
+				
+			} //-- end limit dashboard to faculty --// ?>
+	</div>
+
+<?php
+//-- Footer --//
+$this->partial("partials/footer-top");
+$this->partial("partials/scripts/dashboard");
+$this->partial("partials/footer-bottom");
+?>

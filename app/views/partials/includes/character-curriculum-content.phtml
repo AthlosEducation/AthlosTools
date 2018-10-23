@@ -1,0 +1,304 @@
+<div class="row">
+
+	<div class="col-md-3 col-sm-4">
+
+	    <ul id="myTab" class="nav nav-pills nav-stacked">
+			
+			<?php
+			//-- Build Curriculum Navigation --//
+			foreach($traits as $trait){ ?>
+				
+				<li <?php if($trait->id == $curTrait){ echo 'class="active"'; } ?>>
+		        	<a href="/traits/<?php echo $trait->url_name; ?>">
+		        		<i class="fa <?php echo $trait->icon; ?>"></i> 
+		        		<?php echo '&nbsp;&nbsp;'.$trait->trait_name; ?>
+		        	</a>
+		        </li>
+				
+				<?php
+			}
+			?>
+			
+	    </ul>
+
+	</div> <!-- /.col -->
+
+	<div class="col-md-9 col-sm-8">
+	      <div class="tab-content stacked-content">
+				
+			<?php
+			$theTrait = $traits[$curTrait-1];
+			
+			//-- Build Curriculum Content Pages --// ?>
+			<div class="tab-pane fade in active" id="<?php echo $theTrait->url_name; ?>-tab">
+				<h3 class="heading"><?php echo '<i class="fa '.$theTrait->icon.'"></i> &nbsp;'.$theTrait->trait_name; ?></h3>
+				<p><?php echo $theTrait->description; ?></p>
+				<p>&nbsp;</p>
+				
+				<ul id="<?php echo $theTrait->url_name; ?>-content-nav" class="nav nav-tabs">
+
+					<?php
+					//-- Build Curriculum Type Tab Navigation --//
+					$tab5_output = $tab_nav_output = '';
+					foreach($types as $type){
+						//-- Don't show huddle videos here --//
+						if($type->id == 5){
+							$tab5_output.= '<li class="active">
+					        	<a href="#'.$theTrait->url_name.'-'.$type->url_name.'-tab" data-toggle="tab" class="'.$type->url_name.'">'.$type->type_name.'</a>
+					        </li>';
+						}else if($type->id != 1){
+							$tab_nav_output.= '<li>
+					        	<a href="#'.$theTrait->url_name.'-'.$type->url_name.'-tab" data-toggle="tab" class="'.$type->url_name.'">'.$type->type_name.'</a>
+					        </li>';
+						}
+					}
+					echo $tab5_output.$tab_nav_output; ?>
+					<!-- Add Talking Points -->
+					<!--<li>
+			        	<a href="#<?php echo $theTrait->url_name.'-talking-points'; ?>-tab" data-toggle="tab" class="talking-points">
+			        		Talking Points
+			        	</a>
+			        </li>-->
+				</ul><!-- /.nav-tabs -->
+				
+				<div id="<?php echo $theTrait->url_name; ?>-content-types" class="tab-content">
+					
+					<?php
+					//-- Build Curriculum Content Type Tab page --//
+					foreach($types as $type){ 
+						
+						//-- Exclude Huddle Videos --//
+						if($type->id != 1){ ?>
+						
+							<div class="tab-pane fade <?php if($type->id == 5){ echo 'in active'; } ?>" id="<?php echo $theTrait->url_name.'-'.$type->url_name; ?>-tab">
+
+								<?php
+									//-- Grab posts from curriculum trait and curriculum type --//
+									if($type->id == 3){
+										//-- This adds all group activities to all tab panes --//
+										$curriculum = $activities;
+									}else{
+										$curriculum = Curriculum::query()
+											->where("post_trait = ".$theTrait->id)
+											->andWhere("post_type = ".$type->id)
+											->andWhere("post_status = 'publish'")
+											->order("post_title")
+											->execute();
+									}
+									
+									if($curriculum){
+										$totalPosts = count($curriculum);
+										$pageLimit = 3;
+										$row = $i = $t = 0;
+										foreach($curriculum as $post){
+											if($t >= $pageLimit){ break; }
+											if($i == 0){
+												if($row != 0){ echo '</div> <!-- /.row -->'; }
+												echo '<div class="row">';
+												$row++;
+											} ?>
+											<div class="col-md-4 col-sm-6" style="max-width: 360px;">
+
+												<?php
+												//-- Grab author object --//
+												$authorName = 'admin';
+												$author = $post->users;
+
+												//-- Determine Layout - based on post properties --//
+												if($post->post_video_url || $post->post_image_url){
+													//-- Video / Image Portlets --// ?>
+
+													<div class="thumbnail">
+														<?php
+														//-- Setup Image to Display --//
+														if(!$post->post_image_url){
+															if($post->post_video_image){
+																//-- make sure video image is pulling from https --//
+																$post->post_video_image = str_ireplace('http://', 'https://', $post->post_video_image);
+																if(getimagesize($post->post_video_image) !== false){
+																	$post->post_image_url = $post->post_video_image;
+																}else{
+																	$post->post_image_url = '/img/empty-photo_320x180.jpg';
+																}
+															}else{
+																$post->post_image_url = '/img/empty-photo_320x180.jpg';
+															}
+														}else{
+															//-- Make sure image is pulling from https --//
+															$post->post_image_url = str_ireplace('http://', 'https://', $post->post_image_url);
+														}
+
+														//-- Set lightbox Url && Classes --//
+														if($post->post_video_url){
+															$post->url = $post->post_video_url;
+															$lightboxClass = 'ui-lightbox-video';
+														}else if($post->post_image_url){
+															$post->url = $post->post_image_url;
+															$lightboxClass = 'ui-lightbox';
+														}
+
+														?>
+														<div class="thumbnail-view">
+															<a href="<?php echo $post->url; ?>" class="thumbnail-view-hover <?php echo $lightboxClass; ?>"></a>
+															<?php //if($theTrait->id == $curTrait){ ?>
+																<img src="<?php echo $post->post_image_url; ?>" style="width: 100%" alt="Gallery Image" />
+															<?php /*}else{ ?>
+																<img src="/img/blank.png" class="lazy-<?php echo $theTrait->id; ?>" data-src="<?php echo $post->post_image_url; ?>" style="width: 100%" alt="Gallery Image" />
+															<?php }*/ ?>
+													    </div>
+													    <div class="caption">
+															<h3 class="curr-display-head"><?php echo stripslashes(html_entity_decode($post->post_title, ENT_QUOTES)); ?></h3>
+															<div class="curr-display-content">
+																<?php //-- Truncate visible chars in content to specified amount --//
+																$currContent = stripslashes(html_entity_decode($post->post_content, ENT_QUOTES));
+																//-- Display Content --//
+																echo strip_tags($currContent, '<p><a><b><em><i><ul><blockquote><span><u><li><ol>'); ?>
+															</div>
+															<p class="curr-display-actions">
+																<a href="javascript:;" class="btn btn-primary btn-sm btn-sm viewComplex">View</a>
+																<?php
+																//-- Open PDF --//
+																if($post->post_lesson_path){
+																	$ext = strtolower(pathinfo($post->post_lesson_path, PATHINFO_EXTENSION));
+																	$newName = str_ireplace('.'.$ext, '', substr($post->post_lesson_path, strrpos($post->post_lesson_path, '/')+1));
+																	echo '<a href="/athletic/viewer/?name='.urlencode($newName).'&path='.urlencode('https://s3.amazonaws.com/'.$post->post_lesson_path).'" target="_blank" class="btn btn-secondary btn-sm">Open</a>';
+																}
+																//-- include button for external link if there is one --//
+																if($post->post_external_url){ ?>
+																	<a href="<?php echo $post->post_external_url; ?>" target="_blank" class="btn btn-secondary btn-sm">Resource</a>
+																<?php }else if($post->post_video_url){ ?>
+																	<a href="<?php echo $post->post_video_url; ?>" target="_blank" class="btn btn-secondary btn-sm">Video</a>
+																<?php } ?>
+															</p>
+													    </div>
+													    <div class="thumbnail-footer">
+													    	<div class="pull-left">
+													        	<a class="post-author"><i class="fa fa-user"></i>
+																	&nbsp;<?php if(isset($author->usernm) && $author->usernm){ echo $author->usernm; }else{ echo $authorName; } ?>
+																</a>
+													        </div>
+
+													        <div class="pull-right">
+													        	<a class="post-time"><i class="fa fa-clock-o"></i> <?php echo date('M j, Y', $post->post_time); ?></a>
+															</div>
+														</div>
+													</div>
+
+													<?php
+												}else{
+													//-- Plain Portlets --// ?>
+													<div class="portlet portlet-plain">
+														<div class="portlet-header">
+															<h3><?php echo stripslashes(html_entity_decode($post->post_title, ENT_QUOTES)); ?></h3>
+														</div> <!-- /.portlet-header -->
+														<div class="portlet-content">
+
+															<div class="curr-display-content">
+																<?php //-- Truncate visible chars in content to specified amount --//
+																$currContent = stripslashes(html_entity_decode($post->post_content, ENT_QUOTES));
+																//-- Display Content --//
+																echo strip_tags($currContent, '<p><a><b><em><i><ul><blockquote><span><u><li><ol>'); ?>
+															</div>
+															<p class="curr-display-actions">
+																<a class="btn btn-primary btn-sm btn-sm viewPlain">View</a>
+																<?php
+																//-- Open PDF --//
+																if($post->post_lesson_path){
+																	$ext = strtolower(pathinfo($post->post_lesson_path, PATHINFO_EXTENSION));
+																	$newName = str_ireplace('.'.$ext, '', substr($post->post_lesson_path, strrpos($post->post_lesson_path, '/')+1));
+																	echo '<a href="/athletic/viewer/?name='.urlencode($newName).'&path='.urlencode('https://s3.amazonaws.com/'.$post->post_lesson_path).'" target="_blank" class="btn btn-secondary btn-sm">Open</a>';
+																}
+																//-- include button for external link if there is one --//
+																if($post->post_external_url){ ?>
+																	<a href="<?php echo $post->post_external_url; ?>" target="_blank" class="btn btn-secondary btn-sm">Resource</a>
+																<?php } ?>
+															</p>
+
+															<div class="thumbnail-footer">
+														    	<div class="pull-left">
+														        	<a class="post-author"><i class="fa fa-user"></i>
+																		&nbsp;<?php if(isset($author->usernm) && $author->usernm){ echo $author->usernm; }else{ echo $authorName; } ?>
+																	</a>
+														        </div>
+
+														        <div class="pull-right">
+														        	<a class="post-time"><i class="fa fa-clock-o"></i> <?php echo date('M j, Y', $post->post_time); ?></a>
+																</div>
+															</div>
+														</div> <!-- /.portlet-content -->
+
+													</div> <!-- /.portlet --><?php
+												} ?>
+
+
+
+											</div> <!-- /.col -->
+											<?php
+											$i++; $t++; if($i == 3){ $i = 0; }
+										}
+										//-- add closing div if content was posts were returned --//
+										if(count($curriculum) > 0){ echo '</div>'; }
+										
+										//-- Create Pager --//
+										if($totalPosts > $pageLimit){
+											$numLimit = $totalPosts / $pageLimit;
+											echo '<div class="curriculum-pager">';
+											echo '<span class="page-count">Showing <span class="curMin">1</span> - <span class="curMax">3</span> of '.$totalPosts.' entries</span>';
+											echo '<ul class="pagination" data-limit="'.$pageLimit.'" data-type="'.$type->id.'" data-trait="'.$theTrait->id.'" data-total="'.$totalPosts.'">';
+											echo '<li class="prev disabled"><a href="#">← Previous</a></li>';
+											$i = 0;
+											while($i < $numLimit){
+												$i++;
+												if($i == 1){ $theClass = 'active firstPage '; }else{ $theClass = ''; }
+												if($i >= $numLimit){ $theClass.= 'lastPage'; }
+												if(!$theClass && $numLimit > 5 && $i > 3){ $theClass.= 'scrunch'; }
+												echo '<li class="'.$theClass.'"><a href="#" data-page="'.$i.'">'.$i.'</a></li>';
+											}
+											echo '<li class="next"><a href="#">Next → </a></li></ul>';
+											echo '</div>';
+										}
+										
+									}
+								?>
+
+							</div><!-- /.tab-pane -->
+
+						<?php
+						}
+						
+					} // end foreach; ?>
+					<!-- Add Talking Points Tab -->
+					<!--<div class="tab-pane fade" id="<?php echo $theTrait->url_name.'-talking-points'; ?>-tab">
+						<h4 style="margin: 20px 0 10px;">Athlos Performance Character Trait Talking Points</h4>
+						
+						<ol>
+						<li>What did you learn from the video?</li>
+						<li>What did you learn from the group activity?</li>
+						<li>How will this Character Trait make you a better person?</li>
+						<li>How will this Character Trait help you be a better student?</li>
+						<li>How will this Character Trait help you later in life?</li>
+						<li>Can you give an example of someone you know who has this Character Trait and when you have seen them exhibit the Character Trait?</li>
+						<li>If you lack this Character Trait what could some of the consequences be in life?</li>
+						<li>Can you give an example of someone in history that had this Character Trait and how they exhibited the Trait?</li>
+						<li>Can you define this Character Trait for me?</li>
+						<li>What other skills and habits do I need in order to have this Character Trait?</li>
+						<li>How can you help others around you develop this Character Trait?</li>
+						<li>If you possess this Character Trait how will it help those you associate with?</li>
+						</ol>
+
+						<h4 style="margin: 20px 0 10px;">Student Self Assessment</h4>
+						<ol>
+						<li>Write your goal for the coming week that applies to this Character Trait.</li>
+						<li>Write how you did in completing last week’s goal for the Character Trait.</li>
+						<li>Write down a specific habit or skill you need to develop in order to improve at this Character Trait.</li>
+						<li>Have the student write down an example of when they themselves practiced or witnessed someone exhibiting the Character Trait.</li>
+						</ol>
+						
+					</div>--><!-- /.tab-pane -->
+					
+				</div><!-- /.tab-content -->
+			</div><!-- /.tab-pane -->
+		</div>
+	</div> <!-- /.col -->
+
+</div> <!-- /.row -->

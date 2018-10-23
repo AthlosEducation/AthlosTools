@@ -1,0 +1,200 @@
+<?php
+/*
+*	Widget: Athletic Comparison Chart
+*/
+?>
+
+<div class="portlet">
+	<div class="portlet-header">
+		<h3><i class="fa fa-bar-chart-o"></i> Athletic Comparison Chart</h3>
+		<ul class="portlet-tools pull-right">
+			<li>
+				<ul class="nav nav-pills">
+					<li <?php if(!isset($compare_Ath_Data) || empty($compare_Ath_Data)){ echo 'class="active"'; } ?>><a href="#compare-ath-form" data-toggle="tab"><i class="fa fa-pencil"></i> Form</a></li>
+					<li <?php if(isset($compare_Ath_Data) && !empty($compare_Ath_Data)){ echo 'class="active"'; } ?>><a href="#compare-ath-chart" data-toggle="tab"><i class="fa fa-bar-chart-o"></i> Chart</a></li>
+				</ul>
+			</li>
+		</ul>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content">
+		<div class="tab-content">
+			<div id="compare-ath-form" class="tab-pane fade <?php if(!isset($compare_Ath_Data) || empty($compare_Ath_Data)){ echo 'active in'; } ?>"><?php
+				/*----------------------------
+				 	Comparision Chart Form
+				-----------------------------*/ ?>
+				<form id="athletic-comparison-chart-form" action="" method="post"><?php
+					//-- Grab Graded Terms --//
+					$query = "SELECT DISTINCT semester FROM athletic_grading";
+					$response = $this->db->query($query, array());
+					$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
+					$semesters = $response->fetchAll();
+					if(!empty($semesters)){
+						$termOptions = '';
+						foreach($semesters as $semester){
+							$term = Semesters::findFirst('id = '.$semester->semester);
+							if(!empty($term)){
+								$termOptions.= '<option value="'.$term->id.'">'.$term->semesterName.'</option>';
+							}
+						}
+					}
+
+					//-- add filters --//
+					echo $schoolFilter.$termFilter;
+
+					 ?>
+					<div class="col-sm-6">
+						<h4 style="font-size: 14px;">Assessment to Compare:</h4>
+						<p style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e4e4e4;">
+							<select name="compare_assessment" class="form-control"><?php
+								$assessments = AthleticAssessments::find('');
+								if(!empty($assessments)){
+									foreach($assessments as $test){
+										if(isset($_POST['compare_assessment']) && $_POST['compare_assessment'] == $test->url_name){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$test->url_name.'" '.$sel.'>'.$test->assessment_name.'</option>';
+									}
+								} ?>
+							</select>
+						</p>
+
+						<h4 style="font-size: 14px;">Select Terms to Compare: <span class="btn btn-xs btn-primary add-athletic-term" title="Add Term" style="float: right; font-size: 10px;"><i class="fa fa-plus"></i></span></h4>
+						<div id="athletic-semester-term-box">
+							<p>
+								<select name="acc-term[]" id="acc-term-1" class="acc-term form-control">
+									<?php echo $termOptions; ?>
+								</select>
+							</p>
+							<?php
+								//-- Show All Terms that were posted --//
+								if(isset($_POST['acc-term']) && !empty($_POST['acc-term'])){
+									foreach($_POST['acc-term'] as $key => $val){
+										if($key != 0){ ?>
+											<p>
+												<select name="acc-term[]" id="acc-term-<?php echo ($key + 1); ?>" class="acc-item form-control" onchange="removeAthleticDropDown(this)">
+													<option value=""></option>
+													<?php echo $termOptions; ?>
+												</select>
+											</p><?php
+										}
+									}
+								}
+							?>
+						</div>
+					</div><!-- /.col-sm-6 -->
+
+					<div class="col-sm-6">
+						<!-- Add Item Btn -->
+						<div class="btn-group" style="float: right;">
+							<button type="button" class="btn btn-xs btn-primary dropdown-toggle" data-toggle="dropdown" title="Add Item" style="font-size: 10px;"><i class="fa fa-plus"></i></button>
+							<ul class="dropdown-menu add-ath-menu" role="menu" style="left: auto; right: 0; width: 180px;">
+							    <li><a href="javascript:;" class="add-ath-object" data-object-type="school">School</a></li>
+							    <li><a href="javascript:;" class="add-ath-object" data-object-type="grade">Grade Level</a></li>
+							    <li><a href="javascript:;" class="add-ath-object" data-object-type="class">Class Room</a></li>
+							    <li class="divider"></li>
+								<li class="athletic-search-student">
+									<div class="input-group">
+										<input type="text" id="athletic-student-search" class="form-control" placeholder="Student Name" value="" <?php if(!isset($schoolID)){ echo 'disabled="disabled"'; } ?> />
+										<div class="input-group-btn">
+											<button type="button" class="btn btn-tertiary <?php if(!isset($schoolID)){ echo 'disabled'; } ?>" id="search-ath-students"><i class="fa fa-search" id="search-ath-students-txt"></i></button>
+										</div><!-- /input-group-btn -->
+									</div>
+									<ul id="athletic-student-results"></ul>
+								</li>
+							  </ul>
+						</div>
+
+						<h4 style="font-size: 14px;">Select Items to Compare:</h4>
+						<div id="comparison-athletic-box">
+							<?php
+								//-- Show All Items that were posted --//
+								if(isset($_POST['acc-items']) && !empty($_POST['acc-items'])){
+									foreach($_POST['acc-items'] as $key => $val){
+										list($ctype,$ccID) = explode('-', $val);
+										if(strpos($ccID, ':')){
+											list($sID,$ccID) = explode(':', $ccID);
+										}
+										//-- Echo out select boxes by type of dropdown --//
+										switch($ctype){
+											case 'school':
+												$cc_schools = Schools::find('');
+												if(!empty($cc_schools)){
+													echo '<p><select name="acc-items[]" id="acc-item-'.($key + 1).'" class="acc-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option>';
+													foreach($cc_schools as $school){
+														if($school->id == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+														echo '<option value="school-'.$school->id.'" '.$sel.'>'.$school->schoolName.'</option>';
+													}
+													echo '</select><input type="hidden" name="acc-item-label[]" class="acc-item-label" value="'.$_POST['acc-item-label'][$key].'" /></p>';
+												}
+												break;
+											case 'grade':
+												if(isset($sID) && !empty($sID)){
+													//-- grab school name --//
+													$theSchool = Schools::findFirst(array('id = :id:', "bind" => array("id" => $sID)));
+													//-- Grab Grade Levels --//
+													$levels = array();
+													$gradelevels = GradeLevel::find('');
+													foreach($gradelevels as $gl){
+														$levels[$gl->id] = $gl->gradeName;
+													}
+													unset($gradelevels);
+
+													//-- Grab Available Grade Levels --//
+													$query = "SELECT DISTINCT grade FROM students WHERE school = ".$sID." ORDER BY grade ASC";
+													$response = $this->db->query($query, array());
+													$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
+													$grades = $response->fetchAll();
+													if(!empty($grades)){
+														echo '<p><select name="acc-items[]" id="acc-item-'.($key + 1).'" class="acc-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option>';
+														foreach($grades as $grade){
+															if($grade->grade == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+															echo '<option value="grade-'.$theSchool->id.':'.$grade->grade.'" '.$sel.'>'.$theSchool->schoolName.': '.$levels[$grade->grade].'</option>';
+														}
+														echo '</select><input type="hidden" name="acc-item-label[]" class="acc-item-label" value="'.$_POST['acc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+											case 'class':
+												if(isset($sID) && !empty($sID)){
+													//-- grab school name --//
+													$theSchool = Schools::findFirst(array('id = :id:', "bind" => array("id" => $sID)));
+													//-- Grab School Teachers --//
+													$teachers = Users::find(array("school = :sid: AND role = 3", "order" => "lname ASC, fname ASC", "bind" => array("sid" => $sID)));
+													if(!empty($teachers)){
+														echo '<p><select name="acc-items[]" id="acc-item-'.($key + 1).'" class="acc-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option>';
+														foreach($teachers as $teacher){
+															//-- grab class size count --//
+															$size = Students::count(array("school = :sid: AND teacher = ".$teacher->id, "bind" => array("sid" => $sID)));
+															//-- list out options --//
+															if($teacher->id == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+															echo '<option value="class-'.$theSchool->id.':'.$teacher->id.'" '.$sel.'>'.$theSchool->schoolName.': '.$teacher->lname.', '.$teacher->fname.' ('.$size.')</option>';
+														}
+														echo '</select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'.$_POST['cc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+											case 'student':
+												if(!empty($schoolID)){
+													$theStudent = Students::findFirst(array('id = :id:', "bind" => array("id" => $ccID)));
+													if(!empty($theStudent)){
+														echo '<p><select name="acc-items[]" class="acc-item last-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option><option value="student-'.$theStudent->id.'" selected="selected">'.$theStudent->fname.' '.$theStudent->lname.'</option></select><input type="hidden" name="acc-item-label[]" class="acc-item-label" value="'.$_POST['acc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+										}
+									}
+								}
+							?>
+						</div><!-- /#comparison-item-box -->
+					</div><!-- /.col-sm-6 -->
+					<div class="col-sm-12" style="clear: left; float: left; margin: 10px 0;">
+						<p style="margin: 0; text-align: center;">
+							<input type="submit" name="draw-athletic-compare-chart" class="btn btn-primary" value="Draw Comparison Chart" />
+						</p>
+					</div><!-- /.col-sm-12 -->
+				</form>
+			</div><!-- /.tab-pane -->
+			<div id="compare-ath-chart" class="tab-pane fade <?php if(isset($compare_Ath_Data) && !empty($compare_Ath_Data)){ echo 'active in'; } ?>">
+				<div id="athletic-vertical-chart" class="chart-holder"></div>
+			</div><!-- /.tab-pane -->
+		</div><!-- /.tab-content -->
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

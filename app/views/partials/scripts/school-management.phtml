@@ -1,0 +1,403 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to Check All Checkboxes in Table --//
+		$('#check-all').change(function(event){
+			if(this.checked){
+				$('.select-check').prop('checked', true);
+			}else{
+				$('.select-check').prop('checked', false);
+			}
+		});
+		
+		//-- Change # of Results to Display --//
+		$('#changeLimit a').click(function(event){
+			event.preventDefault();
+			//-- grab var --//
+			var numLimit = $(this).attr('data-val');
+			//-- set var --//
+			$(this).parent('li').parent('ul').next('input.form-control').val(numLimit);
+			//-- submit form --//
+			$('#changeLimit').submit();
+		});
+		
+		/*---------------------------------
+			Pagination for Content Tabs
+		----------------------------------*/
+		$('.users-pager li > a').click(function(e){
+			e.preventDefault();
+			//-- make sure button isn't disabled --//
+			if($(this).parent('li').hasClass('disabled') || $(this).parent('li').hasClass('active')){ return false; }
+			
+			//-- Figure out what the active page is based on the button clicked --//
+			if($(this).parent('li').hasClass('prev')){
+				var activeItem = $(this).parent('li').siblings('li.active').prev('li').children('a');
+			}else if($(this).parent('li').hasClass('next')){
+				var activeItem = $(this).parent('li').siblings('li.active').next('li').children('a');
+			}else{
+				var activeItem = $(this);
+			}
+			
+			//-- Get Values --//
+			var page = $(activeItem).attr('data-page');
+			//-- Set Page Var / Submit Form --//
+			$('#pageNumber').val(page);
+			$('#pagerForm').submit();
+			
+		});
+		/*--------------------
+			end pagination
+		---------------------*/
+		
+		/*----------------
+			Add School
+		-----------------*/
+		$('.addSchool').click(function(e){
+			//-- Initiate Validation --//
+			if($('#addSchoolForm').parsley('validate')){
+				//-- passed validation - Run Add Script --//
+				var name = $('#add-name').val();
+				var abbr = $('#add-abbr').val();
+				var district = $('#add-district').val();
+				var state = $('#add-state').val();
+				var city = $('#add-city').val();
+				if($('#add-ilt').is(":checked")){ var ilt = 1; }else{ var ilt = 0; }
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/schools/addschool";'."\n"; ?>
+				var data = {
+					action: "add_school",
+					name: name,
+					abbr: abbr,
+					district: district,
+					state: state,
+					city: city,
+					ilt: ilt
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Hide Modal --//
+								$('#addSchoolModal').modal('hide');
+								
+								//-- Clear Out Data --//
+								$('#addSchoolForm .form-control').val('');
+								
+								//-- Success Message --//
+								howlerMsg('success', 'School Added', 'The school was added successfully', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			} // end if validation cleared
+		});
+		/*--------------------
+			end add school
+		---------------------*/
+		
+		/*----------------
+			Edit School
+		-----------------*/
+		$('.editSchool').click(function(e){
+			//-- Retrieve School --//
+			var theID = $(this).attr('data-school-val');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/schools/editschool";'."\n"; ?>
+			var data = {
+				action: "grab_school",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#editSchoolForm .form-control').val('');
+							$('#editSchoolForm .checkbox input').prop('checked', false);
+							
+							//-- Populate Modal --//
+							var newID = results.id;
+							$('#edit-name').val(results.schoolname);
+							$('#edit-abbr').val(results.abbreviation);
+							$('#edit-district').val(results.district);
+							$('#edit-state').val(results.state);
+							$('#edit-city').val(results.city);
+							if(results.ilt == '1'){ $('#edit-ilt').prop('checked', true); }
+							
+							//-- Show modal --//
+							$('#editSchoolModal .modal-header h3 .insert-schoolname').text(results.schoolname);
+							//$('#editSchoolModal .field-msg').text('');
+							//$('#editSchoolModal .form-group').removeClass('failed').removeClass('successful');
+							$('#editSchoolModal').modal('show');
+							//-- reset parsley validation --//
+							$('#editSchoolForm').parsley('destroy');
+							$('#editSchoolForm').resetParsley();
+							
+							//-- validate form --//
+							$('#editSchoolSubmit').off().click(function(event){
+								event.preventDefault();
+								if($('#editSchoolForm').parsley('validate')){
+									//-- Check for any failed ajax checks --//
+									if(!$('#editSchoolForm .failed').get(0)){
+										//-- Passed Validation - Run Edit Script --//
+										
+										var name = $('#edit-name').val();
+										var abbr = $('#edit-abbr').val();
+										var district = $('#edit-district').val();
+										var state = $('#edit-state').val();
+										var city = $('#edit-city').val();
+										if($('#edit-ilt').is(":checked")){ var ilt = 1; }else{ var ilt = 0; }
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/schools/editschool";'."\n"; ?>
+										var info = {
+											action: "edit_school",
+											school_id: newID,
+											name: name,
+											abbr: abbr,
+											district: district,
+											state: state,
+											city: city,
+											ilt: ilt
+										};
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#editSchoolModal').modal('hide');
+
+														//-- Success Message --//
+														howlerMsg('success', 'School Updated', 'The school was updated successfully', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+
+									}
+									
+								} // end if validation cleared
+								
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Failed to Retrieve School', 'There was a problem retrieving the school, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*--------------------
+			end Edit School
+		---------------------*/
+		
+		/*------------------
+			Delete School
+		-------------------*/
+		$('.delSchool').click(function(e){
+		    var theID = $(this).attr('data-school-val');
+			var theName = $(this).attr('data-school-name');
+			var container = $(this).parent('td').parent('tr');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/schools/delschool";'."\n"; ?>
+			var data = {
+				action: "delete_school",
+				theID: theID
+				};
+			//-- Ask to confirm "Do you really want to delete this?" --//
+			bootbox.confirm("Are you sure you want to delete School: <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ theName +"</span>?", function(result) {
+				if(result){
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(container).delay(500).slideUp('fast');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'School Deleted', 'The school was deleted successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*----------------------
+			end delete school
+		-----------------------*/
+		
+		$.fn.resetParsley = function() {
+			$(this).parsley ({
+				trigger: 'change',
+				errors: {
+					container: function (element, isRadioOrCheckbox) {
+						if (element.parents ('form').is ('.form-horizontal')) {
+							return element.parents ("*[class^='col-']");
+						}
+
+						return element.parents ('.form-group');
+					}
+				}
+			});
+		};
+	});
+</script>
+
+<!-- Add School Modal -->
+<div id="addSchoolModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Add New School</h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Add School Form -->
+				<form id="addSchoolForm" action="" class="form parsley-form" method="post">
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="add-name">School Name</label>
+						<input type="text" name="school-name" id="add-name" class="form-control" value="" maxlength="64" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-abbr">Abbreviation / Nickname</label>
+						<input type="text" name="school-abbr" id="add-abbr" class="form-control" value="" maxlength="64" data-required="true">
+					</div>
+					<?php
+					if(isset($districts)){ ?>
+						<div class="form-group">
+							<label for="add-district">District</label>
+							<select id="add-district" name="add-district" class="form-control" data-required="true">
+								<option value="">Select District</option><?php
+								foreach($districts as $district){
+									echo '<option value="'.$district->id.'">'.$district->districtName.'</option>';
+								} ?>
+							</select>
+						</div><!-- /.form-group --><?php
+					}
+					
+					if(isset($states)){ ?>
+						<div class="form-group">	
+							<label for="add-state">State</label>
+							<select id="add-state" name="add-state" class="form-control" data-required="true">
+								<option value="">Select State</option><?php
+								foreach($states as $key => $val){
+									echo '<option value="'.$key.'">'.$val.'</option>';
+								} ?>
+							</select>
+						</div><?php
+					} ?>
+					<div class="form-group">
+						<label for="add-city">City</label>
+						<input type="text" name="city" id="add-city" class="form-control" value="" maxlength="32" data-required="true">
+					</div>
+					<div class="form-group">
+						<div class="checkbox">
+							<label style="font-weight: 600px;">
+								<input type="checkbox" name="add-ilt" id="add-ilt" value="1" /> ILT School
+							</label>
+						</div>
+					</div>
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary addSchool">Add New School</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit School Modal -->
+<div id="editSchoolModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Edit School: <span class="insert-schoolname"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit School Form -->
+				<form id="editSchoolForm" action="" method="post">
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="edit-name">School Name</label>
+						<input type="text" name="school-name" id="edit-name" class="form-control" value="" maxlength="64" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-abbr">Abbreviation / Nickname</label>
+						<input type="text" name="school-abbr" id="edit-abbr" class="form-control" value="" maxlength="64" data-required="true">
+					</div>
+					<?php
+					if(isset($districts)){ ?>
+						<div class="form-group">
+							<label for="edit-district">District</label>
+							<select id="edit-district" name="edit-district" class="form-control" data-required="true">
+								<option value="">Select District</option><?php
+								foreach($districts as $district){
+									echo '<option value="'.$district->id.'">'.$district->districtName.'</option>';
+								} ?>
+							</select>
+						</div><!-- /.form-group --><?php
+					}
+					
+					if(isset($states)){ ?>
+						<div class="form-group">	
+							<label for="edit-state">State</label>
+							<select id="edit-state" name="edit-state" class="form-control" data-required="true">
+								<option value="">Select State</option><?php
+								foreach($states as $key => $val){
+									echo '<option value="'.$key.'">'.$val.'</option>';
+								} ?>
+							</select>
+						</div><?php
+					} ?>
+					<div class="form-group">
+						<label for="edit-city">City</label>
+						<input type="text" name="edit-city" id="edit-city" class="form-control" value="" maxlength="32" data-required="true">
+					</div>
+					<div class="form-group">
+						<div class="checkbox">
+							<label style="font-weight: 600px;">
+								<input type="checkbox" name="edit-ilt" id="edit-ilt" value="1" /> ILT School
+							</label>
+						</div>
+					</div>
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="editSchoolSubmit">Update School</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

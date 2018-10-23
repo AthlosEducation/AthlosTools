@@ -1,0 +1,173 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/magnific/jquery.magnific-popup.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/*------------------------------
+			View Athletic Curriculum
+		-------------------------------*/
+		$('.lesson-nav').change(function(event){
+			var lessonID = $(this).val();
+			//-- hide all panels --//
+			$(this).siblings('.tab-content').children('.tab-pane.active').removeClass('in').removeClass('active');
+			if(lessonID){
+				//-- show correct panel --//
+				$(this).siblings('.tab-content').children(lessonID).addClass('in').addClass('active');
+			}
+		});
+		/*-- end view curriculum --*/
+		
+		/*--------------------------
+			Resource Upload Form
+		---------------------------*/
+		$('#upload-resource-form').submit(function(){
+			$('#form-errors').hide();
+			var doc_url = $('#resourceupload').val();
+			var level = $('#athlevel').val();
+			var topic = $('#ath-topic').val();
+			if(doc_url){
+				var ext = doc_url.substr(doc_url.lastIndexOf('.') + 1).toLowerCase();
+				if(ext == 'pdf' || ext == 'doc' || ext == 'docx' || ext == 'zip' || ext == 'xls' || ext == 'xlsx'){
+					//-- make sure level and topic are selected --//
+					if(level && topic){
+						//-- Successful Upload --//
+					}else{
+						//-- if invalid filetype --//
+						$('#form-errors').html('<strong>Lesson Level & Topic Missing</strong> <span>Please select a level and topic for the file before submitting.</span>').show();
+						return false;
+					}
+				}else{
+					//-- if invalid filetype --//
+					$('#form-errors').html('<strong>Wrong Filetype!</strong> <span>Only PDF & Word Docs Allowed.</span>').show();
+					return false;
+				}
+			}else{
+				//-- no file selected --//
+				$('#form-errors').html('<strong>No File Selected!</strong> <span>Select a file and then try again.</span>').show();
+				return false;
+			}
+		});
+		
+		$('#resourceupload').change(function(){
+			var doc_url = $(this).val();
+			var doc_name = doc_url.substr(doc_url.lastIndexOf('\\') + 1);
+			var ext = doc_name.substr(doc_name.lastIndexOf('.') + 1).toLowerCase();
+			//-- make sure document is selected --//
+			if(doc_url){
+				//-- Make sure is valid filetype --//
+				if(ext == 'pdf' || ext == 'doc' || ext == 'docx' || ext == 'zip' || ext == 'xls' || ext == 'xlsx'){
+					//-- mark with right filetype class --//
+					$('#document-to-upload').removeAttr('class');
+					$('#document-to-upload').addClass(ext);
+					
+					$('#document-to-upload .the-doc-name').text(doc_name);
+					$('#res-up-err').hide();
+					$('#document-to-upload').show();
+				}else{
+					$('#document-to-upload').hide();
+					$('#res-up-err').html('<strong>Wrong Filetype!</strong> <span>Only PDF & Word Docs Allowed.</span>').show();
+					$('#document-to-upload .the-doc-name').text('');
+				}
+			}else{
+				$('#document-to-upload').hide();
+				$('#res-up-err').html('<strong>Oh Snap!</strong> <span>No document selected.</span>').show();
+				$('#document-to-upload .the-doc-name').text('');
+			}
+		});
+		
+		$('#athlevel').change(function(event){
+			//-- Remove all options except for default --//
+			$('#ath-topic option:not([value=""])').remove();
+			//-- Add additional options --//
+			var level = $(this).val();
+			if(level == 1){
+				var folderName = ['Body Awareness', 'Body Control', 'Interpretation', 'Traveling'];
+				var folderVal = ['body-awareness', 'body-control', 'interpretation', 'traveling'];
+				for(var i=0; i < 4; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}else if(level == 2){
+				var folderName = ['Throwing and Catching', 'Chasing and Dodging', 'Kicking and Striking', 'Dribbling'];
+				var folderVal = ['throwing-and-catching', 'chasing-and-dodging', 'kicking-and-striking', 'dribbling'];
+				for(var i=0; i < 4; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}else if(level == 3){
+				var folderName = ['Basketball', 'Football', 'Handball', 'Hockey', 'Lacrosse', 'Racquet Sports', 'Soccer', 'Ultimate Frisbee', 'Volleyball'];
+				var folderVal = ['basketball', 'football', 'handball', 'hockey', 'lacrosse', 'racquet-sports', 'soccer', 'ultimate-frisbee', 'volleyball'];
+				for(var i=0; i < 9; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}else if(level == 4){
+				var folderName = ['Football: Lesson Plans', 'Football: Team Binder Resources', 'Soccer: Lesson Plans', 'Soccer: Team Binder Resources', 'Volleyball: Lesson Plans', 'Volleyball: Team Binder Resources', 'Badminton: Lesson Plans', 'Badminton: Team Binder Resources', 'Basketball: Lesson Plans', 'Basketball: Team Binder Resources', 'Hockey: Lesson Plans', 'Hockey: Team Binder Resources'];
+				var folderVal = ['football-lesson-plans', 'football-team-binder-resources', 'soccer-lesson-plans', 'soccer-team-binder-resources', 'volleyball-lesson-plans', 'volleyball-team-binder-resources', 'badminton-lesson-plans', 'badminton-team-binder-resources', 'basketball-lesson-plans', 'basketball-team-binder-resources', 'hockey-lesson-plans', 'hockey-team-binder-resources'];
+				for(var i=0; i < 12; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}else if(level == 'resistance-training-resources'){
+				var folderName = ['Hip Dominant', 'Knee Dominant', 'Core', 'Push', 'Pull', 'Carry', 'Explosive'];
+				var folderVal = ['hip-dominant', 'knee-dominant', 'core', 'push', 'pull', 'carry', 'explosive'];
+				for(var i=0; i < 7; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}else if(level == 'movement-training-resources'){
+				var folderName = ['Acceleration', 'Multi Direction'];
+				var folderVal = ['acceleration', 'multi-direction'];
+				for(var i=0; i < 2; i++){
+					$('#ath-topic').append('<option value="'+ folderVal[i] +'">'+ folderName[i] +'</option>');
+				}
+			}
+		});
+		/*-- end resource upload form --*/
+		
+		/*-------------------------------------
+			Delete Resource from S3 Storage
+		--------------------------------------*/
+		$('.delete-doc').click(function(){
+			var filename = $(this).attr('data-name');
+			var level = $(this).attr('data-level');
+			var folder = $(this).attr('data-folder');
+			var container = $(this).parent('div.download');
+			bootbox.confirm("Are you sure you want to delete <strong>"+ filename +"</strong>?", function(result) {
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/deleteresource";'."\n"; ?>
+					var data = {
+						action: "delete_resource",
+						filename: filename,
+						level: level,
+						folder: folder
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide document on page --//
+									container.delay(500).slideUp('fast');
+
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Document Deleted', 'The document was removed successfully from resources.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Document Not Removed', 'There was a problem removing the document, Please refresh the page and try again.', 7500, 'fa fa-ban', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*-- end delete resource --*/
+	});
+</script>

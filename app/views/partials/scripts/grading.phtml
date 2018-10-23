@@ -1,0 +1,927 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to Check All Checkboxes in Table --//
+		$('#check-all').change(function(event){
+			if(this.checked){
+				$('.select-check').prop('checked', true);
+			}else{
+				$('.select-check').prop('checked', false);
+			}
+		});
+		
+		//-- Change # of Results to Display --//
+		$('#changeLimit a').click(function(event){
+			event.preventDefault();
+			//-- grab var --//
+			var numLimit = $(this).attr('data-val');
+			//-- set var --//
+			$(this).parent('li').parent('ul').next('input.form-control').val(numLimit);
+			//-- submit form --//
+			$('#changeLimit').submit();
+		});
+		
+		//-- Display Filters --//
+		$('#show-user-filters > a').click(function(e){
+			e.preventDefault();
+			$('#user-filters').slideToggle(500);
+			if($(this).children('span').text() == 'Show Filters'){
+				$(this).children('span').text('Hide Filters');
+			}else{
+				$(this).children('span').text('Show Filters');
+			}
+		});
+		
+		/*---------------------------------
+			Pagination for Content Tabs
+		----------------------------------*/
+		$('.users-pager li > a').click(function(e){
+			e.preventDefault();
+			//-- make sure button isn't disabled --//
+			if($(this).parent('li').hasClass('disabled') || $(this).parent('li').hasClass('active')){ return false; }
+			
+			//-- Figure out what the active page is based on the button clicked --//
+			if($(this).parent('li').hasClass('prev')){
+				var activeItem = $(this).parent('li').siblings('li.active').prev('li').children('a');
+			}else if($(this).parent('li').hasClass('next')){
+				var activeItem = $(this).parent('li').siblings('li.active').next('li').children('a');
+			}else{
+				var activeItem = $(this);
+			}
+			
+			//-- Get Values --//
+			var page = $(activeItem).attr('data-page');
+			//-- Set Page Var / Submit Form --//
+			$('#pageNumber').val(page);
+			$('#pagerForm').submit();
+			
+		});
+		/*--------------------
+			end pagination
+		---------------------*/
+		
+		/*-----------------------------------------
+			hide pager items when too many pages
+		------------------------------------------*/
+		if($('.pagination .scrunch').length > 200){
+			//console.log($('.pagination .scrunch').length);
+			$('.pagination .scrunch').hide();
+			$('.pagination .scrunch:nth-child(10n)').show();
+		}
+		/*--------------------------
+			end hide pager items 
+		----------------------------*/
+		
+		/*------------------------------------
+			Create & Manage grading sliders
+		-------------------------------------*/
+		$(".incrementSlider").slider({
+			range: "min",
+			value:0,
+			min: 0,
+			max: 5,
+			step: 1,
+			slide: function(event, ui) {
+				//-- When Slider Value is Changed - Update the Number Grade --//
+				$(this).parent('div').next('div').children('input.form-control').val(ui.value);
+			}
+		});
+		//--  When number grade is input, it updates the slider --//
+		$('.grade-input').blur(function(event){
+			var theVal = $(this).val();
+			$(this).parent('div').prev('div').children('.incrementSlider').slider({value: theVal});
+		});
+		//-- onLoad change the slider for set grades --//
+		$('.grade-input').each(function(e){
+			//-- if has value then change slider --//
+			var thisVal = $(this).val();
+			if(thisVal && thisVal > 0){
+				$(this).parent('div').parent('.gradeSection').find('.incrementSlider').slider({value: thisVal});
+			}
+		});
+		
+		//-- Show loading modal when using an advanced filter --//
+		<?php if($this->session->get("user-role") <= 2 && (isset($missingGradeRole) || (isset($schoolID) && (isset($teacherID) || isset($gradeID))))){ ?>
+			$('#user-filters select').change(function(event){
+				//-- check missing grade filter --//
+				var missGrade = $('#filter-missing-grade').val();
+				if(missGrade || missGrade === 0){
+					$('#loadingFilterModal').modal('show');
+				}
+			});<?php
+		} ?>
+		
+		
+		/*--------------------
+			Review Grades
+		---------------------*/
+		$('.reviewGrades').click(function(e){
+			//-- Grab Student Data --//
+			var studentID = $(this).attr('data-student-val');
+			var theName = $(this).attr('data-student-name');
+			var gradeLevel = $(this).attr('data-grade-level');
+			
+			$('#gradeStudentModal .modal-header h3 .insert-studentname').text(theName);
+			$('#admin-grades-review .form-group').remove();
+			$('#grading-form').hide();
+			$('#pick-trait').val('');
+			$('#staff-grade-form, #student-grade-form').remove();
+			$('#admin-grades-review').show();
+			$('#gradeStudentModal').modal('show');
+			
+			//-- Trait Selected - Grab Trait Grading Info --//
+			$('#pick-trait').off().change(function(event){
+				var traitID = $(this).val();
+				if(traitID){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/reviewtrait";'."\n"; ?>
+					var data = {
+						action: "review_grades",
+						theID: traitID,
+						studentID: studentID
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									
+									/*----------------------------
+										populate review section
+									-----------------------------*/
+									//-- student info --//
+									$('#grading-form').attr('data-grade-level', gradeLevel);
+									//-- trait info --//
+									$('#grading-form span.trait-name').text(results.trait.trait_name);
+									$('#grading-form span.trait-name').siblings('i').addClass(results.trait.icon);
+									$('#grading-form p.trait-description').html(results.trait.description);
+									var roles = ['Turf Coach','Teacher', 'Student', 'Parent'];
+									
+									if(results.grades){
+										$('#admin-grades-review .form-group').remove();
+										jQuery.each(results.grades, function (i, grade){
+											//-- verification of which roles have graded the student --//
+											var roleIndex = jQuery.inArray(grade.role, roles);
+											if(roleIndex !== -1){
+												roles.splice(roleIndex, 1);
+											}
+											//-- end verification --//
+											
+											var output = '<div class="form-group">';
+											output+= '<div class="col-sm-12"><label>'+ grade.role +'</label></div>';
+											//-- Grade & slider --//
+											if(grade.grade && gradeLevel > 3){
+												output+= '<div class="gradeSection">';
+												output+= '<div class="col-sm-9"><div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div></div>';
+												output+= '<div class="col-sm-3"><input type="text" class="form-control grade-input" maxlength="1" style="width: 34px;" value="'+ grade.grade +'"></div>';
+												output+= '</div>';
+											}
+											//-- observation section --//
+											if(grade.role == 'Student'){ hideOb = 'invisible'; }else{ hideOb = ''; }
+											if(grade.observation){
+												if(grade.reaction === 0){ var bgcolor = 'lightcyan'; }else{ var bgcolor = 'none'; }
+												output+= '<div class="col-sm-9 observationSection '+ hideOb +'"><textarea class="form-control input-observation" rows="2" cols="10" placeholder="Enter Observations..." style="background-color: '+ bgcolor +'">'+ grade.observation +'</textarea></div>';
+											}else{
+												output+= '<div class="col-sm-9 observationSection '+ hideOb +'"><textarea class="form-control input-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea></div>';
+											}
+											//-- submit button --//
+											output+= '<div class="col-sm-3"><span class="btn btn-primary submitReviewGrade" style="margin: 19px 0 0;" data-grade-val="'+ grade.id +'" data-student-val="'+ studentID +'" data-trait="'+ results.trait.url_name +'" data-grade-level="'+ gradeLevel +'">Submit</span></div>';
+											output+= '<div style="clear: both;"></div></div>';
+											$('#admin-grades-review').append(output);
+											
+										});
+										
+									}else{
+										$('#admin-grades-review .form-group').remove();
+										/*var output = '<div class="form-group">';
+										output+= '<div class="alert alert-danger"><a class="close" data-dismiss="alert" href="#" aria-hidden="true">×</a><strong style="letter-spacing: 0.3px;">There are no grades input for this student.</strong><br />They have to be added before you can review and modify them.</div>';
+										output+= '</div>';
+										$('#admin-grades-review').append(output);*/
+									}
+									
+									//-- Show Remaining (Not Existing Grades) --//
+									jQuery.each(roles, function(i, val){
+										
+										var output = '<div class="form-group">';
+										output+= '<div class="col-sm-12"><label>'+ val +'</label></div>';
+										//-- Grade & slider --//
+										if(gradeLevel > 3){
+											output+= '<div class="gradeSection">';
+											output+= '<div class="col-sm-9"><div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div></div>';
+											output+= '<div class="col-sm-3"><input type="text" class="form-control grade-input" maxlength="1" style="width: 34px;" value=""></div>';
+											output+= '</div>';
+										}
+										//-- observation section --//
+										if(val == 'Student'){ hideOb = 'invisible'; }else{ hideOb = ''; }
+										output+= '<div class="col-sm-9 observationSection '+ hideOb +'"><textarea class="form-control input-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea></div>';
+										//-- submit button --//
+										output+= '<div class="col-sm-3"><span class="btn btn-primary submitReviewGrade" style="margin: 19px 0 0;" data-student-val="'+ studentID +'" data-trait="'+ results.trait.url_name +'" data-grade-level="'+ gradeLevel +'" data-grade-type="new" data-grade-role="'+ val.toLowerCase() +'">Submit</span></div>';
+										output+= '<div style="clear: both;"></div></div>';
+										$('#admin-grades-review').append(output);
+										
+									});
+									
+									/*----------------------------------------------------------------
+										Add sliders && get it to setup listeners for grade changes
+									-----------------------------------------------------------------*/
+									$(".incrementSlider").slider({
+										range: "min",
+										value:0,
+										min: 0,
+										max: 5,
+										step: 1,
+										slide: function(event, ui) {
+											//-- When Slider Value is Changed - Update the Number Grade --//
+											$(this).parent('div').next('div').children('input.grade-input').val(ui.value);
+										}
+									});
+									//--  When number grade is input, it updates the slider --//
+									$('.grade-input').blur(function(event){
+										var theVal = $(this).val();
+										$(this).parent('div').prev('div').children('.incrementSlider').slider({value: theVal});
+									});
+									//-- onLoad change the slider for set grades --//
+									$('.grade-input').each(function(e){
+										//-- if has value then change slider --//
+										var thisVal = $(this).val();
+										if(thisVal && thisVal > 0){
+											$(this).parent('div').parent('.gradeSection').find('.incrementSlider').slider({value: thisVal});
+										}
+									});
+									//-- Make sure only valid chars are entered for grade --//
+									$('.grade-input').keyup(function(e){
+										var filteredVal = $(this).val().replace(/[^0-5]/g,'');
+										$(this).val(filteredVal);
+									});
+									/*----------------------------------
+										end add listeners for sliders
+									-----------------------------------*/
+									
+									/*---------------------------
+										Submit Reviewed Grade
+									----------------------------*/
+									$('.submitReviewGrade').click(function(){
+										var submitBtn = $(this);
+										var gradeID = $(this).attr('data-grade-val');
+										var studentID = $(this).attr('data-student-val');
+										var gradeLevel = $(this).attr('data-grade-level');
+										var trait = $(this).attr('data-trait');
+										var grade = $(this).parent('div').siblings('.gradeSection').find('.grade-input').val();
+										var gradeType = $(this).attr('data-grade-type');
+										var observation = $(this).parent('div').siblings('.observationSection').find('.input-observation').val();
+										var newRole = $(this).attr('data-grade-role');
+										if(newRole){ var revRole = newRole; }else{ var revRole = 'review'; }
+										if(gradeID || gradeType){
+											if(grade || gradeLevel < 4){
+												//-- if observation - get if comment is positive or negative --//
+												if(observation){
+													bootbox.dialog({
+													  message: "Please indicate whether the observation you wrote is positive or negative.",
+													  buttons: {
+													    positive: {
+													      label: "Positive",
+													      className: "btn-primary",
+													      callback: function() {
+													        var reaction = 'positive';
+															submitGrade(revRole, gradeID, studentID, grade, trait, observation, reaction, gradeLevel, gradeType, submitBtn);
+													      }
+													    },
+													    negative: {
+													      label: "Negative",
+													      className: "btn-secondary",
+													      callback: function() {
+													        var reaction = 'negative';
+															submitGrade(revRole, gradeID, studentID, grade, trait, observation, reaction, gradeLevel, gradeType, submitBtn);
+													      }
+													    },
+													    cancel: {
+													      label: "Cancel",
+													      className: "btn-default",
+													      callback: function() {
+													        var reaction = 'cancel';
+													      }
+													    }
+													  }
+													});
+												}else{
+													var reaction = '';
+													submitGrade(revRole, gradeID, studentID, grade, trait, observation, reaction, gradeLevel, gradeType, submitBtn);
+												}
+
+											}else{
+												bootbox.alert("You need to grade the student on a scale from 1 - 5.", function(){ /*- do nothing -*/ });
+											}
+										}else{
+											bootbox.alert("Something is wrong with this grade, and you can't edit it. Refresh the page and try again. If the problem persists contact your site administrator.", function(){ /*- do nothing -*/ });
+										}
+									});
+									/*-------------------------
+										end submit reviewed
+									--------------------------*/
+									
+									//-- Show Grading --//
+									$('#grading-form').show();
+									
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the parents, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+			
+		});
+		/*-----------------------
+			end review grades
+		------------------------*/
+		
+		
+		/*--------------------
+			Grade Student
+		---------------------*/
+		$('.gradeStudent').click(function(e){
+			//-- Grab the data --//
+			var studentID = $(this).attr('data-student-val');
+			var theName = $(this).attr('data-student-name');
+			var gradeLevel = $(this).attr('data-grade-level');
+			
+			$('#gradeStudentModal .modal-header h3 .insert-studentname').text(theName);
+			$('#pick-trait').val('');
+			$('#grading-form').hide();
+			$('#gradeStudentModal').modal('show');
+			
+			//-- Trait Selected - Grab Trait Grading Info --//
+			$('#pick-trait').off().change(function(event){
+				var traitID = $(this).val();
+				if(traitID){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/grabtrait";'."\n"; ?>
+					var data = {
+						action: "grab_trait",
+						theID: traitID,
+						studentID: studentID
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- show / hide grade & slider --//
+									if(gradeLevel < 4){
+										$('#grading-form .gradeSection').hide();
+									}else{
+										$('#grading-form .gradeSection').show();
+									}
+									
+									/*----------------------------
+										populate grading form
+									-----------------------------*/
+									//-- student info --//
+									$('#grading-form').attr('data-grade-level', gradeLevel);
+									$('#submitStaffGrade, #submitStudentGrade, #submitParentGrade').attr('data-grade-val', '');
+									$('#submitStaffGrade, #submitStudentGrade, #submitParentGrade').attr('data-student-val', studentID).attr('data-trait', results.trait.url_name);
+									//-- trait info --//
+									$('#grading-form span.trait-name').text(results.trait.trait_name);
+									$('#grading-form span.trait-name').siblings('i').addClass(results.trait.icon);
+									$('#grading-form p.trait-description').html(results.trait.description);
+									//-- Clear out Data --//
+									$('#submitStaffGrade, #submitStudentGrade, #submitParentGrade').attr('data-grade-val', '');
+									$('#staff-grade-form .grade-input, #student-grade-form .grade-input, #parent-grade-form .grade-input').val('');
+									$('#staff-grade-form .incrementSlider, #student-grade-form .incrementSlider, #parent-grade-form .incrementSlider').slider({value: 0});
+									$('#staff-observation, #student-observation, #parent-observation').val('');
+									
+									if(results.grades){
+										jQuery.each(results.grades, function (i, grade){
+											if(grade.role == 'Teacher' || grade.role == 'TurfCoach'){
+												$('#submitStaffGrade').attr('data-grade-val', grade.id);
+												$('#staff-grade-form label:first').text(grade.role);
+												$('#staff-grade-form .grade-input').val(grade.grade);
+												$('#staff-grade-form .incrementSlider').slider({value: grade.grade});
+												$('#staff-observation').val(grade.observation);
+											}else if(grade.role == 'Student'){
+												$('#submitStudentGrade').attr('data-grade-val', grade.id);
+												$('#student-grade-form .grade-input').val(grade.grade);
+												$('#student-grade-form .incrementSlider').slider({value: grade.grade});
+												$('#student-observation').val(grade.observation);
+											}else if(grade.role == 'Parent'){
+												$('#submitParentGrade').attr('data-grade-val', grade.id);
+												$('#parent-grade-form .grade-input').val(grade.grade);
+												$('#parent-grade-form .incrementSlider').slider({value: grade.grade});
+												$('#parent-observation').val(grade.observation);
+											}
+										});
+									}
+									//-- Show Grading --//
+									$('#grading-form').show();
+									
+									//-- Add Event Listeners --//
+									$('body').off("click", "#submitStaffGrade").on("click", "#submitStaffGrade", function(){ $(this).staffGrade(); });
+									$('body').off("click", "#submitStudentGrade").on("click", "#submitStudentGrade", function(){ $(this).studentGrade(); });
+									$('body').off("click", "#submitParentGrade").on("click", "#submitParentGrade", function(){ $(this).parentGrade(); });
+									
+									
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the character trait & grade. Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+			
+		});
+		/*-----------------------
+			end grade student
+		------------------------*/
+		
+		
+		/*------------------------------------------
+			Grab Grade Form (students / parents)
+		-------------------------------------------*/
+		$('.pick-trait').change(function(event){
+			//-- Grab the data --//
+			var studentID = $(this).attr('data-student');
+			var theName = $('#sname'+ studentID).attr('data-student-name');
+			var traitID = $(this).val();
+			
+			$('#grading-form-'+ studentID).hide();
+			
+			if(traitID){
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/grabtrait";'."\n"; ?>
+				var data = {
+					action: "grab_trait",
+					theID: traitID,
+					studentID: studentID
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								/*----------------------------
+									populate grading form
+								-----------------------------*/
+								//-- student info --//
+								$('#grading-form-'+ studentID +' .submitYourGrade').attr('data-grade-val', '').attr('data-student-val', studentID).attr('data-trait', results.trait.url_name);
+								//-- trait info --//
+								$('#grading-form-'+ studentID +' span.trait-name').text(results.trait.trait_name);
+								$('#grading-form-'+ studentID +' span.trait-name').siblings('i').removeAttr('class').addClass('fa').addClass(results.trait.icon);
+								$('#grading-form-'+ studentID +' p.trait-description').html(results.trait.description);
+								//-- Clear out Data --//
+								$('#trait-grade-'+ studentID).val('');
+								$('#grading-form-'+ studentID +' .incrementSlider').slider({value: 0});
+								$('#grading-form-'+ studentID +' .grade-observation').val('');
+								
+								if(results.grades){
+									jQuery.each(results.grades, function (i, grade){
+										$('#grading-form-'+ studentID +' .submitYourGrade').attr('data-grade-val', grade.id);
+										$('#trait-grade-'+ studentID).val(grade.grade);
+										$('#grading-form-'+ studentID +' .incrementSlider').slider({value: grade.grade});
+										$('#grading-form-'+ studentID +' .grade-observation').val(grade.observation);
+									});
+								}
+								//-- Show Grading --//
+								$('#grading-form-'+ studentID).show();
+								
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the character trait & grade. Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+			
+		});
+		/*----------------------------------------------
+			End grab grade form (students / parents)
+		-----------------------------------------------*/
+		
+		/*-------------------------------------------------
+			Parent/Student Grading Page - Grade Student
+		--------------------------------------------------*/
+		$('.submitYourGrade').click(function(e){
+			var thisItem = $(this);
+			var gradeID = $(this).attr('data-grade-val');
+			var studentID = $(this).attr('data-student-val');
+			var gradeLevel = $(this).attr('data-grade-level');
+			var trait = $(this).attr('data-trait');
+			var grade = $('#trait-grade-'+ studentID).val();
+			var observation = $('#grading-form-'+ studentID +' .grade-observation').val();
+			
+			if(grade || gradeLevel < 4){
+				//-- submit Grade --//
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/submitgrade";'."\n"; ?>
+				var data = {
+					action: "submit_grade",
+					role: <?php if($this->session->get("user-id") == NULL){ echo "'student'"; }else{ echo "'parent'"; } ?>,
+					theID: gradeID,
+					studentID: studentID,
+					grade: grade,
+					trait: trait,
+					observation: observation,
+					reaction: '',
+					level: gradeLevel
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- add grade ID to submit btn --//
+								$(thisItem).attr('data-grade-val', results.entry);
+
+								//-- Success - Howler MSG --//
+								howlerMsg('success', 'Grade Entered', 'The grade was successfully entered.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Grade Failed', 'Something went wrong, the grade was not saved.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+				
+			}else{
+				bootbox.alert("You need to grade your student on a scale from 1 - 5.", function(){ /*- do nothing -*/ });
+			}
+		});
+		/*------------------------------
+			end parent/student grade
+		-------------------------------*/
+		
+		
+		$.fn.staffGrade = function(){
+			var gradeID = $(this).attr('data-grade-val');
+			var studentID = $(this).attr('data-student-val');
+			var grade = $('#staff-grade-form .grade-input').val();
+			var trait = $(this).attr('data-trait');
+			var observation = $('#staff-observation').val();
+			var gradeLevel = $('#grading-form').attr('data-grade-level');
+			if(grade || gradeLevel < 4){
+				//-- if observation - get if comment is positive or negative --//
+				if(observation){
+					bootbox.dialog({
+					  message: "Please indicate whether the observation you wrote is positive or negative.",
+					  buttons: {
+					    positive: {
+					      label: "Positive",
+					      className: "btn-primary",
+					      callback: function() {
+					        var reaction = 'positive';
+							submitGrade('staff', gradeID, studentID, grade, trait, observation, reaction, gradeLevel, '', '');
+					      }
+					    },
+					    negative: {
+					      label: "Negative",
+					      className: "btn-secondary",
+					      callback: function() {
+					        var reaction = 'negative';
+							submitGrade('staff', gradeID, studentID, grade, trait, observation, reaction, gradeLevel, '', '');
+					      }
+					    },
+					    cancel: {
+					      label: "Cancel",
+					      className: "btn-default",
+					      callback: function() {
+					        var reaction = 'cancel';
+					      }
+					    }
+					  }
+					});
+				}else{
+					var reaction = '';
+					submitGrade('staff', gradeID, studentID, grade, trait, observation, reaction, gradeLevel, '', '');
+				}
+				
+			}else{
+				bootbox.alert("You need to grade the student on a scale from 1 - 5.", function(){ /*- do nothing -*/ });
+			}
+		};
+		
+		$.fn.studentGrade = function(){
+			var gradeID = $(this).attr('data-grade-val');
+			var studentID = $(this).attr('data-student-val');
+			var grade = $('#student-grade-form .grade-input').val();
+			var trait = $(this).attr('data-trait');
+			var observation = $('#student-observation').val();
+			var gradeLevel = $('#grading-form').attr('data-grade-level');
+			if(grade || gradeLevel < 4){
+				//-- if observation --//
+				if(gradeLevel > 3 || observation){
+					submitGrade('student', gradeID, studentID, grade, trait, observation, 'positive', gradeLevel, '', '');
+				}else{
+					bootbox.alert("You need to add an observation.", function(){ /*- do nothing -*/ });
+				}
+				
+			}else{
+				bootbox.alert("You need to grade the student on a scale from 1 - 5.", function(){ /*- do nothing -*/ });
+			}
+		};
+		
+		$.fn.parentGrade = function(){
+			var gradeID = $(this).attr('data-grade-val');
+			var studentID = $(this).attr('data-student-val');
+			var grade = $('#parent-grade-form .grade-input').val();
+			var trait = $(this).attr('data-trait');
+			var observation = $('#parent-observation').val();
+			var gradeLevel = $('#grading-form').attr('data-grade-level');
+			if(grade || gradeLevel < 4){
+				//-- if observation --//
+				if(gradeLevel > 3 || observation){
+					submitGrade('parent', gradeID, studentID, grade, trait, observation, 'positive', gradeLevel, '', '');
+				}else{
+					bootbox.alert("You need to add an observation.", function(){ /*- do nothing -*/ });
+				}
+				
+			}else{
+				bootbox.alert("You need to grade the student on a scale from 1 - 5.", function(){ /*- do nothing -*/ });
+			}
+		};
+		
+		/*------------------
+			Report Cards
+		-------------------*/
+		$('#generate-report-cards').click(function(){
+			//-- Check to make sure checkboxes are checked --//
+			if($('.select-check:checked').get(0)){
+				var sList = [];
+				//-- Grab value of each checked checkbox --//
+				$('.select-check:checked').each(function(){
+					sList.push($(this).val());
+				});
+				//-- If there was a checked box send form --//
+				if(sList.length > 0){
+					$('#card-ids').val(sList);
+					$('#reportcards-form').submit();
+				}
+			}else{
+				bootbox.alert("Before you can generate report cards, you need to indicate which students you want to generate report cards for.<br /><br /><ol><li>Simply check the checkbox on the left side of the row the student is in.</li><li>Once you have selected the students you need a report card for; press the 'Report Cards' button again.</li>", function(){ /*- do nothing -*/ });
+			}
+		});
+		/*- end report cards -*/
+		
+	});
+	
+	function submitGrade(role, gradeID, studentID, grade, trait, observation, reaction, level, type, btn){
+		var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/submitgrade";'."\n"; ?>
+		var data = {
+			action: "submit_grade",
+			role: role,
+			theID: gradeID,
+			studentID: studentID,
+			grade: grade,
+			trait: trait,
+			observation: observation,
+			reaction: reaction,
+			level: level,
+			type: type
+			};
+		jQuery.post(ajaxurl, data, function(json){
+			if(typeof json != 'undefined'){
+				var results = jQuery.parseJSON(json);
+				if(typeof results.result != 'undefined'){
+					if(results.result == 'success'){
+						//-- Success - Howler MSG --//
+						howlerMsg('success', 'Grade Entered', 'The grade was successfully entered.', 7500, 'fa fa-check', false);
+						
+						//-- add grade ID to submit btn --//
+						if(role == 'review'){
+							//-- do nothing --//
+						}else if(type == 'new'){
+							//-- Add Grade ID to submit btn & remove grade type --//
+							console.log(results.entry);
+							btn.attr('data-grade-val', results.entry).removeAttr('data-grade-type');
+						}else if(role == 'student'){
+							$('#submitStudentGrade').attr('data-grade-val', results.entry);
+						}else if(role == 'parent'){
+							$('#submitParentGrade').attr('data-grade-val', results.entry);
+						}else{
+							$('#submitStaffGrade').attr('data-grade-val', results.entry);
+						}
+						
+					}else if(results.result == 'failed'){
+						//-- Failed - Howler MSG --//
+						howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+					}
+				}
+			}
+		});
+	}
+</script>
+
+<!-- Grade Student Modal -->
+<div id="gradeStudentModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Enter Grades for: <span class="insert-studentname"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<?php //-- Select Which Character Trait --//
+				if(isset($traits) && $traits){ ?>
+					<div class="form-group">
+						<label for="pick-trait">Character Trait</label><br />
+						<select id="pick-trait" class="form-control">
+							<option value="">Select Character Trait</option>
+							<?php
+								//-- List Out Grade Levels --//
+								foreach($traits as $trait){
+									echo '<option value="'.$trait->id.'">'.$trait->trait_name.'</option>';
+								}
+							?>
+						</select>
+					</div><?php
+				} ?>
+				
+				<div id="grading-form" class="grading-form" style="clear: both; margin: 20px 0 0;">
+					<div class="col-sm-12">
+						<h3><i class="fa"></i> <span class="trait-name"></span></h3>
+						<blockquote style="margin: 0 0 10px;">
+							<p class="trait-description" style="font-size: 12px;"></p>
+						</blockquote>
+					</div>
+					<div id="admin-grades-review" style="display: none;">
+						
+					</div>
+					<div class="form-group" id="staff-grade-form">
+						<div class="col-sm-12">
+							<label for="trait-grade"><?php if($this->session->get("user-role") == 3){ echo 'Teacher'; }else if($this->session->get("user-role") == 4){ echo 'TurfCoach'; } ?></label>
+						</div>
+						<div class="gradeSection">
+							<div class="col-sm-9">
+								<div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div>
+							</div>
+							<div class="col-sm-3">
+								<input type="text" onkeyup="this.value = this.value.replace(/[^0-5]/g,'');" class="form-control grade-input" id="trait-grade" maxlength="1" style="width: 34px;">
+							</div>
+						</div>
+						<div class="col-sm-9">
+							<textarea class="form-control" id="staff-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea>
+						</div>
+						<div class="col-sm-3">
+							<span class="btn btn-primary" id="submitStaffGrade" style="margin: 19px 0 0;">Submit</span>
+						</div>
+						<div style="clear: both;"></div>
+					</div>
+					<?php
+					if($this->session->get("user-role") == 3){ ?>
+						<div class="form-group" id="student-grade-form" style="margin: 0;">
+							<div class="col-sm-12">
+								<label for="trait-grade">Student</label>
+							</div>
+							<div class="gradeSection">
+								<div class="col-sm-9">
+									<div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div>
+								</div>
+								<div class="col-sm-3">
+									<input type="text" onkeyup="this.value = this.value.replace(/[^0-5]/g,'');" class="form-control grade-input" id="trait-grade" maxlength="1" style="width: 34px;">
+								</div>
+							</div>
+							<div class="col-sm-9">
+								<textarea class="form-control" id="student-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea>
+							</div>
+							<div class="col-sm-3">
+								<span class="btn btn-primary" id="submitStudentGrade" style="margin: 19px 0 0;">Submit</span>
+							</div>
+							<div style="clear: both;"></div>
+						</div>
+						
+						<div class="form-group" id="parent-grade-form" style="margin: 0;">
+							<div class="col-sm-12">
+								<label for="trait-grade">Parent</label>
+							</div>
+							<div class="gradeSection">
+								<div class="col-sm-9">
+									<div class="incrementSlider slider-secondary" style="margin-top: 1em;"></div>
+								</div>
+								<div class="col-sm-3">
+									<input type="text" onkeyup="this.value = this.value.replace(/[^0-5]/g,'');" class="form-control grade-input" id="trait-grade" maxlength="1" style="width: 34px;">
+								</div>
+							</div>
+							<div class="col-sm-9">
+								<textarea class="form-control" id="parent-observation" rows="2" cols="10" placeholder="Enter Observations..."></textarea>
+							</div>
+							<div class="col-sm-3">
+								<span class="btn btn-primary" id="submitParentGrade" style="margin: 19px 0 0;">Submit</span>
+							</div>
+							<div style="clear: both;"></div>
+						</div><?php
+					} ?>
+				</div>
+				
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Grading Legend Modal -->
+<div id="gradeLegendModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				
+				<!-- Legend -->
+				<div class="well col-sm-12" style="float: none; margin: 0; position: relative; top: 5px;">
+					<h4>Numeric Grade Value Definitions:</h4>
+					<p><span class="label label-tertiary" style="font-size: 11px;">1</span> - Very seldomly exhibits character trait.</p>
+					<p><span class="label label-tertiary" style="font-size: 11px;">2</span> - Occasionally but not consistently exhibits character trait.</p>
+					<p><span class="label label-secondary" style="font-size: 11px;">3</span> - Frequently exhibits and average for age in exhibiting character trait.</p>
+					<p><span class="label label-secondary" style="font-size: 11px;">4</span> - Consistently exhibits and above average for age in exhibiting character trait.</p>
+					<p><span class="label label-secondary" style="font-size: 11px;">5</span> - Very consistently exhibits and outstanding character performance.</p>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Filter Loading Modal -->
+<div id="loadingFilterModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				
+				<h4 style="text-align: center;">Loading Filtered Results</h4>
+				<div class="progress progress-striped active" style="margin: 0 0 10px;">
+					<div class="progress-bar progress-bar-secondary" role="progressbar" aria-valuenow="44" aria-valuemin="0" aria-valuemax="100" style="width: 100%;">
+						<span class="sr-only">100% Complete</span>
+					</div>
+				</div>
+				
+			</div><!-- /.modal-body -->
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Import CSV Modal -->
+<div id="importGradesModal" class="modal fade" style="z-index: 1035">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Import Completed Grades Template</h3>
+			</div>
+			<div class="modal-body">
+				
+				<p>
+					Select the Grading Template that you would like to import into the grading system, then select the character trait that you wish to import into. Please ensure that the file you are Importing is in the correct format for the Grading System:<br>
+					Correct Column Order: "Student ID, Student, Trait, Observations, Attitude"
+				</p>
+				<?php //-- Select Which Character Trait --//
+				if(isset($traits) && $traits){ ?>
+					<div class="form-group">
+						<label for="upload-trait">Character Trait</label><br />
+						<select id="upload-trait" class="form-control">
+							<option value="">Select Character Trait</option>
+							<?php
+								//-- List Out Grade Levels --//
+								foreach($traits as $trait){
+									echo '<option value="'.$trait->id.'">'.$trait->trait_name.'</option>';
+								}
+							?>
+						</select>
+					</div><?php
+				} ?>
+				<!-- Import CSV File Form -->
+				<span class="btn btn-primary fileinput-button">
+			        <i class="glyphicon glyphicon-plus"></i>
+			        <span>Select CSV File...</span>
+			        <!-- The file input field used as target for the file upload widget -->
+			        <input id="fileupload" type="file" name="files[]" multiple>
+			    </span>
+			    <br>
+			    <br>
+			    <!-- The global progress bar -->
+			    <div id="progress" class="progress">
+			        <div class="progress-bar progress-bar-primary"></div>
+			    </div>
+			    <!-- The container for the uploaded files -->
+			    <div id="fileUploads" class="files"></div>
+			    <br>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

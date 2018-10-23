@@ -1,0 +1,1042 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to Check All Checkboxes in Table --//
+		$('#check-all').change(function(event){
+			if(this.checked){
+				$('.select-check').prop('checked', true);
+			}else{
+				$('.select-check').prop('checked', false);
+			}
+		});
+		
+		//-- Change # of Results to Display --//
+		$('#changeLimit a').click(function(event){
+			event.preventDefault();
+			//-- grab var --//
+			var numLimit = $(this).attr('data-val');
+			//-- set var --//
+			$(this).parent('li').parent('ul').next('input.form-control').val(numLimit);
+			//-- submit form --//
+			$('#changeLimit').submit();
+		});
+		
+		//-- Display Filters --//
+		$('#show-user-filters > a').click(function(e){
+			e.preventDefault();
+			$('#user-filters').slideToggle(500);
+			if($(this).children('span').text() == 'Show Filters'){
+				$(this).children('span').text('Hide Filters');
+			}else{
+				$(this).children('span').text('Show Filters');
+			}
+		});
+		
+		/*---------------------------------
+			Pagination for Content Tabs
+		----------------------------------*/
+		$('.users-pager li > a').click(function(e){
+			e.preventDefault();
+			//-- make sure button isn't disabled --//
+			if($(this).parent('li').hasClass('disabled') || $(this).parent('li').hasClass('active')){ return false; }
+			
+			//-- Figure out what the active page is based on the button clicked --//
+			if($(this).parent('li').hasClass('prev')){
+				var activeItem = $(this).parent('li').siblings('li.active').prev('li').children('a');
+			}else if($(this).parent('li').hasClass('next')){
+				var activeItem = $(this).parent('li').siblings('li.active').next('li').children('a');
+			}else{
+				var activeItem = $(this);
+			}
+			
+			//-- Get Values --//
+			var page = $(activeItem).attr('data-page');
+			//-- Set Page Var / Submit Form --//
+			$('#pageNumber').val(page);
+			$('#pagerForm').submit();
+			
+		});
+		/*--------------------
+			end pagination
+		---------------------*/
+		
+		/*--------------
+			Add User
+		---------------*/
+		$('.addUser').click(function(e){
+			//-- Initiate Validation --//
+			$('#addUserForm').parsley('destroy');
+			$('#addUserForm').resetParsley();
+			
+			if($('#addUserForm').parsley('validate')){
+				console.log('Validation Successful');
+				//-- Check for any failed ajax checks --//
+				if(!$('#addUserForm .failed').get(0)){
+					//-- passed validation - Run Add Script --//
+					
+					var alt_id = $('#add-alt-id').val();
+					var state_id = $('#add-state-id').val();
+					var first = $('#add-first').val();
+					var last = $('#add-last').val();
+					var email = $('#add-email').val();
+					var phone = $('#add-phone').val().replace(/[^0-9]/g,'');
+					var username = $('#add-username').val();
+					var pass = $('#add-pass').val();
+					var type = $('#add-type').val();
+					var school = $('#add-school').val();
+					var grade = $('#add-grade').val();
+					if($('#send-new-user-email-checkbox:checked').get(0)){
+						var sendEmail = 1;
+					}else{
+						var sendEmail = 0;
+					}
+					
+					<?php //-- figure out ajax url --//
+					if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){
+						$ajaxUrl = $_SERVER['REQUEST_URI'].'/adduser";';
+					}else{
+						$ajaxUrl = $_SERVER['REQUEST_URI'].'adduser";';
+					} ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+					
+					var data = {
+						action: "add_user",
+						altid: alt_id,
+						stateid: state_id,
+						first: first,
+						last: last,
+						email: email,
+						phone: phone,
+						user_name: username,
+						type: type,
+						pass: pass,
+						school: school,
+						grade: grade,
+						send_email: sendEmail
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide Modal --//
+									$('#addUserModal').modal('hide');
+									
+									//-- Clear Out Data --//
+									$('#addUserForm .form-control').val('');
+									$('#addUserModal .field-msg').text('');
+									$('#addUserModal .form-group').removeClass('failed').removeClass('successful');
+									
+									//-- Success Message --//
+									howlerMsg('success', 'User Added Successfully', 'The user was added successfully', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+					
+				}
+				
+			} // end if validation cleared
+		});
+		/*------------------
+			end Add User
+		-------------------*/
+		
+		/*--------------
+			Edit User
+		---------------*/
+		$('.editUser').click(function(e){
+			//-- Retrieve User --//
+			var theID = $(this).attr('data-user-val');
+			<?php //-- figure out ajax url --//
+			if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){
+				$ajaxUrl = $_SERVER['REQUEST_URI'].'/edituser";';
+			}else{
+				$ajaxUrl = $_SERVER['REQUEST_URI'].'edituser";';
+			} ?>
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+			var data = {
+				action: "grab_user",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#editUserForm .form-control').val('');
+							
+							//-- Populate Modal --//
+							var newID = results.id;
+							$('#edit-first').val(results.first);
+							$('#edit-last').val(results.last);
+							$('#edit-email').val(results.email).attr('data-user-val', newID);
+							$('#edit-phone').val(results.phone);
+							$('#edit-alt-id').val(results.alt_id).attr('data-user-val', newID);
+							$('#edit-state-id').val(results.state_id);
+							$('#edit-username').val(results.username).attr('data-user-val', newID);
+								//-- if school field exists --//
+							if($('#edit-school').get(0)){
+								$('#edit-school').val(results.school);
+							}
+								//-- if grade field exists --//
+							if($('#edit-grade').get(0)){
+								$('#edit-grade').val(results.grade);
+							}
+							
+							//-- Show modal --//
+							if(results.username){
+								$('#editUserModal .modal-header h3 .insert-username').text(results.username);
+							}else{
+								$('#editUserModal .modal-header h3 .insert-username').text(results.first +' '+ results.last);
+							}
+							$('#editUserModal .field-msg').text('');
+							$('#editUserModal .form-group').removeClass('failed').removeClass('successful');
+							$('#editUserModal').modal('show');
+							//-- reset parsley validation --//
+							$('#editUserForm').parsley('destroy');
+							$('#editUserForm').resetParsley();
+							
+							//-- validate form --//
+							$('#editUserSubmit').off().click(function(event){
+								event.preventDefault();
+								if($('#editUserForm').parsley('validate')){
+									//-- Check for any failed ajax checks --//
+									if(!$('#editUserForm .failed').get(0)){
+										//-- Passed Validation - Run Edit Script --//
+										
+										var alt_id = $('#edit-alt-id').val();
+										var state_id = $('#edit-state-id').val();
+										var first = $('#edit-first').val();
+										var last = $('#edit-last').val();
+										var email = $('#edit-email').val();
+										var phone = $('#edit-phone').val().replace(/[^0-9]/g,'');
+										var username = $('#edit-username').val();
+										var type = $('#edit-type').val();
+										var pass = $('#edit-pass').val();
+											//-- if school field exists --//
+										if($('#edit-school').get(0)){
+											var school = $('#edit-school').val();
+										}else{
+											var school = 0;
+										}
+											//-- if grade field exists --//
+										if($('#edit-grade').get(0)){
+											var grade = $('#edit-grade').val();
+										}else{
+											var grade = '';
+										}
+											//-- Send email notifying changed username / password --//
+										if($('#send-new-pass-email-checkbox:checked').get(0)){
+											var sendEmail = 1;
+										}else{
+											var sendEmail = 0;
+										}
+
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+
+										var info = {
+											action: "edit_user",
+											user_id: newID,
+											altid: alt_id,
+											stateid: state_id,
+											first: first,
+											last: last,
+											email: email,
+											phone: phone,
+											type: type,
+											user_name: username,
+											pass: pass,
+											school: school,
+											grade: grade,
+											send_email: sendEmail
+										};
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#editUserModal').modal('hide');
+
+														//-- Success Message --//
+														howlerMsg('success', 'User Updated', 'The user was updated successfully', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+
+									}
+									
+								} // end if validation cleared
+								
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Failed to Retrieve User', 'There was a problem retrieving the user, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*------------------
+			end Edit User
+		-------------------*/
+		
+		/*-----------------
+			Delete User
+		------------------*/
+		$('.delUser').click(function(e){
+		    var theID = $(this).attr('data-user-val');
+			var theName = $(this).attr('data-user-name');
+			var container = $(this).parent('td').parent('tr');
+			
+			<?php //-- figure out ajax url --//
+			if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){ $ajaxUrl = $_SERVER['REQUEST_URI'].'/deluser";'; }
+			else{ $ajaxUrl = $_SERVER['REQUEST_URI'].'deluser";'; }
+			?>
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+			var data = {
+				action: "delete_user",
+				theID: theID
+				};
+			//-- Ask to confirm "Do you really want to delete this?" --//
+			bootbox.confirm("Are you sure you want to delete User: <span style='font-weight: bold;'>"+ theName +"</span>?", function(result) {
+				if(result){
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(container).delay(500).slideUp('fast');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'User Deleted', 'The user was deleted successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*--------------------
+			end delete user
+		---------------------*/
+		
+		/*-------------------------
+			Assign Coach Grading
+		--------------------------*/
+		$('.assignGrades').click(function(e){
+			//-- Retrieve User --//
+			var theID = $(this).attr('data-user-val');
+			var theName = $(this).attr('data-user-name');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/turfcoach/assigngrades";'."\n"; ?>
+			var data = {
+				action: "grab_grade_levels",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#assign-grading option:selected').prop("selected", false);
+							
+							//-- Populate Modal --//
+							if(results.grades){
+								$.each(results.grades.split(","), function(i,e){
+								    $("#assign-grading option[value='" + e + "']").prop("selected", true);
+								});
+								//$('#assign-grading').val(results.grades);
+							}
+							
+							//-- Show modal --//
+							$('#assignGradesModal .modal-header h3 .insert-username').text(theName);
+							$('#assignGradesModal').modal('show');
+							
+							//-- validate form --//
+							$('#setGradingAssignment').off().click(function(event){
+								//-- Ask to confirm "Do you really want to delete this?" --//
+								bootbox.confirm("Are you sure you want to update the grade levels that: <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ theName +"</span> can grade?", function(result) {
+									if(result){
+										var gradeVal = $('#assign-grading').val().join();
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/turfcoach/assigngrades";'."\n"; ?>
+										var info = {
+											action: "update_grade_levels",
+											user_id: theID,
+											gradeVal: gradeVal
+										};
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#assignGradesModal').modal('hide');
+
+														//-- Success Message --//
+														howlerMsg('success', 'Grade Levels Assigned', 'The Grade Levels were updated successfully for this user', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+									}
+								});
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Did Not Grab Grade Levels', 'There was a problem retrieving the user, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*-----------------------
+			end Assign Grading
+		------------------------*/
+		
+		$.fn.resetParsley = function() {
+			$(this).parsley ({
+				trigger: 'change',
+				errors: {
+					container: function (element, isRadioOrCheckbox) {
+						if (element.parents ('form').is ('.form-horizontal')) {
+							return element.parents ("*[class^='col-']");
+						}
+
+						return element.parents ('.form-group');
+					}
+				}
+			});
+		};
+		
+		/*--------------------
+			Validate Email
+		---------------------*/
+		$('#add-email, #edit-email').blur(function(e){
+			var emailVal = $(this).val();
+			var thisInput = $(this);
+			var userID = $(this).attr('data-user-val');
+			var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+			if(emailVal.length > 4){
+				//-- Make sure its formatted like an email --//
+				if(emailVal == '' || !re.test(emailVal)){
+				    $(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+					$(this).parent('div').removeClass('successful').addClass('failed');
+				}else{
+					
+					//-- setup ajax request --//
+					<?php if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){ $ajaxUrl = $_SERVER['REQUEST_URI'].'/validemail";'; }else{ $ajaxUrl = $_SERVER['REQUEST_URI'].'validemail";'; } ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+					var data = {
+						action: "validate_email",
+						email: emailVal,
+						user_id: userID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Email is valid');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Email already in use - Email Address has to be unique - pick a new one');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+					
+				}
+				
+			}else{
+				$(this).prev('em').text('Enter a valid email address. Ex: name@domain.com');
+				$(this).parent('div').removeClass('successful').addClass('failed');
+			}
+		});
+		/*-- end email --*/
+		
+		/*--------------------
+			Validate Phone
+		---------------------*/
+		$('#add-phone, #edit-phone').blur(function(e){
+			var countInt = $(this).val().replace(/[^0-9]/g,'').length;
+			if(!$(this).val()){
+				$(this).prev('em').text('');
+				$(this).parent('div').removeClass('failed').removeClass('successful');
+			}else if(countInt < 10 || countInt > 10){
+				$(this).prev('em').text('The phone number needs to contain 10 numbers. Ex: (801) 555-5555');
+				$(this).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(this).prev('em').text('Phone is valid - it has 10 numbers');
+				$(this).parent('div').removeClass('failed').addClass('successful');
+			}
+		});
+		/*-- end phone --*/
+		
+		/*-----------------------
+			Validate Username
+		------------------------*/
+		$('#add-username, #edit-username').blur(function(e){
+			var username = $(this).val();
+			var userID = $(this).attr('data-user-val');
+			var thisInput = $(this);
+			if(username){
+				if(username.length > 4){
+					//-- setup ajax request --//
+					<?php if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){ $ajaxUrl = $_SERVER['REQUEST_URI'].'/validname";'; }else{ $ajaxUrl = $_SERVER['REQUEST_URI'].'validname";'; } ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+					var data = {
+						action: "validate_username",
+						user_name: username,
+						user_id: userID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Username is available');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Username already in use - pick new username');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+				}else{
+					$(thisInput).prev('em').text('Minimum length of 5 characters');
+					$(thisInput).parent('div').removeClass('successful').addClass('failed');
+				}
+			}else{
+				$(thisInput).prev('em').text('');
+				$(thisInput).parent('div').removeClass('failed').removeClass('successful');
+			}
+		});
+		/*-- end validate username --*/
+		
+		/*-----------------------
+			Validate Alt ID
+		------------------------*/
+		$('#add-alt-id, #edit-alt-id').blur(function(e){
+			var alt_id = $(this).val();
+			var school = $(this).parent().parent().find('.school-input').val();
+			var userID = $(this).attr('data-user-val');
+			var thisInput = $(this);
+			if(alt_id){
+				if(school){
+					//-- setup ajax request --//
+					<?php if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){ $ajaxUrl = $_SERVER['REQUEST_URI'].'/validaltid";'; }else{ $ajaxUrl = $_SERVER['REQUEST_URI'].'validaltid";'; } ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+					var data = {
+						action: "validate_alt_id",
+						altid: alt_id,
+						school: school,
+						user_id: userID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Alt ID is okay');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Alt ID is already in use');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}else if(results.result == 'invalid'){
+									$(thisInput).prev('em').text('School has not been selected.');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+				}else{
+					$(thisInput).prev('em').text('School has not been selected.');
+					$(thisInput).parent('div').removeClass('successful').addClass('failed');
+				}
+			}else{
+				$(thisInput).prev('em').text('');
+				$(thisInput).parent('div').removeClass('failed').removeClass('successful');
+			}
+		});
+		/*-- end validate alt ID --*/
+		
+		/*-----------------------
+			Validate Password
+		------------------------*/
+		$.fn.validatePassword = function(pass, confirm, clear) {
+			var passVal = $(pass).val();
+			var confirmVal = $(confirm).val();
+			
+			//-- Check Password - at least 8 characters long --//
+			if(passVal.length == 0 && clear == true){
+				$(pass).prev('em').text('');
+				$(pass).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal.length < 8){
+				$(pass).prev('em').text('Password needs to be at least 8 characters long');
+				$(pass).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(pass).prev('em').text('Good Password');
+				$(pass).parent('div').removeClass('failed').addClass('successful');
+			}
+			
+			//-- Confirm Password --//
+			if(confirmVal.length == 0 && clear == true){
+				$(confirm).prev('em').text('');
+				$(confirm).parent('div').removeClass('failed').removeClass('successful');
+			}else if(passVal !== confirmVal){
+				$(confirm).prev('em').text('Passwords do not match');
+				$(confirm).parent('div').removeClass('successful').addClass('failed');
+			}else{
+				$(confirm).prev('em').text('Password Confirmed');
+				$(confirm).parent('div').removeClass('failed').addClass('successful');
+			}
+		};
+		
+		$('#confirm-pass, #add-pass').blur(function(e){
+			$(this).validatePassword($('#add-pass'), $('#confirm-pass'), false);
+		});
+		$('#confirm-edit-pass, #edit-pass').blur(function(e){
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end valid password --*/
+		
+		/*-----------------------
+			Generate password
+		------------------------*/
+		$('.add-generate').click(function(e){
+			var randStr = generatePassword();
+			$('#add-pass, #confirm-pass').val(randStr);
+			$(this).validatePassword($('#add-pass'), $('#confirm-pass'), false);
+		});
+		$('.edit-generate').click(function(e){
+			var randStr = generatePassword();
+			$('#edit-pass, #confirm-edit-pass').val(randStr);
+			$(this).validatePassword($('#edit-pass'), $('#confirm-edit-pass'), true);
+		});
+		/*-- end generate pass --*/
+		
+	});
+	
+	function generatePassword() {
+	    var length = 10,
+	        charset = "abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+	        retVal = "";
+	    for (var i = 0, n = charset.length; i < length; ++i) {
+	        retVal += charset.charAt(Math.floor(Math.random() * n));
+	    }
+	    return retVal;
+	}
+</script>
+
+<?php
+	//-- Setup User Role Vars --//
+	if($navGroup == 'Administrators'){ $role = 1; $single = 'Administrator'; }
+	else if($navGroup == 'Coaches'){ $role = 2; $single = 'Character Coach'; }
+	else if($navGroup == 'Teachers'){ $role = 3; $single = 'Teacher'; }
+	else if($navGroup == 'Turfcoach'){ $role = 4; $single = 'Turf Coach'; }
+	else if($navGroup == 'Parents'){ $role = 5; $single = 'Parent'; }
+?>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Add New <?php echo $single; ?></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Add User Form -->
+				<form id="addUserForm" action="" method="post">
+					<?php
+						//-- display hidden field - user role --//
+						if(isset($role) && $role){ echo '<input type="hidden" id="add-type" value="'.$role.'" />'; }
+					?>
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="add-first">First Name</label>
+						<input type="text" name="first" id="add-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-last">Last Name</label>
+						<input type="text" name="last" id="add-last" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-email">Email Address</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="email" id="add-email" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-phone">Phone Number</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="phone" id="add-phone" class="form-control" value="">
+					</div>
+					
+					<?php //-- Select School --//
+						if(!isset($schools) || !$schools){
+							echo '<input type="hidden" id="add-school" class="school-input" value="0" />';
+						}else if(isset($schools) && isset($schoolID) && $this->session->get("user-role") != 1){
+							echo '<input type="hidden" id="add-school" class="school-input" value="'.$schoolID.'" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-school">School</label>
+								<select id="add-school" name="add-school" class="form-control school-input" data-required="true">
+									<option value="">Select School</option>
+									<?php
+									if($schools){
+										$curState = '';
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Grade Level --//
+						/*if(!isset($grade_level) || !$grade_level){
+							echo '<input type="hidden" id="add-grade" value="0" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-grade">Grade Level</label>
+								<select id="add-grade" name="add-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}*/
+					?>
+					
+					<!-- User Info Section -->
+					<?php
+						if($role == 1 || $role == 5){ ?>
+							<input type="hidden" name="alt-id" id="add-alt-id" value="">
+							<input type="hidden" name="state-id" id="add-state-id" value=""><?php
+						}else{ ?>
+							<div class="form-group">
+								<label for="add-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+								<input type="text" name="alt-id" id="add-alt-id" class="form-control" value="">
+							</div>
+							<div class="form-group">
+								<label for="add-state-id">State ID</label> &nbsp;<em class="field-msg"></em>
+								<input type="text" name="state-id" id="add-state-id" class="form-control" value="">
+							</div><?php
+						}
+					?>
+					<div class="form-group">
+						<label for="add-username">Username</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="username" id="add-username" class="form-control" value="" maxlength="32" onkeyup="this.value = this.value.replace(/[^\w]/gi, '');">
+					</div>
+					<div style="margin: 0 0 5px;">
+						<span class="label label-primary add-generate" style="cursor: pointer;">Generate Password</span>
+					</div>
+					<div class="form-group">
+						<label for="add-pass">Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="pass" id="add-pass" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="confirm-pass">Re-enter Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="confirm-pass" id="confirm-pass" class="form-control" value="" data-required="true">
+					</div>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<div id="send-new-user-email-box">
+					<input type="checkbox" id="send-new-user-email-checkbox" checked="checked" />
+					<label for="send-new-user-email-checkbox">Send user welcome email</label>
+				</div>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary addUser">Add New User</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Edit User: <span class="insert-username"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit User Form -->
+				<form id="editUserForm" action="" method="post">
+					<?php
+						//-- display hidden field - user role --//
+						if(isset($role) && $role){ echo '<input type="hidden" id="edit-type" value="'.$role.'" />'; }
+					?>
+					
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="edit-first">First Name</label>
+						<input type="text" name="first" id="edit-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-last">Last Name</label>
+						<input type="text" name="last" id="edit-last" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-email">Email Address</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="email" id="edit-email" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-phone">Phone Number</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="phone" id="edit-phone" class="form-control" value="">
+					</div>
+					
+					<?php //-- Select School --//
+						if(isset($schools) && $this->session->get("user-role") != 1){
+							echo '<input type="hidden" id="edit-school" class="school-input" value="" />';
+						}else if(isset($schools) && $schools){ ?>
+							<div class="form-group">	
+								<label for="edit-school">School</label>
+								<select id="edit-school" name="edit-school" class="form-control school-input" data-required="true">
+									<option value="">Select School...</option>
+									<?php
+										//-- List Out Schools --//
+										$curState = '';
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<?php //-- Select Grade Level --//
+						/*if(isset($grade_level) && $grade_level){ ?>
+							<div class="form-group">	
+								<label for="edit-grade">Grade Level</label>
+								<select id="edit-grade" name="edit-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}*/
+					?>
+					
+					<!-- User Info Section -->
+					<?php
+						if($role == 1 || $role == 5){ ?>
+							<input type="hidden" name="alt-id" id="edit-alt-id" value="">
+							<input type="hidden" name="state-id" id="edit-state-id" value=""><?php
+						}else{ ?>
+							<div class="form-group">
+								<label for="edit-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+								<input type="text" name="alt-id" id="edit-alt-id" class="form-control" value="">
+							</div>
+							<div class="form-group">
+								<label for="edit-state-id">State ID</label> &nbsp;<em class="field-msg"></em>
+								<input type="text" name="state-id" id="edit-state-id" class="form-control" value="">
+							</div><?php
+						}
+					?>
+					<div class="form-group">
+						<label for="edit-username">Username</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="username" id="edit-username" class="form-control" value="" maxlength="32" onkeyup="this.value = this.value.replace(/[^\w]/gi, '');">
+					</div>
+					<div style="margin: 0 0 5px;">
+						<span class="label label-primary edit-generate" style="cursor: pointer;">Generate Password</span>
+					</div>
+					<div class="form-group">
+						<label for="edit-pass">Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="pass" id="edit-pass" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="confirm-edit-pass">Re-enter Password</label> &nbsp;<em class="field-msg"></em>
+						<input type="password" name="confirm-pass" id="confirm-edit-pass" class="form-control" value="">
+					</div>
+					
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<div id="send-new-pass-email-box">
+					<input type="checkbox" id="send-new-pass-email-checkbox" checked="checked" />
+					<label for="send-new-pass-email-checkbox">Send new password email</label>
+				</div>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="editUserSubmit">Update User</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Assign Grades to Coach Modal -->
+<div id="assignGradesModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Assign Grading For: <span class="insert-username"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<?php //-- Assign Grade Levels for Grading --//
+					if(isset($gradeList) && $gradeList){ ?>
+						<div id="assign-the-grades" class="form-group">
+							<label for="assign-grading">Assign Grade Levels</label><br>
+							<select multiple="multiple" id="assign-grading" class="form-control" style="height: 275px;">
+								<?php
+									foreach($gradeList as $grade){
+										echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+									}
+								?>
+							</select>
+							<span class="btn btn-primary" id="setGradingAssignment" style="margin: 0 0 0 20px;">Assign</span>
+						</div><?php
+					}
+				?>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Import CSV Modal -->
+<div id="importCSVModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Import CSV File</h3>
+			</div>
+			<div class="modal-body">
+				
+				<?php
+					/*-------------------------
+						School to import to
+					--------------------------*/
+					if(strpos($_SERVER['REQUEST_URI'], 'administrators') !== FALSE || strpos($_SERVER['REQUEST_URI'], 'parents') !== FALSE){
+						//--- Administrators modal ---// ?>
+						<input type="hidden" name="theImportSchool" id="theImportSchool" value="0" /><?php
+					}else if($this->session->get("user-school")){
+						//-- User has a school they belong to, should be everyone except Administrators --// ?>
+						<input type="hidden" name="theImportSchool" id="theImportSchool" value="<?php echo $this->session->get("user-school"); ?>" /><?php
+					}else{
+						//-- User has no school, select which school the import should be done for --// ?>
+						<p>Please select the school that the new users will be added to.</p>
+						<p style="margin-bottom: 20px;">
+							<select id="theImportSchool" class="form-control" style="width: 65%;">
+								<option value="none">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									if(isset($schools) && $schools){
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									}
+								?>
+							</select>
+						</p><?php
+					}
+					/*-- end import school --*/ ?>
+				
+				<p>
+					Select the file that you would like to import into the selected management interface, Please ensure that the file you are Importing is intended for this section:
+				</p>
+				
+				<!-- Import CSV File Form -->
+				<span class="btn btn-primary fileinput-button">
+			        <i class="glyphicon glyphicon-plus"></i>
+			        <span>Select CSV File...</span>
+			        <!-- The file input field used as target for the file upload widget -->
+			        <input id="fileupload" type="file" name="files[]" multiple>
+			    </span>
+			    <br>
+			    <br>
+			    <!-- The global progress bar -->
+			    <div id="progress" class="progress">
+			        <div class="progress-bar progress-bar-primary"></div>
+			    </div>
+			    <!-- The container for the uploaded files -->
+			    <div id="fileUploads" class="files"></div>
+			    <br>
+				
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

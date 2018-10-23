@@ -1,0 +1,196 @@
+<?php
+/*
+*	Widget: Character Comparison Chart
+*/
+?>
+
+<div class="portlet">
+	<div class="portlet-header">
+		<h3><i class="fa fa-bar-chart-o"></i> Comparison Chart</h3>
+		<ul class="portlet-tools pull-right">
+			<li>
+				<ul class="nav nav-pills">
+					<li <?php if(!isset($compareData) || empty($compareData)){ echo 'class="active"'; } ?>><a href="#compare-form" data-toggle="tab"><i class="fa fa-pencil"></i> Form</a></li>
+					<li <?php if(isset($compareData) && !empty($compareData)){ echo 'class="active"'; } ?>><a href="#compare-chart" data-toggle="tab"><i class="fa fa-bar-chart-o"></i> Chart</a></li>
+				</ul>
+			</li>
+		</ul>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content">
+		<div class="tab-content">
+			<div id="compare-form" class="tab-pane fade <?php if(!isset($compareData) || empty($compareData)){ echo 'active in'; } ?>"><?php
+				/*----------------------------
+				 	Comparision Chart Form
+				-----------------------------*/ ?>
+				<form id="comparison-chart-form" action="" method="post"><?php
+					//-- Grab Graded Terms --//
+					$query = "SELECT DISTINCT semester FROM grading";
+					$response = $this->db->query($query, array());
+					$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
+					$semesters = $response->fetchAll();
+					if(!empty($semesters)){
+						$termOptions = '';
+						foreach($semesters as $semester){
+							$term = Semesters::findFirst('id = '.$semester->semester);
+							if(!empty($term)){
+								$termOptions.= '<option value="'.$term->id.'">'.$term->semesterName.'</option>';
+							}
+						}
+					}
+
+					//-- add filters --//
+					echo $schoolFilter.$termFilter;
+
+					 ?>
+					<div class="col-sm-6">
+						<h4 style="font-size: 14px;">What to Compare:</h4>
+						<p style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e4e4e4;">
+							<select name="grade_compare" class="form-control">
+								<option value="athlos-grade">Overall Athlos Grade</option>
+								<!--<option value="athlos-traits">Character Traits</option>-->
+							</select>
+						</p>
+
+						<h4 style="font-size: 14px;">Select Terms to Compare: <span class="btn btn-xs btn-primary add-term" title="Add Term" style="float: right; font-size: 10px;"><i class="fa fa-plus"></i></span></h4>
+						<div id="semester-term-box">
+							<p>
+								<select name="cc-term[]" id="cc-term-1" class="cc-term form-control">
+									<?php echo $termOptions; ?>
+								</select>
+							</p>
+							<?php
+								//-- Show All Terms that were posted --//
+								if(isset($_POST['cc-term']) && !empty($_POST['cc-term'])){
+									foreach($_POST['cc-term'] as $key => $val){
+										if($key != 0){ ?>
+											<p>
+												<select name="cc-term[]" id="cc-term-<?php echo ($key + 1); ?>" class="cc-item form-control" onchange="removeDropDown(this)">
+													<option value=""></option>
+													<?php echo $termOptions; ?>
+												</select>
+											</p><?php
+										}
+									}
+								}
+							?>
+						</div>
+					</div><!-- /.col-sm-6 -->
+
+					<div class="col-sm-6">
+						<!-- Add Item Btn -->
+						<div class="btn-group" style="float: right;">
+							<button type="button" class="btn btn-xs btn-primary dropdown-toggle" data-toggle="dropdown" title="Add Item" style="font-size: 10px;"><i class="fa fa-plus"></i></button>
+							<ul class="dropdown-menu add-item-menu" role="menu" style="left: auto; right: 0; width: 180px;">
+							    <li><a href="javascript:;" class="add-item-object" data-object-type="school">School</a></li>
+							    <li <?php if(!isset($schoolID)){ echo 'role="presentation" class="disabled"'; } ?>>
+									<a href="javascript:;" class="add-item-object" data-object-type="grade">Grade Level</a>
+								</li>
+							    <li <?php if(!isset($schoolID)){ echo 'role="presentation" class="disabled"'; } ?>>
+									<a href="javascript:;" class="add-item-object" data-object-type="class">Class Room</a>
+								</li>
+							    <li class="divider"></li>
+								<li class="compare-search-student">
+									<div class="input-group">
+										<input type="text" id="compare-student-search" class="form-control" placeholder="Student Name" value="" <?php if(!isset($schoolID)){ echo 'disabled="disabled"'; } ?> />
+										<div class="input-group-btn">
+											<button type="button" class="btn btn-tertiary <?php if(!isset($schoolID)){ echo 'disabled'; } ?>" id="search-students"><i class="fa fa-search" id="search-students-txt"></i></button>
+										</div><!-- /input-group-btn -->
+									</div>
+									<ul id="compare-student-results"></ul>
+								</li>
+							  </ul>
+						</div>
+
+						<h4 style="font-size: 14px;">Select Items to Compare:</h4>
+						<div id="comparison-item-box">
+							<?php
+								//-- Show All Items that were posted --//
+								if(isset($_POST['cc-items']) && !empty($_POST['cc-items'])){
+									foreach($_POST['cc-items'] as $key => $val){
+										list($ctype,$ccID) = explode('-', $val);
+										//-- Echo out select boxes by type of dropdown --//
+										switch($ctype){
+											case 'school':
+												$cc_schools = Schools::find('');
+												if(!empty($cc_schools)){
+													echo '<p><select name="cc-items[]" id="cc-item-'.($key + 1).'" class="cc-item form-control" onchange="removeDropDown(this)"><option value=""></option>';
+													foreach($cc_schools as $school){
+														if($school->id == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+														echo '<option value="school-'.$school->id.'" '.$sel.'>'.$school->schoolName.'</option>';
+													}
+													echo '</select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'.$_POST['cc-item-label'][$key].'" /></p>';
+												}
+												break;
+											case 'grade':
+												if(!empty($schoolID)){
+													//-- grab school name --//
+													$theSchool = Schools::findFirst(array('id = :id:', "bind" => array("id" => $schoolID)));
+													//-- Grab Grade Levels --//
+													$levels = array();
+													$gradelevels = GradeLevel::find('');
+													foreach($gradelevels as $gl){
+														$levels[$gl->id] = $gl->gradeName;
+													}
+													unset($gradelevels);
+
+													//-- Grab Available Grade Levels --//
+													$query = "SELECT DISTINCT grade FROM students WHERE school = ".$schoolID." ORDER BY grade ASC";
+													$response = $this->db->query($query, array());
+													$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
+													$grades = $response->fetchAll();
+													if(!empty($grades)){
+														echo '<p><select name="cc-items[]" id="cc-item-'.($key + 1).'" class="cc-item form-control" onchange="removeDropDown(this)"><option value=""></option>';
+														foreach($grades as $grade){
+															if($grade->grade == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+															echo '<option value="grade-'.$grade->grade.'" '.$sel.'>'.$theSchool->schoolName.': '.$levels[$grade->grade].'</option>';
+														}
+														echo '</select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'.$_POST['cc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+											case 'class':
+												if(!empty($schoolID)){
+													//-- grab school name --//
+													$theSchool = Schools::findFirst(array('id = :id:', "bind" => array("id" => $schoolID)));
+													//-- Grab School Teachers --//
+													$teachers = Users::find(array("school = :sid: AND role = 3", "order" => "lname ASC, fname ASC", "bind" => array("sid" => $schoolID)));
+													if(!empty($teachers)){
+														echo '<p><select name="cc-items[]" id="cc-item-'.($key + 1).'" class="cc-item form-control" onchange="removeDropDown(this)"><option value=""></option>';
+														foreach($teachers as $teacher){
+															//-- grab class size count --//
+															$size = Students::count(array("school = :sid: AND teacher = ".$teacher->id, "bind" => array("sid" => $schoolID)));
+															//-- list out options --//
+															if($teacher->id == $ccID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+															echo '<option value="class-'.$teacher->id.'" '.$sel.'>'.$theSchool->schoolName.': '.$teacher->lname.', '.$teacher->fname.' ('.$size.')</option>';
+														}
+														echo '</select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'.$_POST['cc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+											case 'student':
+												if(!empty($schoolID)){
+													$theStudent = Students::findFirst(array('id = :id:', "bind" => array("id" => $ccID)));
+													if(!empty($theStudent)){
+														echo '<p><select name="cc-items[]" class="cc-item last-item form-control" onchange="removeDropDown(this)"><option value=""></option><option value="student-'.$theStudent->id.'" selected="selected">'.$theStudent->fname.' '.$theStudent->lname.'</option></select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'.$_POST['cc-item-label'][$key].'" /></p>';
+													}
+												}
+												break;
+										}
+									}
+								}
+							?>
+						</div><!-- /#comparison-item-box -->
+					</div><!-- /.col-sm-6 -->
+					<div class="col-sm-12" style="clear: left; float: left; margin: 10px 0;">
+						<p style="margin: 0; text-align: center;">
+							<input type="submit" name="draw-compare-chart" class="btn btn-primary" value="Draw Comparison Chart" />
+						</p>
+					</div><!-- /.col-sm-12 -->
+				</form>
+			</div><!-- /.tab-pane -->
+			<div id="compare-chart" class="tab-pane fade <?php if(isset($compareData) && !empty($compareData)){ echo 'active in'; } ?>">
+				<div id="vertical-chart" class="chart-holder"></div>
+			</div><!-- /.tab-pane -->
+		</div><!-- /.tab-content -->
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

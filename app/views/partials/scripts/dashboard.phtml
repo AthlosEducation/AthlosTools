@@ -1,0 +1,1595 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/sparkline/jquery.sparkline.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery.ui.touch-punch.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/morris/morris.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/flot/jquery.flot.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/flot/jquery.flot.orderBars.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/flot/jquery.flot.resize.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/flot/jquery.flot.tooltip.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/flot/jquery.flot.valuelabels.js");
+?>
+<script type="text/javascript">
+	//-- Sortable Lists - Customize Dashboard --//
+	$(function() {
+		$( "#available-widgets, #selected-widgets" ).sortable({
+			connectWith: ".connectedSortable", 
+			placeholder: "sort-holder",
+			receive: function(event, ui){
+				var parentID = $(ui.item).parent('ul').attr('id');
+				if(parentID == 'selected-widgets'){
+					//-- Give Size Attribute --//
+					$(ui.item).attr('data-width', 12);
+					//-- verify size --//
+					bootbox.dialog({
+						message: "<select id='bootbox-widget-size' class='form-control'><option value='full'>Full Width</option><option value='half'>Half Width</option></select>",
+						title: "What width would you like the \""+ $(ui.item).text() +"\" widget to be?",
+						buttons: {
+							success: {
+								label: "OK",
+								className: "btn-info",
+								callback: function() {
+									//-- Update Size attribute --//
+									if($('#bootbox-widget-size').val() == 'half'){
+										$(ui.item).attr('data-width', 6).addClass('half-width');
+									}
+								}
+							}
+						}
+					});
+				}else{
+					$(ui.item).removeAttr('data-width').removeClass('half-width');
+				}
+				//console.log();
+			}
+		}).disableSelection();
+	});
+	
+	jQuery(document).ready(function($){
+		/*--------------------------
+			Lock / Unlock Admin
+		---------------------------*/
+		//-- unlock athlos tools --//
+		$('#manage-admin-lock a').click(function(e){
+			e.preventDefault();
+			bootbox.confirm("Are you sure you want to unlock the Athlos Tools Admin?", function(result) {
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/index/lockdown";'."\n"; ?>
+					var data = {
+						action: "unlock_athlos"
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Redirect to dashboard --//
+									window.location = ajaxurl.replace('lockdown', '');
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Failed to Unlock', 'Could not unlock the admin. Refresh page and try again.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		
+		//-- lock athlos tools --//
+		$('#manage-admin-unlock a').click(function(e){
+			e.preventDefault();
+			bootbox.confirm("Are you sure you want to lock down the Athlos Tools Admin?", function(result) {
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/index/lockdown";'."\n"; ?>
+					var data = {
+						action: "lockdown_athlos"
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Redirect to dashboard --//
+									window.location = ajaxurl.replace('lockdown', '');
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Failed to Lock', 'Could not lock down the admin. Refresh page and try again.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		
+		
+		/*-----------------------------------
+			Open Customize Widgets Section
+		------------------------------------*/
+		$('#customize-dash > a, #add-widgets').click(function(){
+			if($(this).hasClass('open')){
+				$('#customize-widgets').slideUp();
+				$(this).removeClass('open');
+			}else{
+				$('#customize-widgets').slideDown();
+				$(this).addClass('open');
+			}
+		});
+		
+		/*--------------------------------
+			Customize Dashboard Widgets
+		---------------------------------*/
+		$('#apply-dashboard-customizations').click(function(){
+			if(!$(this).hasClass('disabled')){
+				//-- Grab Widget Vars --//
+				var widgets = [];
+				$.each($('#selected-widgets > li'), function(i, item){
+					var wid = jQuery(item).attr('data-widget');
+					var ww = jQuery(item).attr('data-width');
+					if(null == widgets[ww]){ widgets[ww] = []; }
+					//widgets[ww].push(wid);
+					widgets[ww][i] = wid;
+				});
+				//console.log(widgets);
+				
+				//-- Ajax Update Dashboard Widgets --//
+				<?php $ajaxUrl = '/index/customizedash";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "customize_dashboard_widgets",
+					widgets: widgets
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								location.reload(true);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Customization Failed', 'The dashboard failed to be customized. Refresh the page and try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+		
+		/*------------------------------
+			Students Graded Portlet
+		-------------------------------*/
+		$('#show-report-filters').click(function(event){
+			$('#grade-report-filters').slideToggle();
+		});
+		
+		//-- Create Bar Chart --//
+		var traitList = $('#bar-trait').text().split(',');
+		var gradeCount = traitList.length;
+		var barWidth = [20,8];
+		if(gradeCount > 56){
+			barWidth = [4,1];
+		}else if(gradeCount > 35){
+			barWidth = [6,2];
+		}else if(gradeCount > 24){
+			barWidth = [10,3];
+		}else if(gradeCount > 16){
+			barWidth = [14,5];
+		}
+		$("#bar-trait").sparkline(traitList, {
+		    type: 'bar',
+		    height: '50px',
+		    barWidth: barWidth[0],
+		    barSpacing: barWidth[1],
+		    zeroAxis: false
+		});
+		
+		/*------------------------------
+			Athletic Grades Portlet
+		-------------------------------*/
+		$('#show-athletic-report-filters').click(function(event){
+			$('#athletic-grade-report-filters').slideToggle();
+		});
+	});
+	
+	/*--------------------------------------
+		Character Curriculum Donut Chart
+	---------------------------------------*/
+	$(function () {
+	    if(!$('#curriculum-donut-chart').length){ return false; }
+		donut();
+		$(window).resize (App.debounce (donut, 325));
+		//-- expand detailed breakdown --//
+		$('#show-detailed-breakdown').click(function(event){
+			$('#detailed-breakdown').slideToggle();
+		});
+	});
+
+	function donut() {
+		jQuery('#curriculum-donut-chart').empty();
+		
+		var colorArray = ['#e5412d','#f0ad4e','#5cb85c','#3498db','#444444','#888888'];
+		<?php
+		if(isset($currStats)){ ?>
+			Morris.Donut({
+		        element: 'curriculum-donut-chart',
+		        data: [<?php
+					$i = 0;
+					foreach($currStats as $key => $stat){
+						if($key != 'admin'){
+							if($i == 0){
+								echo "{label: '".$stat['label']."', value: ".$stat['percent']." }";
+							}else{
+								echo ",\n{label: '".$stat['label']."', value: ".$stat['percent']." }";
+							}
+							$i++;
+						}
+					} ?>
+		        ],
+				colors: colorArray,
+		        hideHover: true,
+		        formatter: function (y) { return y + "%" }
+		    });<?php
+		} ?>
+		
+	}
+</script>
+
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/* Character Comparison Chart Form Scripts
+		--------------------------------------------*/
+		//-- Keep bootstrap dropdown open --//
+		$(document).on('click', '.dropdown-menu', function(e){
+			//console.log(e);
+			if(e.target.id == 'compare-student-search' || e.target.id == 'search-students' || e.target.id == 'search-students-txt' || e.target.parentNode.className == 'disabled' || e.target.parentNode.parentNode.className == 'compare-search-student'){
+				e.stopPropagation();
+			}
+		});
+		
+		//-- Show Tooltips on Disabled Menu Items --//
+		if($('.add-item-menu li.disabled').eq(0)){
+			$('.add-item-menu li.disabled, .compare-search-student').addClass('ui-tooltip').attr('data-toggle', 'tooltip').attr('data-placement', 'left').attr('title', 'First use the school filter.');
+		}
+		$('.ui-tooltip').tooltip();
+		
+		//-- Add Term Dropdown --//
+		$('.add-term').click(function(event){
+			//-- limit to only the number of terms that have been graded --//
+			if($('.cc-term').size() < $('#cc-term-1 option').size()){
+				$('#semester-term-box').append('<p><select name="cc-term[]" class="cc-term last-term form-control" onchange="removeDropDown(this)"><option value=""></option></select></p>');
+				$('#cc-term-1 option').each(function(e){
+					$(this).clone().appendTo('#semester-term-box .last-term');
+				});
+				$('#semester-term-box .last-term').removeClass('last-term');
+			}else{
+				bootbox.alert("You can only have "+ $('#cc-term-1 option').size() +" terms, since only "+ $('#cc-term-1 option').size() +" terms have been graded.", function(){});
+			}
+		});
+		
+		//-- Add Comparison Items --//
+		$('.add-item-object').click(function(event){
+			//-- Limit to only 4 Items --//
+			if($('.cc-item').size() <= 4){
+				//-- grab item type --//
+				var itemType = $(this).attr('data-object-type');
+				
+				<?php $ajaxUrl = '/index/addcompareobject";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "grab_compare_object",
+					type: itemType,
+					school: <?php if(isset($schoolID)){ echo $schoolID; }else{ echo 0; } ?>
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Populate Results - Add Search Box --//
+								$('#comparison-item-box').append('<p><select name="cc-items[]" class="cc-item last-item form-control" onchange="removeDropDown(this)"><option value=""></option></select><input type="hidden" name="cc-item-label[]" class="cc-item-label" /></p>');
+								jQuery.each(results.items, function (i, item){
+									$('#comparison-item-box .last-item').append('<option value="'+ item.value +'">'+ item.text +'</option>');
+								});
+								$('#comparison-item-box .last-item').removeClass('last-item');
+							}else if(results.result == 'empty'){
+								//-- No Results Returned Message --//
+								howlerMsg('danger', 'No Results Returned', 'These items do not exist for this school.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}else{
+				bootbox.alert("You can only have 4 items to compare.", function(){});
+			}
+		});
+		
+		<?php
+			//-- If posted term values, save to dropdowns --//
+			if(isset($_POST['cc-term']) && !empty($_POST['cc-term'])){
+				foreach($_POST['cc-term'] as $key => $val){ ?>
+					jQuery('#cc-term-<?php echo ($key + 1); ?>').val('<?php echo $val; ?>');<?php echo "\n";
+				}
+			}
+		?>
+		
+		/* Student Search
+		---------------------*/
+		$('#search-students').click(function(event){
+			var searchVal = $('#compare-student-search').val();
+			var lastSearch = $('#compare-student-search').attr('data-last-search');
+			if(searchVal && searchVal !== lastSearch){
+				//-- clear previous results --//
+				$('#compare-student-results li').remove();
+				$('#compare-student-results').hide();
+				<?php $ajaxUrl = '/index/studentsearch";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "search_student_name",
+					search: searchVal,
+					school: <?php if(isset($schoolID)){ echo $schoolID; }else{ echo 0; } ?>
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Set last search value --//
+								$('#compare-student-search').attr('data-last-search', searchVal);
+								//-- Populate Results --//
+								jQuery.each(results.student, function (i, student){
+									console.log(student);
+									$('#compare-student-results').append('<li class="btn btn-default add-student-object" data-student-val="'+ student.id +'">'+ student.first +' '+ student.last +'</li>');
+								});
+								//-- function to add student to compare list --//
+								$('.add-student-object').off().on("click", function(){
+									//-- Limit to only 4 Items --//
+									if($('.cc-item').size() <= 4){
+										var studentVal = $(this).attr('data-student-val');
+										var studentName = $(this).text();
+										$('#comparison-item-box').append('<p><select name="cc-items[]" class="cc-item last-item form-control" onchange="removeDropDown(this)"><option value=""></option><option value="student-'+ studentVal +'" selected="selected">'+ studentName +'</option></select><input type="hidden" name="cc-item-label[]" class="cc-item-label" value="'+ studentName +'" /></p>');
+									}else{
+										bootbox.alert("You can only have 4 items to compare.", function(){});
+									}
+								});
+								//-- end function - and show results --//
+								$('#compare-student-results').show();
+								//-- Success Message --//
+								howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'empty'){
+								//-- No Results Returned Message --//
+								howlerMsg('danger', 'No Results Returned', 'No students matched your search, try again.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+	});
+	
+	function removeDropDown(curItem){
+		if(!jQuery(curItem).val()){
+			jQuery(curItem).parent('p').remove();
+		}else{
+			//-- Assign Label Value --//
+			var curLabel = jQuery(curItem).children('option:selected').text();
+			console.log(curLabel);
+			jQuery(curItem).siblings('.cc-item-label').val(curLabel);
+		}
+	}
+	
+	$(function () {
+		<?php if(isset($compareData) && !empty($compareData)){
+			//-- Initialize Vars and the item data --//
+			foreach($compareData as $item_key => $item){
+				echo "var d".$item_key." = [";
+				foreach($item as $term_key => $term){
+					if($term['athlos_grade']){ $athGrade = $term['athlos_grade']; }else{ $athGrade = '0.1'; }
+					echo "[".($term_key + 1).", ".$athGrade."]";
+					if($term_key != (count($item) - 1)){ echo ","; }
+				}
+				echo "];\n\t\t";
+			}
+			
+			//-- Setup Data Var --//
+			echo "var data = [";
+			foreach($compareData as $item_key => $item){
+				echo "{label: '".$item[0]['label']."', data: d".$item_key."}";
+				if($item_key != (count($compareData) - 1)){ echo ","; }
+			}
+			echo "];";
+			
+			
+			?>
+			
+			var chartOptions;
+
+		    chartOptions = {
+		        xaxis: {
+		            min: 0,
+		            max: 5,
+		            mode: "time",
+					<?php
+						echo "ticks: [";
+						foreach($compareData[0] as $term_key => $term){
+							$termInfo = Semesters::findFirst(array("id = :tid:", "bind" => array("tid" => $term['termID'])));
+							echo "[".($term_key + 1).", '".$termInfo->semesterName."']";
+							if($term_key != (count($compareData[0]) - 1)){ echo ","; }
+						}
+						echo "],\n";
+					?>
+		            tickSize: 1,
+		            tickLength: 0
+		        },
+				yaxis: {
+					min: 0,
+					max: 5.5
+				},
+		        grid: {
+		            hoverable: true,
+		            clickable: false,
+		            borderWidth: 0
+		        },
+				series: {
+					bars: {
+						show: true,
+					},
+				},
+		        bars: {
+			    	show: true,
+			    	barWidth: .2,
+		            fill: true,
+		            lineWidth: 1,
+		            order: true,
+		            lineWidth: 0,
+		            fillColor: { colors: [ { opacity: 1 }, { opacity: 1 } ] }
+			    },
+				valueLabels: {
+					show: true
+				},
+
+		        tooltip: true,
+		        tooltipOpts: {
+		            content: '%s: %y'
+		        },
+		        colors: App.chartColors
+		    }<?php
+		
+		} ?>
+	
+	    var holder = $('#vertical-chart');
+
+	    if (holder.length && typeof data != 'undefined') {
+	        $.plot(holder, data, chartOptions );
+	    }
+	});
+</script>
+
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/* Athletic Comparison Chart Form Scripts
+		--------------------------------------------*/
+		//-- Keep bootstrap dropdown open --//
+		$(document).on('click', '.dropdown-menu', function(e){
+			//console.log(e);
+			if(e.target.id == 'athletic-student-search' || e.target.id == 'search-ath-students' || e.target.id == 'search-ath-students-txt' || e.target.parentNode.className == 'disabled' || e.target.parentNode.parentNode.className == 'athletic-search-student'){
+				e.stopPropagation();
+			}
+		});
+		
+		//-- Show Tooltips on Disabled Menu Items --//
+		if($('.add-ath-menu li.disabled').eq(0)){
+			$('.add-ath-menu li.disabled, .athletic-search-student').addClass('ui-tooltip').attr('data-toggle', 'tooltip').attr('data-placement', 'left').attr('title', 'First use the school filter.');
+		}
+		$('.ui-tooltip').tooltip();
+		
+		//-- Add Term Dropdown --//
+		$('.add-athletic-term').click(function(event){
+			//-- limit to only the number of terms that have been graded --//
+			if($('.acc-term').size() < $('#acc-term-1 option').size()){
+				$('#athletic-semester-term-box').append('<p><select name="acc-term[]" class="acc-term last-term form-control" onchange="removeAthleticDropDown(this)"><option value=""></option></select></p>');
+				$('#acc-term-1 option').each(function(e){
+					$(this).clone().appendTo('#athletic-semester-term-box .last-term');
+				});
+				$('#athletic-semester-term-box .last-term').removeClass('last-term');
+			}else{
+				bootbox.alert("You can only have "+ $('#acc-term-1 option').size() +" terms, since only "+ $('#acc-term-1 option').size() +" terms have been graded.", function(){});
+			}
+		});
+		
+		//-- Add Comparison Items --//
+		$('.add-ath-object').click(function(event){
+			//-- Limit to only 4 Items --//
+			if($('.acc-item').size() <= 3){
+				//-- grab item type --//
+				var itemType = $(this).attr('data-object-type');
+				var sID = 0;
+				if(itemType == 'grade' || itemType == 'class'){
+					<?php
+						//-- List Out Schools --//
+						$curState = $sItems = '';
+						foreach($schools as $school){
+							if($school->state != $curState){
+								if($curState){
+									$sItems.= '</optgroup><optgroup label="'.$states[$school->state].'">';
+								}else{
+									$sItems.= '<optgroup label="'.$states[$school->state].'">';
+								}
+								$curState = $school->state;
+							}
+							if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+							$sItems.= '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+						}
+						$sItems.= '</optgroup>';
+					?>
+					var schoolSel = '<select id="select-school" class="form-control"><?php echo $sItems; ?></select>';
+					bootbox.dialog({
+						message: schoolSel,
+						title: "Select a school",
+						buttons: {
+							default: { label: "Cancel", className: "btn-default", callback: function(){} },
+							success: {
+								label: "Use School",
+								className: "btn-primary",
+								callback: function(){
+									sID = $('#select-school').val();
+									<?php $ajaxUrl = '/index/addathleticcompareobject";'; ?>
+									var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+
+									var data = {
+										action: "grab_compare_object",
+										type: itemType,
+										school: sID
+									};
+									jQuery.post(ajaxurl, data, function(json){
+										if(typeof json != 'undefined'){
+											var results = jQuery.parseJSON(json);
+											if(typeof results.result != 'undefined'){
+												if(results.result == 'success'){
+													//-- Populate Results - Add Search Box --//
+													$('#comparison-athletic-box').append('<p><select name="acc-items[]" class="acc-item last-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option></select><input type="hidden" name="acc-item-label[]" class="acc-item-label" /></p>');
+													jQuery.each(results.items, function (i, item){
+														$('#comparison-athletic-box .last-item').append('<option value="'+ item.value +'">'+ item.text +'</option>');
+													});
+													$('#comparison-athletic-box .last-item').removeClass('last-item');
+												}else if(results.result == 'empty'){
+													//-- No Results Returned Message --//
+													howlerMsg('danger', 'No Results Returned', 'These items do not exist for this school.', 7500, 'fa fa-check', false);
+												}else if(results.result == 'failed'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+												}
+											}
+										}
+									});
+								}
+							}
+						}
+					});
+				}
+				//-- Make sure school was selected for grade / class --//
+				if((sID == 0 && itemType == 'school')){
+					<?php $ajaxUrl = '/index/addathleticcompareobject";'; ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+
+					var data = {
+						action: "grab_compare_object",
+						type: itemType,
+						school: sID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Populate Results - Add Search Box --//
+									$('#comparison-athletic-box').append('<p><select name="acc-items[]" class="acc-item last-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option></select><input type="hidden" name="acc-item-label[]" class="acc-item-label" /></p>');
+									jQuery.each(results.items, function (i, item){
+										$('#comparison-athletic-box .last-item').append('<option value="'+ item.value +'">'+ item.text +'</option>');
+									});
+									$('#comparison-athletic-box .last-item').removeClass('last-item');
+								}else if(results.result == 'empty'){
+									//-- No Results Returned Message --//
+									howlerMsg('danger', 'No Results Returned', 'These items do not exist for this school.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			}else{
+				bootbox.alert("You can only have 4 items to compare.", function(){});
+			}
+		});
+		
+		<?php
+			//-- If posted term values, save to dropdowns --//
+			if(isset($_POST['acc-term']) && !empty($_POST['acc-term'])){
+				foreach($_POST['acc-term'] as $key => $val){ ?>
+					jQuery('#acc-term-<?php echo ($key + 1); ?>').val('<?php echo $val; ?>');<?php echo "\n";
+				}
+			}
+		?>
+		
+		/* Student Search
+		---------------------*/
+		$('#search-ath-students').click(function(event){
+			var searchVal = $('#athletic-student-search').val();
+			var lastSearch = $('#athletic-student-search').attr('data-last-search');
+			if(searchVal && searchVal !== lastSearch){
+				//-- clear previous results --//
+				$('#athletic-student-results li').remove();
+				$('#athletic-student-results').hide();
+				<?php $ajaxUrl = '/index/studentsearch";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "search_student_name",
+					search: searchVal,
+					school: <?php if(isset($schoolID)){ echo $schoolID; }else{ echo 0; } ?>
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Set last search value --//
+								$('#athletic-student-search').attr('data-last-search', searchVal);
+								//-- Populate Results --//
+								jQuery.each(results.student, function (i, student){
+									console.log(student);
+									$('#athletic-student-results').append('<li class="btn btn-default add-ath-student-object" data-student-val="'+ student.id +'">'+ student.first +' '+ student.last +'</li>');
+								});
+								//-- function to add student to compare list --//
+								$('.add-ath-student-object').off().on("click", function(){
+									//-- Limit to only 4 Items --//
+									if($('.acc-item').size() <= 4){
+										var studentVal = $(this).attr('data-student-val');
+										var studentName = $(this).text();
+										$('#comparison-athletic-box').append('<p><select name="acc-items[]" class="acc-item last-item form-control" onchange="removeAthleticDropDown(this)"><option value=""></option><option value="student-'+ studentVal +'" selected="selected">'+ studentName +'</option></select><input type="hidden" name="acc-item-label[]" class="acc-item-label" value="'+ studentName +'" /></p>');
+									}else{
+										bootbox.alert("You can only have 4 items to compare.", function(){});
+									}
+								});
+								//-- end function - and show results --//
+								$('#athletic-student-results').show();
+								//-- Success Message --//
+								howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'empty'){
+								//-- No Results Returned Message --//
+								howlerMsg('danger', 'No Results Returned', 'No students matched your search, try again.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+		/* Athletic Score Card - Student Search
+		-----------------------------------------*/
+		$('#asc-search-students').click(function(event){
+			var searchVal = $('#asc-student-search').val();
+			var lastSearch = $('#asc-student-search').attr('data-last-search');
+			var asc_school = $('#asc-filter-schools').val();
+			if(searchVal && searchVal !== lastSearch && asc_school){
+				//-- clear previous results --//
+				$('#asc-student-results li').remove();
+				$('#asc-student-results').hide();
+				<?php $ajaxUrl = '/index/studentsearch";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "search_student_name",
+					search: searchVal,
+					school: asc_school
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Set last search value --//
+								$('#asc-student-search').attr('data-last-search', searchVal);
+								//-- Populate Results --//
+								jQuery.each(results.student, function (i, student){
+									console.log(student);
+									$('#asc-student-results').append('<li class="btn btn-default asc-student-score-card" data-student-val="'+ student.id +'">'+ student.first +' '+ student.last +'</li>');
+								});
+								//-- function to add student to compare list --//
+								$('.asc-student-score-card').off().on("click", function(){
+									var studentVal = $(this).attr('data-student-val');
+									var studentName = $(this).text();
+									//-- Run ajax call to grab student scores --//
+									<?php $ajaxUrl_2 = '/index/athleticscores";'; ?>
+									var ajax_url_2 = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl_2."\n"; ?>
+
+									var info = {
+										action: "athletic_card_scores",
+										student: studentVal
+									};
+									jQuery.post(ajax_url_2, info, function(json){
+										if(typeof json != 'undefined'){
+											var results = jQuery.parseJSON(json);
+											if(typeof results.result != 'undefined'){
+												if(results.result == 'success'){
+													var tstArr = ['bmi','sprint','hex','vjump','sjump','pacer','shuttle','pushup','curlup','trunklift','sitreach'];
+													/*$.each( tstArr, function( index, value ){
+													    $('.asc-'+ value).text(results.{value});
+														$('.asc-'+ value +'-pr').text(results.{value}_pr);
+													});*/
+													
+													$('.asc-sname').text(studentName);
+													$('#card-ids').val(studentVal);
+													
+													//-- Normal Values --//
+													$('.asc-bmi').text(results.bmi);
+													$('.asc-sprint').text(results.sprint);
+													$('.asc-hex').text(results.hex);
+													$('.asc-vjump').text(results.vjump);
+													$('.asc-sjump').text(results.sjump);
+													$('.asc-pacer').text(results.pacer);
+													$('.asc-shuttle').text(results.shuttle);
+													$('.asc-pushup').text(results.pushup);
+													$('.asc-curlup').text(results.curlup);
+													$('.asc-trunklift').text(results.trunklift);
+													$('.asc-sitreach').text(results.sitreach);
+													
+													//-- PR Values --//
+													$('.asc-bmi-pr').text(results.bmi_pr);
+													$('.asc-sprint-pr').text(results.sprint_pr);
+													$('.asc-hex-pr').text(results.hex_pr);
+													$('.asc-vjump-pr').text(results.vjump_pr);
+													$('.asc-sjump-pr').text(results.sjump_pr);
+													$('.asc-pacer-pr').text(results.pacer_pr);
+													$('.asc-shuttle-pr').text(results.shuttle_pr);
+													$('.asc-pushup-pr').text(results.pushup_pr);
+													$('.asc-curlup-pr').text(results.curlup_pr);
+													$('.asc-trunklift-pr').text(results.trunklift_pr);
+													$('.asc-sitreach-pr').text(results.sitreach_pr);
+													
+													$('#score-card-details').show();
+												}else if(results.result == 'failed'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('danger', 'Invalid Data', 'Invalid student, or school not selected.', 7500, 'fa fa-exclamation', false);
+												}
+											}
+										}
+									});
+									
+									
+								});
+								//-- end function - and show results --//
+								$('#asc-student-results').show();
+								//-- Success Message --//
+								howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'empty'){
+								//-- No Results Returned Message --//
+								howlerMsg('danger', 'No Results Returned', 'No students matched your search, try again.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+	});
+	
+	function removeAthleticDropDown(curItem){
+		if(!jQuery(curItem).val()){
+			jQuery(curItem).parent('p').remove();
+		}else{
+			//-- Assign Label Value --//
+			var curLabel = jQuery(curItem).children('option:selected').text();
+			console.log(curLabel);
+			jQuery(curItem).siblings('.acc-item-label').val(curLabel);
+		}
+	}
+	
+	$(function () {
+		<?php if(isset($compare_Ath_Data) && !empty($compare_Ath_Data)){
+			//-- Initialize Vars and the item data --//
+			foreach($compare_Ath_Data as $item_key => $item){
+				echo "var d".$item_key." = [";
+				foreach($item as $term_key => $term){
+					if($term['athlos_grade']){ $athGrade = $term['athlos_grade']; }else{ $athGrade = '0.1'; }
+					echo "[".($term_key + 1).", ".$athGrade."]";
+					if($term_key != (count($item) - 1)){ echo ","; }
+				}
+				echo "];\n\t\t";
+			}
+			
+			//-- Setup Data Var --//
+			echo "var athdata = [";
+			foreach($compare_Ath_Data as $item_key => $item){
+				echo "{label: '".$item[0]['label']."', data: d".$item_key."}";
+				if($item_key != (count($compare_Ath_Data) - 1)){ echo ","; }
+			}
+			echo "];";
+			
+			
+			?>
+			
+			var athchartOptions;
+		    athchartOptions = {
+		        xaxis: {
+		            min: 0,
+		            max: 5,
+		            mode: "time",
+					<?php
+						echo "ticks: [";
+						foreach($compare_Ath_Data[0] as $term_key => $term){
+							$termInfo = Semesters::findFirst(array("id = :tid:", "bind" => array("tid" => $term['termID'])));
+							echo "[".($term_key + 1).", '".$termInfo->semesterName."']";
+							if($term_key != (count($compare_Ath_Data[0]) - 1)){ echo ","; }
+						}
+						echo "],\n";
+					?>
+		            tickSize: 1,
+		            tickLength: 0
+		        },
+				yaxis: {
+					min: 0,
+					max: <?php echo round($athMax + 4); ?>
+				},
+		        grid: {
+		            hoverable: true,
+		            clickable: false,
+		            borderWidth: 0
+		        },
+				series: {
+					bars: {
+						show: true,
+					},
+				},
+		        bars: {
+			    	show: true,
+			    	barWidth: .2,
+		            fill: true,
+		            lineWidth: 1,
+		            order: true,
+		            lineWidth: 0,
+		            fillColor: { colors: [ { opacity: 1 }, { opacity: 1 } ] }
+			    },
+				valueLabels: {
+					show: true
+				},
+
+		        tooltip: true,
+		        tooltipOpts: {
+		            content: '%s: %y'
+		        },
+		        colors: App.chartColors
+		    }<?php
+		
+		} ?>
+	
+	    var holder = $('#athletic-vertical-chart');
+
+	    if(holder.length && typeof athdata != 'undefined') {
+	        $.plot(holder, athdata, athchartOptions );
+	    }
+	});
+	
+	jQuery(document).ready(function($){
+		/* Toggle Student Search - Missing Assessments
+		------------------------------------------------*/
+		$('#missing-assessments-student-search-toggle').click(function(){
+			if($(this).hasClass('btn-default')){
+				$(this).addClass('btn-primary').removeClass('btn-default');
+				$('#miss-assess-student').show();
+				$('#miss-assess-all').hide();
+			}else{
+				$(this).addClass('btn-default').removeClass('btn-primary');
+				$('#miss-assess-student').hide();
+				$('#miss-assess-all').show();
+			}
+		});
+		
+		
+		/* Missing Assessments - Student Search
+		-----------------------------------------*/
+		$('#miss-assess-search-students').click(function(event){
+			var searchVal = $('#miss-assess-student-search').val();
+			var lastSearch = $('#miss-assess-student-search').attr('data-last-search');
+			var ma_school = $('#miss-assess-student-school').val();
+			if(searchVal && searchVal +'-'+ ma_school !== lastSearch && ma_school){
+				//-- clear previous results --//
+				$('#miss-assess-student-results li').remove();
+				$('#miss-assess-student-results').hide();
+				<?php $ajaxUrl = '/index/studentsearch";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+				var data = {
+					action: "search_student_name",
+					search: searchVal,
+					school: ma_school
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Set last search value --//
+								$('#miss-assess-student-search').attr('data-last-search', searchVal +'-'+ ma_school);
+								//-- Populate Results --//
+								jQuery.each(results.student, function (i, student){
+									console.log(student);
+									$('#miss-assess-student-results').append('<li class="btn btn-default student-missed-assessments" data-student-val="'+ student.id +'">'+ student.first +' '+ student.last +'</li>');
+								});
+								//-- function to add student to compare list --//
+								$('.student-missed-assessments').off().on("click", function(){
+									var studentVal = $(this).attr('data-student-val');
+									var studentName = $(this).text();
+									var ma_phase = $('#ma-student-phases').val();
+									//-- Run ajax call to grab student scores --//
+									<?php $ajaxUrl_2 = '/index/missingstudent";'; ?>
+									var ajax_url_2 = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl_2."\n"; ?>
+
+									var info = {
+										action: "missing_assessments_student",
+										student: studentVal, 
+										phase: ma_phase
+									};
+									jQuery.post(ajax_url_2, info, function(json){
+										if(typeof json != 'undefined'){
+											var results = jQuery.parseJSON(json);
+											if(typeof results.result != 'undefined'){
+												if(results.result == 'success'){
+													
+													//-- clear div contents --//
+													$('#missing-assessment-details').html('<h4 style="font-weight: 600;">'+ studentName +'\'s Assessments:</h4>');
+													
+													//-- show scores / missing --//
+													$.each(results.scores, function(key, val){
+														if(!val){
+															$('#missing-assessment-details').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7;" class="text-primary"><i class="fa fa-times"></i> &nbsp;'+ results.data[key].name +' - <em>(missing)</em></p>');
+														}else{
+															$('#missing-assessment-details').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7;" class="text-success"><i class="fa fa-check"></i> &nbsp;'+ results.data[key].name +' - <em>(Data: '+ val +' '+ results.data[key].label +')</em></p>');
+														}
+													});
+													
+												}else if(results.result == 'failed'){
+													//-- Failed - Howler MSG --//
+													howlerMsg('danger', 'Invalid Data', 'Invalid student, or school not selected.', 7500, 'fa fa-exclamation', false);
+												}
+											}
+										}
+									});
+									
+									
+								});
+								//-- end function - and show results --//
+								$('#miss-assess-student-results').show();
+								//-- Success Message --//
+								howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'empty'){
+								//-- No Results Returned Message --//
+								howlerMsg('danger', 'No Results Returned', 'No students matched your search, try again.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid search term entered, or school not selected.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+		//-- Grab copies of assessment options --//
+		/*var fitnessArr = $('#ma-all-tests').children('option[data-type$="1"]').clone();
+		var performanceArr = $('#ma-all-tests').children('option[data-type$="2"]').clone();
+		var neutralArr = $('#ma-all-tests').children('option[data-type$="0"]').clone();
+		//-- show / hide assessment options based on selected phase --//
+		$('#ma-all-phases').change(function(event){
+			var phaseVal = $(this).val();
+			var curAssess = $('#ma-all-tests').val();
+			if(phaseVal){
+				if(phaseVal == 1 || phaseVal == 4){
+					//-- Fitness --//
+					$('#ma-all-tests').children('option[data-type]').remove();
+					neutralArr.appendTo('#ma-all-tests');
+					fitnessArr.appendTo('#ma-all-tests');
+					$('#ma-all-tests').val(curAssess);
+				}else if(phaseVal == 2 || phaseVal == 3){
+					//-- Performance --//
+					$('#ma-all-tests').children('option[data-type]').remove();
+					neutralArr.appendTo('#ma-all-tests');
+					performanceArr.appendTo('#ma-all-tests');
+					$('#ma-all-tests').val(curAssess);
+				}
+			}else{
+				//-- If no phase is selected --//
+				$('#ma-all-tests').children('option[data-type]').remove();
+				neutralArr.appendTo('#ma-all-tests');
+				performanceArr.appendTo('#ma-all-tests');
+				fitnessArr.appendTo('#ma-all-tests');
+				$('#ma-all-tests').val(curAssess);
+			}
+		});
+		//-- show / hide on page load (assessment options) --//
+		$('#ma-all-phases').change();*/
+		
+		
+		//-- Grab list of coaches --//
+		$('#miss-assess-all-school').change(function(){
+			var ma_school = $(this).val();
+			if(ma_school){
+				//-- Run ajax call to grab coaches --//
+				<?php $ajaxUrl = '/index/getcoaches";'; ?>
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+			
+				var data = {
+					action: "get_coach_list",
+					school: ma_school
+				};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Clear out old options --//
+								$('#ma-coach').children('option[data-type]').remove();
+								
+								//-- show grade scores / missing --//
+								$.each(results.coaches, function(i, data){
+									$('#ma-coach').append('<option value="'+ data[0] +'" data-type="coach">'+ data[1] +'</option>');
+								});
+								
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								//howlerMsg('danger', 'Invalid Data', 'Could not grab the coach information.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		
+		
+		/* Missing Assessments - All Results
+		-----------------------------------------*/
+		$('#miss-assess-all-get-list').click(function(event){
+			if(!$(this).hasClass('disabled')){
+				var ma_school = $('#miss-assess-all-school').val();
+				var ma_coach = $('#ma-coach').val();
+				var ma_coach_name = $('#ma-coach option:selected').text();
+				var ma_phase = $('#ma-all-phases').val();
+				var ma_test = $('#ma-all-tests').val();
+				if(ma_school && ma_phase && ma_test){
+					$('#missing-assessment-details').hide();
+					
+					<?php $ajaxUrl = '/index/missingassessment";'; ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+					var data = {
+						action: "missing_assessments_all",
+						phase: ma_phase,
+						school: ma_school,
+						coach: ma_coach,
+						test: ma_test
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									
+									//-- clear div contents --//
+									$('#missing-assessment-details').html('<h4 style="font-weight: 600;">'+ results.school +' Assessments:</h4>');
+									
+									//-- Add Coach Header --//
+									if(ma_coach){
+										$('#missing-assessment-details').append('<h5 style="font-weight: 600;">Coach: '+ ma_coach_name +'</h5>');
+									}
+								
+									//-- show grade scores / missing --//
+									$.each(results.grade, function(key, data){
+										if(!data.missed){ data.missed = 0; }
+										$('#missing-assessment-details').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7; cursor: pointer;" class="ma-grade-container" data-grade="'+ key +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.level[key] +' - <em>(Assessments: &nbsp;&nbsp; <span class="text-primary"><i class="fa fa-times"></i> '+ data.missed +'</span> &nbsp;&nbsp; <span class="text-success"><i class="fa fa-check"></i> '+ data.complete +'</span> &nbsp;&nbsp; <span class="text-tertiary"><i class="fa fa-certificate"></i> &nbsp;'+ data.total +'</span>)</em></p>');
+										
+										//-- List out Assessments --//
+										var summary = '';
+										$.each(data, function(test, testdata){
+											if(test != 'total' && test != 'missed' && test != 'complete'){
+												if(testdata.students.length == 0 && !testdata.missed){
+													summary+= '<p style="margin-bottom: 5px; padding-bottom: 5px; margin-left: 18px;" class="text-success completed-test ma-grade-'+ key +'"><i class="fa fa-check"></i> &nbsp;'+ results.data[test].name +' - <em>('+ testdata.complete +' / '+ testdata.total +')</em></p>';
+												}else{
+													summary+= '<p style="margin-bottom: 5px; padding-bottom: 5px; margin-left: 18px; cursor: pointer;" class="ma-test-container ma-grade-'+ key +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.data[test].name +' - <em>(<span class="text-primary"><i class="fa fa-times"></i> '+ testdata.missed +'</span> &nbsp;&nbsp; <span class="text-success"><i class="fa fa-check"></i> '+ testdata.complete +'</span> &nbsp;&nbsp; <span class="text-tertiary"><i class="fa fa-certificate"></i> &nbsp;'+ testdata.total +'</span>)</em></p>';
+													
+													//-- List out students --//
+													var studentList = '';
+													$.each(testdata.students, function(i, student){
+														if(i == 0){
+															studentList = student;
+														}else{
+															studentList+= ', &nbsp; '+ student; 
+														}
+													});
+													summary+= '<div class="well well-sm ma-student-container" style="margin-left: 36px;"><h5 style="font-weight: 600;">Students Missing '+ results.data[test].name +'</h5>'+ studentList +'</div>';
+												}
+											}
+										});
+										//-- Append assessment summary to output --//
+										$('#missing-assessment-details').append('<div class="ma-student-contents">'+ summary +'</div>');
+										
+									});
+									
+									//-- hide accordion pieces --//
+									$('.ma-student-container, .ma-student-contents').hide();
+									
+									//-- instantiate accordion functionality --//
+									$('.ma-grade-container').off().on("click", function(){
+										if($(this).hasClass('open')){
+											$(this).next('.ma-student-contents').slideUp();
+											$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+											$(this).removeClass('open');
+										}else{
+											$(this).next('.ma-student-contents').slideDown();
+											$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+											$(this).addClass('open');
+										}
+									});
+									$('.ma-test-container').off().on("click", function(){
+										if($(this).hasClass('open')){
+											$(this).next('.ma-student-container').slideUp();
+											$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+											$(this).removeClass('open');
+										}else{
+											$(this).next('.ma-student-container').slideDown();
+											$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+											$(this).addClass('open');
+										}
+									});
+									
+									$('#missing-assessment-details').show();
+									
+									//-- Success Message --//
+									howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Invalid Data', 'Invalid data entered.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+				
+			}
+		});
+		
+	});
+	
+	
+	jQuery(document).ready(function($){
+		/* Toggle Track Metric Settings
+		------------------------------------------------*/
+		$('#track-metrics-settings-toggle').click(function(){
+			if($(this).hasClass('btn-default')){
+				$(this).addClass('btn-primary').removeClass('btn-default');
+				$('#track-metrics-settings').show();
+				$('#track-metrics-report').hide();
+			}else{
+				$(this).addClass('btn-default').removeClass('btn-primary');
+				$('#track-metrics-settings').hide();
+				$('#track-metrics-report').show();
+			}
+		});
+		
+		//-- School Settings - Accordion functionality --//
+		$('.tsm-container > .fa').click(function(){
+			if($(this).hasClass('open')){
+				$(this).parent('.tsm-container').next('.school-grades-container').slideUp();
+				$(this).removeClass('fa-toggle-down').addClass('fa-toggle-right');
+				$(this).removeClass('open');
+			}else{
+				$(this).parent('.tsm-container').next('.school-grades-container').slideDown();
+				$(this).removeClass('fa-toggle-right').addClass('fa-toggle-down');
+				$(this).addClass('open');
+			}
+		});
+		
+		//-- Uncheck School = Unchecks grades as well --//
+		$('.track-school').change(function(){
+			if($(this).prop("checked")){
+				$(this).parent('.tsm-container').next('.school-grades-container').find('.track-grade').prop('checked', true);
+			}else{
+				$(this).parent('.tsm-container').next('.school-grades-container').find('.track-grade').prop('checked', false);
+			}
+		});
+		
+		//-- Check Grade = Check School as well --//
+		$('.track-grade').change(function(){
+			if($(this).prop("checked")){
+				$(this).parent('p').parent('.school-grades-container').prev('.tsm-container').find('.track-school').prop('checked', true);
+			}else{
+				//-- if all grades are unchecked = Uncheck School --//
+				if(!$(this).parent('p').siblings('p').find('.track-grade').is(':checked')){
+					$(this).parent('p').parent('.school-grades-container').prev('.tsm-container').find('.track-school').prop('checked', false);
+				}
+			}
+		});
+		
+		//-- Grab copies of Interval types --//
+		var newInterv = $('#track-metrics-phases').children('option[data-type$="new"]').clone();
+		var oldInterv = $('#track-metrics-phases').children('option[data-type$="old"]').clone();
+		//-- Alter Intervals based on year selected --//
+		$('#tm-year').change(function(e){
+			if ($(this).val() < 8){
+				//-- Old Intervals --//
+				$('#track-metrics-phases option').remove();
+				$('#track-metrics-phases').append(oldInterv);
+			}else{
+				//-- New Intervals --//
+				$('#track-metrics-phases option').remove();
+				$('#track-metrics-phases').append(newInterv);
+			}
+			$('#track-metrics-phases').trigger('change');
+		});
+		$('#tm-year').trigger('change');
+		
+		//-- Grab copies of assessment options --//
+		var tmActiveArr = $('#tm-assessments').children('option[data-active$="1"]').clone();
+		var tmFitnessArr = $('#tm-assessments').children('option[data-type$="1"]').clone();
+		var tmPerformanceArr = $('#tm-assessments').children('option[data-type$="2"]').clone();
+		var tmNeutralArr = $('#tm-assessments').children('option[data-type$="0"]').clone();
+		//-- show / hide assessment options based on selected phase --//
+		$('#track-metrics-phases').change(function(event){
+			var phaseVal = $(this).val();
+			var phaseAge = $(this).children(':selected').attr('data-type');
+			var curAssess = $('#tm-assessments').val();
+			if (phaseAge == 'new'){
+				$('#tm-assessments').children('option[data-type]').remove();
+				tmActiveArr.appendTo('#tm-assessments');
+				$('#tm-assessments').val(curAssess);
+			}else{
+				if (phaseVal){
+					if(phaseVal == 1 || phaseVal == 4){
+						//-- Fitness --//
+						$('#tm-assessments').children('option[data-type]').remove();
+						tmNeutralArr.appendTo('#tm-assessments');
+						tmFitnessArr.appendTo('#tm-assessments');
+						$('#tm-assessments').val(curAssess);
+					}else if(phaseVal == 2 || phaseVal == 3){
+						//-- Performance --//
+						$('#tm-assessments').children('option[data-type]').remove();
+						tmNeutralArr.appendTo('#tm-assessments');
+						tmPerformanceArr.appendTo('#tm-assessments');
+						$('#tm-assessments').val(curAssess);
+					}
+				}else{
+					//-- If no phase is selected --//
+					$('#tm-assessments').children('option[data-type]').remove();
+					tmNeutralArr.appendTo('#tm-assessments');
+					tmPerformanceArr.appendTo('#tm-assessments');
+					tmFitnessArr.appendTo('#tm-assessments');
+					$('#tm-assessments').val(curAssess);
+				}
+			}
+		});
+		//-- show / hide on page load (assessment options) --//
+		$('#track-metrics-phases').trigger('change');
+		
+		
+		$('#tm-assessments').change(function(){
+			if($(this).val()){
+				//-- Build out 3rd Section of Query --//
+				var measure = $(this).find('option:selected').attr('data-measure');
+				var datalabel = $(this).find('option:selected').attr('data-label');
+				$('#tm-query-data').removeClass('data-seconds data-inches data-whole data-bmi').addClass('data-'+ measure);
+				$('#tm-query-data').next('.input-group-addon').text(datalabel);
+			
+				//-- Add to Written Query --//
+				var testTxt = $(this).find('option:selected').attr('data-text');
+				if(!testTxt){ testTxt = $(this).find('option:selected').text(); }
+				$('#text-query > .assessment-txt').text(testTxt);
+				$('#tm-query-data').trigger('blur');
+			
+				//-- Format Inputs --//
+				$(".data-bmi").off("keyup").on("keyup", function(){
+					var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+					if(fieldVal.length >= 4){
+						fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,2);
+					}else if(fieldVal.length > 1){
+						fieldVal = fieldVal.substr(0,1) +'.'+ fieldVal.substr(1);
+					}
+					$(this).val(fieldVal);
+				});
+				$(".data-seconds").off("keyup").on("keyup", function(){
+					var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+					if(fieldVal.length >= 5){
+						fieldVal = fieldVal.substr(0,3) +'.'+ fieldVal.substr(3,2);
+					}else if(fieldVal.length == 4){
+						fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,2);
+					}else if(fieldVal.length > 1){
+						fieldVal = fieldVal.substr(0,1) +'.'+ fieldVal.substr(1);
+					}
+					$(this).val(fieldVal);
+				});
+				$(".data-inches").off("keyup").on("keyup", function(){
+					var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+					if(fieldVal.length >= 5){
+						fieldVal = fieldVal.substr(0,3) +'.'+ fieldVal.substr(3,2);
+					}else if(fieldVal.length == 4){
+						fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,2);
+					}else if(fieldVal.length > 1){
+						fieldVal = fieldVal.substr(0,1) +'.'+ fieldVal.substr(1);
+					}
+					$(this).val(fieldVal);
+				});
+				$(".data-whole").off("keyup").on("keyup", function(){
+					var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+					if(fieldVal.length > 4){
+						fieldVal = fieldVal.substr(0,4);
+					}
+					$(this).val(fieldVal);
+				});
+			}else{
+				//-- empty value selected --//
+				//-- Do Nothing --//
+			}
+		});
+		
+		//-- Add to Written Query --//
+		$('#tm-operators').change(function(){
+			var testTxt = $(this).find('option:selected').attr('data-text');
+			if(!testTxt){ testTxt = $(this).find('option:selected').text(); }
+			$('#text-query > .operator-txt').text(testTxt);
+		});
+		$('#tm-query-data').blur(function(){
+			var valueTxt = $(this).val();
+			var labelTxt = $(this).next('.input-group-addon').text().replace('?', '');
+			$('#text-query > .value-txt').text(valueTxt +' '+ labelTxt);
+		});
+		
+		
+		/* Track Athletic Metrics - Retrieval
+		-----------------------------------------*/
+		$('#tm-retrieval').click(function(event){
+			if(!$(this).hasClass('disabled')){
+				var tm_school_arr = grab_metric_schools();
+				var tm_year = $('#tm-year').val();
+				var tm_year_name = $('#tm-year option:selected').text();
+				var tm_phase = $('#track-metrics-phases').val();
+				var tm_test = $('#tm-assessments').val();
+				var tm_comparison = $('#tm-operators').val();
+				var tm_metric = $('#tm-query-data').val();
+				var tm_metric_unit = $('#tm-query-data').next('.input-group-addon').text();
+				var tm_query = "All students that have a "+ $('#text-query > .assessment-txt').text() +" "+ $('#text-query > .operator-txt').text() +" "+ $('#text-query > .value-txt').text();
+				if(tm_school_arr && tm_phase && tm_test && tm_comparison && tm_metric != '' && tm_year){
+					$('#tm-retrieval-results').hide();
+					
+					<?php $ajaxUrl = '/index/getmetrics";'; ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+				
+					var data = {
+						action: "retrieve_athletic_metrics",
+						phase: tm_phase,
+						schools: tm_school_arr,
+						test: tm_test,
+						comparison: tm_comparison,
+						year: tm_year,
+						metric: tm_metric
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									
+									//-- clear div contents --//
+									$('#tm-retrieval-results').html('<h4 style="font-weight: 600;">Results</h4>');
+								
+									//-- List Out Schools --//
+									$.each(results.school, function(key, data){
+										if(data.count){
+											$('#tm-retrieval-results').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7;" class="tm-school-container" data-school="'+ key +'"><span class="clickable" style="cursor: pointer;"><i class="fa fa-toggle-right"></i> &nbsp;'+ data.name +' &nbsp;&nbsp; <strong>('+ data.count +')</strong></span> <span class="export-metrics" style="float: right; cursor: pointer;" data-school="'+ key +'"><i class="fa fa-download"></i> Export</span></p>');
+										
+											//-- List out Grade Levels --//
+											var summary = '';
+											$.each(data, function(grade, leveldata){
+												if(grade != 'count' && grade != 'name'){
+													summary+= '<p style="margin-bottom: 0; padding-bottom: 5px; margin-left: 18px; cursor: pointer;" class="tm-grade-container tm-school-'+ key +'" data-grade="'+ grade +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.level[grade] +' &nbsp;&nbsp; <strong>('+ leveldata.students.length +')</strong></p>';
+												
+													//-- List out students --//
+													var studentTable = '';
+													$.each(leveldata.students, function(i, student){
+														studentTable+= '<tr><td>'+ (i+1) +'</td><td>'+ student.name +'</td><td>'+ student.data +'</td></tr>';
+													});
+													summary+= '<div class="tm-grade-contents" style="margin-left: 36px;"><table class="table table-condensed table-striped"><thead><tr><th>#</th><th>Name</th><th>'+ tm_metric_unit +'</th></tr></thead><tbody>'+ studentTable +'</tbody></table></div>';
+												}
+											});
+											//-- Append assessment summary to output --//
+											$('#tm-retrieval-results').append('<div class="tm-school-contents">'+ summary +'</div>');
+										}
+									});
+									
+									//-- hide accordion pieces --//
+									$('.tm-grade-contents, .tm-school-contents').hide();
+									
+									//-- instantiate accordion functionality --//
+									$('.tm-school-container > .clickable').off().on("click", function(){
+										if($(this).hasClass('open')){
+											$(this).parent('.tm-school-container').next('.tm-school-contents').slideUp();
+											$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+											$(this).removeClass('open');
+										}else{
+											$(this).parent('.tm-school-container').next('.tm-school-contents').slideDown();
+											$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+											$(this).addClass('open');
+										}
+									});
+									$('.tm-grade-container').off().on("click", function(){
+										if($(this).hasClass('open')){
+											$(this).next('.tm-grade-contents').slideUp();
+											$(this).children('.fa-toggle-down').removeClass('fa-toggle-down').addClass('fa-toggle-right');
+											$(this).removeClass('open');
+										}else{
+											$(this).next('.tm-grade-contents').slideDown();
+											$(this).children('.fa-toggle-right').removeClass('fa-toggle-right').addClass('fa-toggle-down');
+											$(this).addClass('open');
+										}
+									});
+									
+									//-- Export Individual School Functionality --//
+									$('.export-metrics').off().on("click", function(){
+										//-- Grab School & Grades --//
+										var selectSchool = $(this).attr('data-school');
+										var selectGrades = [];
+										$.each($(this).parent('.tm-school-container').next('.tm-school-contents').children('.tm-grade-container'), function(i, item){
+											selectGrades.push($(item).attr('data-grade'));
+										});
+										console.log('school: '+ selectSchool +' - - Grades: '+ selectGrades);
+										
+										<?php $ajaxUrl2 = '/index/exportmetrics";'; ?>
+										var ajaxurl2 = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl2."\n"; ?>
+				
+										var info = {
+											action: "export_athletic_metrics",
+											phase: tm_phase,
+											school: selectSchool,
+											grades: selectGrades,
+											test: tm_test,
+											comparison: tm_comparison,
+											metric: tm_metric,
+											unit: tm_metric_unit,
+											year: tm_year,
+											year_name: tm_year_name,
+											query: tm_query
+										};
+										jQuery.post(ajaxurl2, info, function(json2){
+											if(typeof json2 != 'undefined'){
+												var results2 = jQuery.parseJSON(json2);
+												if(typeof results2.result != 'undefined'){
+													if(results2.result == 'success'){
+														//-- Open export in new tab --//
+														window.open(results2.urlpath);
+														//-- Success Message --//
+														howlerMsg('success', 'Metric Exported', 'School metrics exported successfully!', 7500, 'fa fa-check', false);
+													}else if(results2.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', 'Invalid Data', 'Invalid data entered.', 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+									});
+									
+									$('#tm-retrieval-results').show();
+									
+									//-- Success Message --//
+									howlerMsg('success', 'Successful Search', 'Students found that match your search.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', 'Invalid Data', 'Invalid data entered.', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+				
+			}
+		});
+		
+	});
+	
+	//-- Create Array of Schools / Grades For Metric Results --//
+	function grab_metric_schools(){
+		//-- instantiate schools array --//
+		var schools = [];
+		jQuery.each(jQuery('.track-school:checked'), function(i, item){
+			var sid = jQuery(item).val();
+			//-- instantiate school's grade array --//
+			schools[sid] = [];
+			var grades = jQuery(item).parent('.tsm-container').next('.school-grades-container').find('.track-grade:checked');
+			//-- Add Grades to Array --//
+			jQuery.each(grades, function(x, gi){
+				schools[sid].push(jQuery(gi).val());
+			});
+		});
+		//-- Return School Array --//
+		return schools;
+	}
+	
+	//-- Scripts for Assessments Graded --//
+	jQuery(document).ready(function($){
+		$('#aagw-filter-school, #aagw-filter-interval, #aagw-filter-period').on('change', function(){
+			var aagw_school = $('#aagw-filter-school').val();
+			var aagw_interval = $('#aagw-filter-interval').val();
+			var intervalName = $('#aagw-filter-interval').children(':selected').text();
+			var aagw_period = $('#aagw-filter-period').val();
+			var periodName = $('#aagw-filter-period').children(':selected').text();
+			
+			if (aagw_school){
+				<?php $ajaxUrlNew = '/index/assessGraded";'; ?>
+				var ajaxurlNew = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrlNew."\n"; ?>
+
+				var data = {
+					action: "graded_assessments",
+					interval: aagw_interval,
+					school: aagw_school,
+					period: aagw_period
+				};
+				jQuery.post(ajaxurlNew, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Hide Alert --//
+								$('#aagw-alert').remove();
+								//-- Fill Title --//
+								$('#aagw-interval').text(intervalName);
+								if(aagw_period != ''){
+									$('#aagw-school').text(results.school +': '+ periodName);
+								}else{
+									$('#aagw-school').text(results.school);
+								}
+								//-- Fill Assessment Stat Bars --//
+								$.each(results.count, function(key, val){
+									$('.count-'+ key).text(val +'/'+ results.total);
+									$('.progress-'+ key).attr('aria-valuenow', results.per[key]).css({'width': results.per[key] +'%'});
+								});
+								
+								//-- Show results --//
+								$('#display-assessments-graded').show();
+								
+								//-- Success Message --//
+								howlerMsg('success', 'Retreived Assessment Stats', 'Assessments graded were returned successfully!', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Invalid Data', 'Invalid data, or no students fit the criteria.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}else{
+				$('#display-assessments-graded').hide().before('<div id="aagw-alert" class="alert alert-danger"><a class="close" data-dismiss="alert" href="#" aria-hidden="true">×</a><strong>Select School Campus</strong> Can not run this report without a school campus selected.</div>');
+			}
+		});
+	});
+</script>

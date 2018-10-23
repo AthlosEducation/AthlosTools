@@ -1,0 +1,135 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to clear rosters and unenroll all students --//
+		$('#remove-associations').on('click', function(){
+			if (!$(this).hasClass('disabled')){
+				bootbox.confirm("Are you sure you want to clear rosters and unenroll all students?", function(result){
+					if(result){
+						//-- show loading icon --//
+						$('#remove-associations').addClass('disabled').children('.fa').removeClass('fa-eraser').addClass('fa-spinner fa-pulse');
+						//-- Run ajax call --//
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/administration/clearrosters";'."\n"; ?>
+						var data = {
+							action: "unenroll_students"
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Rosters Cleared', 'Rosters have been cleared and all students unenrolled.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+									}else if(results.result == 'invalid'){
+										//-- Invalid - Howler MSG --//
+										howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+							//-- remove loading icon --//
+							$('#remove-associations').removeClass('disabled').children('.fa').removeClass('fa-spinner fa-pulse').addClass('fa-eraser');
+						});
+					}
+				});
+			}
+		});
+		
+		$('#configure-roster-reminder').on('click', function(e){
+			//-- Show Modal --//
+			$('#emailOptionsModal').modal('show');
+		});
+		
+		/*--------------------
+			Set Campus List
+		---------------------*/
+		var campuses = new Array();
+		<?php if(!empty($campuses)){
+			foreach($campuses as $key => $array){
+				echo "campuses[".$key."] = new Array();\r\n";
+				foreach($array as $campus){
+					echo "campuses[".$key."][".$campus[0]."] = '".$campus[1]."';\r\n";
+				}
+			}
+		} ?>
+		
+		/*----------------------------------------------------
+			Modify the Schools Dropdown on District Change
+		----------------------------------------------------*/
+		$('#email-districts').on('change', function(e){
+			//-- Grab Vars --//
+			var curDist = $(this).val();
+			//-- Remove old options --//
+			$('#email-schools > option').not('[value="all"]').remove();
+			
+			//-- Append New Options --//
+			for (i = 0; i < campuses[curDist].length; i++){
+				if (campuses[curDist][i] !== undefined){
+					$('#email-schools').append('<option value="'+ i +'">'+ campuses[curDist][i] +'</option>');
+				}
+			}
+		});
+	});
+</script>
+
+
+<!-- Email Options Modal -->
+<div id="emailOptionsModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Configure Reminder Email</h3>
+			</div>
+			<div class="modal-body">
+				
+				<h4>Campuses to Email</h4>
+				<div class="form-group">
+					<label for="email-districts">Districts</label>
+					<select id="email-districts" class="form-control">
+						<option value="all">All Districts</option>
+						<?php //-- List out all districts --//
+						if(!empty($districts)){
+							foreach($districts as $district){
+								echo '<option value="'.$district->id.'">'.$district->districtName.'</option>';
+							}
+						} ?>
+					</select>
+				</div><!-- /.form-group -->
+				<div class="form-group">
+					<label for="email-schools">Campuses</label>
+					<select id="email-schools" class="form-control">
+						<option value="all">All Campuses in Selected District</option>
+					</select>
+				</div><!-- /.form-group -->
+				
+				<h4>User Roles to Email</h4>
+				<div class="form-group">
+					<label for="email-users">User Roles</label>
+					<select id="email-users" class="form-control">
+						<!--<option value="">Campus Lead APC</option>-->
+						<option value="4">Athletic Coaches (APC)</option>
+					</select>
+				</div><!-- /.form-group -->
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="sendReminderEmail"><i class="fa fa-paper-plane"></i> &nbsp;Send Reminder</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- END: Email Options Modal -->

@@ -1,0 +1,984 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Function to Check All Checkboxes in Table --//
+		$('#check-all').change(function(event){
+			if(this.checked){
+				$('.select-check').prop('checked', true);
+			}else{
+				$('.select-check').prop('checked', false);
+			}
+		});
+		
+		//-- Display Filters --//
+		$('#show-user-filters > a').click(function(e){
+			e.preventDefault();
+			$('#user-filters').slideToggle(500);
+			if($(this).children('span').text() == 'Show Filters'){
+				$(this).children('span').text('Hide Filters');
+			}else{
+				$(this).children('span').text('Show Filters');
+			}
+		});
+		
+		$('#student-roster-add').on('click', function(e){
+			//-- Hide Add Form --//
+			$('#addUserForm, #addUserRosterModal .modal-footer').hide();
+			//-- Show Search Form --//
+			$('#roster-search').show();
+			$('#roster-search-results').hide();
+			//-- Display Modal --//
+			$('#addUserRosterModal').modal('show');
+		});
+		
+		/*--------------
+			Add User
+		---------------*/
+		$('.addUser').click(function(e){
+			//-- Initiate Validation --//
+			$('#addUserForm').parsley('destroy');
+			$('#addUserForm').resetParsley();
+			
+			if($('#addUserForm').parsley('validate')){
+				console.log('Validation Successful');
+				//-- Check for any failed ajax checks --//
+				if(!$('#addUserForm .failed').get(0)){
+					//-- passed validation - Run Add Script --//
+					
+					var alt_id = $('#add-alt-id').val();
+					var state_id = $('#add-state-id').val();
+					var first = $('#add-first').val();
+					var last = $('#add-last').val();
+					var school = $('#add-school').val();
+					var grade = $('#add-grade').val();
+					var coach = $('#add-coach').val();
+					var period = $('#add-period').val();
+					
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST']."/rosters/coachaddnewstudent\";"."\n"; ?>
+					var data = {
+						action: "add_new_student",
+						altid: alt_id,
+						stateid: state_id,
+						first: first,
+						last: last,
+						school: school,
+						grade: grade,
+						coach: coach,
+						period: period
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide Modal --//
+									$('#addUserRosterModal').modal('hide');
+									//-- Populate Table --//
+									var newSchoolName = $('#add-school option:selected').attr('data-nickname');
+									var newCoachName = $('#add-coach option:selected').text();
+									//console.log('coach: '+ newCoachName);
+									<?php if($this->session->get("user-role") <= 3){ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td>'+ newSchoolName +'</td><td>'+ newCoachName +'</td><td></td></tr>');
+									<?php }else if($this->session->get("user-role") != 6){ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td>'+ newCoachName +'</td><td></td></tr>');
+									<?php }else{ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td></td></tr>');
+									<?php } ?>
+									//-- Clear Out Data --//
+									$('#addUserForm .form-control').val('');
+									$('#addUserRosterModal .field-msg').text('');
+									$('#addUserRosterModal .form-group').removeClass('failed').removeClass('successful');
+								
+									//-- Success Message --//
+									howlerMsg('success', 'Student Added Successfully', 'The user was added successfully', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			} // end if validation cleared
+		});
+		/*------------------
+			end Add User
+		-------------------*/
+		
+		/*-------------------
+			Add Found User
+		--------------------*/
+		$('.addFound').on('click', function(e){
+			if (!$(this).hasClass('disabled')){
+				//-- Initiate Validation --//
+				$('#addUserForm').parsley('destroy');
+				$('#addUserForm').resetParsley();
+			
+				if($('#addUserForm').parsley('validate')){
+					console.log('Validation Successful');
+					//-- passed validation - Run Add Script --//
+					//-- Gather Vars --//
+					var studID = $('.addFound').attr('data-sid');
+					var alt_id = $('#add-alt-id').val();
+					var state_id = $('#add-state-id').val();
+					var first = $('#add-first').val();
+					var last = $('#add-last').val();
+					var school = $('#add-school').val();
+					var grade = $('#add-grade').val();
+					var coach = $('#add-coach').val();
+					var period = $('#add-period').val();
+				
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST']."/rosters/addfoundstudent\";"."\n"; ?>
+					var data = {
+						action: "add_found_user",
+						sid: studID,
+						altid: alt_id,
+						stateid: state_id,
+						first: first,
+						last: last,
+						school: school,
+						grade: grade,
+						coach: coach,
+						period: period
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Hide Modal --//
+									$('#addUserRosterModal').modal('hide');
+									//-- Populate Table --//
+									var newSchoolName = $('#add-school option:selected').attr('data-nickname');
+									var newCoachName = $('#add-coach option:selected').text();
+									//console.log('coach: '+ newCoachName);
+									<?php if($this->session->get("user-role") <= 3){ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td>'+ newSchoolName +'</td><td>'+ newCoachName +'</td><td></td></tr>');
+									<?php }else if($this->session->get("user-role") != 6){ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td>'+ newCoachName +'</td><td></td></tr>');
+									<?php }else{ ?>
+										$('#display-results .table tbody').prepend('<tr><td style="width: 30px;"></td><td>'+ data.first +'</td><td>'+ data.last +'</td><td class="hideable">'+ data.period +'</td><td class="hideable">'+ data.grade +'</td><td></td></tr>');
+									<?php } ?>
+									
+									//-- Clear Out Data --//
+									$('#addUserForm .form-control').val('');
+									$('#addUserRosterModal .field-msg').text('');
+									$('#addUserRosterModal .form-group').removeClass('failed').removeClass('successful');
+								
+									//-- Success Message --//
+									howlerMsg('success', 'Student Added Successfully', 'The user was added successfully', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				} // end if validation cleared
+			}
+		});
+		/*------------------------
+			END: Add Found User
+		-------------------------*/
+		
+		/*-----------------
+			Edit Student
+		------------------*/
+		$('.editStudent').click(function(e){
+			//-- Retrieve User --//
+			var theID = $(this).attr('data-student-val');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/rosters/editstudent";'."\n"; ?>
+			var container = $(this).parent('td').parent('tr');
+			var data = {
+				action: "grab_student",
+				theID: theID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Clear Old Unused Data --//
+							$('#editStudentForm .form-control').val('');
+							
+							//-- Populate Modal --//
+							var newID = results.id;
+							$('#edit-first').val(results.first);
+							$('#edit-last').val(results.last);
+								//-- if school field exists --//
+							if($('#edit-school').get(0)){
+								$('#edit-school').val(results.school);
+							}
+								//-- if grade field exists --//
+							if($('#edit-grade').get(0)){
+								$('#edit-grade').val(results.grade);
+							}
+								//-- if Coach field exists --//
+							if($('#edit-coach').get(0)){
+								$('#edit-coach').val(results.coach);
+							}
+								//-- if Turf Period field exists --//
+							if($('#edit-period').get(0)){
+								$('#edit-period').val(results.period);
+							}
+								//-- Alt ID --//
+							if(!results.alt_id || results.alt_id == 'null'){
+								$('#edit-alt-id').val('').attr('data-student-val', newID);
+							}else{
+								$('#edit-alt-id').val(results.alt_id).attr('data-student-val', newID);
+							}
+								//-- State ID --//
+							if(!results.state_id || results.state_id == 'null'){
+								$('#edit-state-id').val('');
+							}else{
+								$('#edit-state-id').val(results.state_id);
+							}
+							
+							//-- Show modal --//
+							$('#editStudentModal .modal-header h3 .insert-username').text(results.first +' '+ results.last);
+							$('#editStudentModal .field-msg').text('');
+							$('#editStudentModal .form-group').removeClass('failed').removeClass('successful');
+							$('#editStudentModal').modal('show');
+							//-- reset parsley validation --//
+							$('#editStudentForm').parsley('destroy');
+							$('#editStudentForm').resetParsley();
+							
+							//-- validate form --//
+							$('#editStudentSubmit').off().click(function(event){
+								event.preventDefault();
+								if($('#editStudentForm').parsley('validate')){
+									//-- Check for any failed ajax checks --//
+									if(!$('#editStudentForm .failed').get(0)){
+										//-- Passed Validation - Run Edit Script --//
+
+										var first = $('#edit-first').val();
+										var last = $('#edit-last').val();
+											//-- if school field exists --//
+										if($('#edit-school').get(0)){
+											var school = $('#edit-school').val();
+										}else{
+											var school = '';
+										}
+											//-- if grade field exists --//
+										if($('#edit-grade').get(0)){
+											var grade = $('#edit-grade').val();
+										}else{
+											var grade = '';
+										}
+											//-- if coach field exists --//
+										if($('#edit-coach').get(0)){
+											var coach = $('#edit-coach').val();
+										}else{
+											var coach = '';
+										}
+										var period = $('#edit-period').val();
+										var alt_id = $('#edit-alt-id').val();
+										var state_id = $('#edit-state-id').val();
+
+										var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/rosters/editstudent";'."\n"; ?>
+										var info = {
+											action: "edit_student",
+											sid: newID,
+											altid: alt_id,
+											stateid: state_id,
+											first: first,
+											last: last,
+											school: school,
+											grade: grade,
+											coach: coach,
+											period: period
+										};
+										jQuery.post(ajaxurl, info, function(json){
+											if(typeof json != 'undefined'){
+												var results = jQuery.parseJSON(json);
+												if(typeof results.result != 'undefined'){
+													if(results.result == 'success'){
+														//-- Hide Modal --//
+														$('#editStudentModal').modal('hide');
+														
+														//-- Update roster data --//
+														var newSchoolName = $('#edit-school option:selected').attr('data-nickname');
+														var newCoachName = $('#edit-coach option:selected').text();
+														var firstCell = $(container).children('td:first');
+														$(firstCell).next().html(info.first);
+														$(firstCell).next().next().html(info.last);
+														$(firstCell).next().next().next().html(info.period);
+														$(firstCell).next().next().next().next().html(info.grade);
+														
+														<?php if($this->session->get("user-role") <= 3){ ?>
+															$(firstCell).next().next().next().next().next().html(newSchoolName);
+															$(firstCell).next().next().next().next().next().next().html(newCoachName);
+														<?php }else if($this->session->get("user-role") != 6){ ?>
+															$(firstCell).next().next().next().next().next().html(newSchoolName);
+														<?php } ?>
+															
+														//-- Success Message --//
+														howlerMsg('success', 'Student Updated', 'The student was updated successfully', 7500, 'fa fa-check', false);
+													}else if(results.result == 'failed'){
+														//-- Failed - Howler MSG --//
+														howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+													}
+												}
+											}
+										});
+
+									}
+									
+								} // end if validation cleared
+								
+							});
+							
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', 'Retrieval Failed', 'There was a problem retrieving the student, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*---------------------
+			end Edit Student
+		----------------------*/
+		
+		$.fn.resetParsley = function() {
+			$(this).parsley ({
+				trigger: 'change',
+				errors: {
+					container: function (element, isRadioOrCheckbox) {
+						if (element.parents ('form').is ('.form-horizontal')) {
+							return element.parents ("*[class^='col-']");
+						}
+
+						return element.parents ('.form-group');
+					}
+				}
+			});
+		};
+		
+		
+		/*--------------------
+			Student Search
+		---------------------*/
+		$('#find-district-student').on('click', function(e){
+			//-- Grab Vars --//
+			var sAID = $('#search-alt-id').val();
+			var sName = $('#search-name').val();
+			if($('#filter-schools').get(0)){
+				var school = $('#filter-schools').val();
+			}else{
+				var school = <?php echo $this->session->get("user-school"); ?>;
+			}
+			
+			if (sAID || sName){
+				if (!$(this).hasClass('disabled')){
+					//-- show loading icon --//
+					$('#find-district-student').addClass('disabled').children('.fa').removeClass('fa-search').addClass('fa-spinner fa-pulse');
+					//-- Run ajax call --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/rosters/search";'."\n"; ?>
+					var data = {
+						action: "search_student",
+						alt: sAID,
+						name: sName,
+						school: school
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Success - Show Search Results --//
+									$('#roster-search-results .table tbody').children('tr').remove();
+									$.each(results.students, function(i, student){
+										if(student.active && student.coach && student.coach != 'null'){
+											//--- Not selectable ---//
+											$('#roster-search-results .table tbody').append('<tr class="disabled text-muted"><td>'+ (i + 1) +'</td><td>'+ student.alt_id +'</td><td>'+ student.lname +', '+ student.fname +'</td><td>'+ Number(student.grade) +'th</td><td></td></tr>');
+										}else{
+											//-- Selectable --//
+											$('#roster-search-results .table tbody').append('<tr><td>'+ (i + 1) +'</td><td>'+ student.alt_id +'</td><td>'+ student.lname +', '+ student.fname +'</td><td>'+ (Number(student.grade) + 1) +'th</td><td><span class="label label-primary found-student" data-id="'+ student.id +'" data-first="'+ student.fname +'" data-last="'+ student.lname +'" data-state="'+ student.state_id +'" data-alt="'+ student.alt_id +'" data-grade="'+ student.grade +'" >Select</span></td></tr>');
+										}
+									});
+									//-- Line to allow creation of new user --//
+									$('#roster-search-results .table tbody').append('<tr><td colspan="5" class="text-center" style="padding-top: 20px; background-color: transparent;"><p>Don\'t see the student you\'re looking for in the results?</p><span class="btn btn-sm btn-secondary new-student">Create New Student</span></td></tr>');
+									$('#roster-search-results').show();
+									
+									//-- Select Student --//
+									$('.found-student').off().on('click', function(e){
+										//-- Reset Add User form --//
+										$('#addUserForm .form-control').val('');
+										//-- Grab Selected User's Vars --//
+										var sID = $(this).attr('data-id');
+										var sFname = $(this).attr('data-first');
+										var sLname = $(this).attr('data-last');
+										var sStateID = $(this).attr('data-state');
+										var sAlt = $(this).attr('data-alt');
+										var sGrade = $(this).attr('data-grade');
+										//-- Assign the form vars --//
+										if(!sAlt || sAlt == 'null'){
+											$('#add-alt-id').val('').attr('data-student-val', sID);
+										}else{
+											$('#add-alt-id').val(sAlt).attr('data-student-val', sID);
+										}
+										$('#add-first').val(sFname);
+										$('#add-last').val(sLname);
+										$('#add-school').val(school);
+										$('#add-grade').val((Number(sGrade) + 1));
+										<?php
+										if($this->session->get("user-role") == 6){
+											echo "$('#add-coach').val(".$this->session->get("user-id").");";
+										} ?>
+										if(!sStateID || sStateID == 'null'){
+											$('#add-state-id').val('');
+										}else{
+											$('#add-state-id').val(sStateID);
+										}
+										//-- Show / Hide Buttons --//
+										$('.addFound').attr('data-sid', sID).show();
+										$('.addUser').hide();
+										//-- Show Add Form --//
+										$('#addUserForm, #addUserRosterModal .modal-footer').show();
+										//-- Hide Search Form --//
+										$('#roster-search').hide();
+										$('#roster-search-results').hide();
+									});
+									//-- New Student Listener --//
+									$('.new-student').off().on('click', function(e){
+										$(this).newStudent();
+									});
+								}else if(results.result == 'failed'){
+									//-- Failed - alert message --//
+									$('#roster-search-results .table tbody').children('tr').remove();
+									$('#roster-search-results .table tbody').append('<tr><td colspan="5" style="background-color: transparent;"><div class="alert alert-danger" style="margin: 5px 0;">The search failed. No students matched your search.</div></td></tr>');
+									//-- Line to allow creation of new user --//
+									$('#roster-search-results .table tbody').append('<tr><td colspan="5" class="text-center" style="padding-top: 20px; background-color: transparent;"><p>Don\'t see the student you\'re looking for in the results?</p><span class="btn btn-sm btn-secondary new-student">Create New Student</span></td></tr>');
+									$('#roster-search-results').show();
+									//-- New Student Listener --//
+									$('.new-student').off().on('click', function(e){
+										$(this).newStudent();
+									});
+								}
+							}
+						}
+						//-- remove loading icon --//
+						$('#find-district-student').removeClass('disabled').children('.fa').removeClass('fa-spinner fa-pulse').addClass('fa-search');
+					});
+				}
+			}
+		});
+		
+		
+		/*----------------
+			New Student
+		-----------------*/
+		$.fn.newStudent = function() {
+			//-- Reset Add User form --//
+			$('#addUserForm .form-control').val('');
+			//-- Grab Selected User's Vars --//
+			var sAlt = $('#search-alt-id').val();
+			var sName = $('#search-name').val();
+			if(sName){
+				if(sName.indexOf(" ") != -1){
+					var nameArr = sName.split(" ");
+					if(nameArr.length > 2){
+						var sFname = nameArr[0]; //-- Adjust later --//
+						var sLname = nameArr[1]; //-- Adjust later --//
+					}else if(nameArr.length > 1){
+						var sFname = nameArr[0];
+						var sLname = nameArr[1];
+					}else{
+						var sFname = nameArr[0];
+						var sLname = '';
+					}
+				}else{
+					var sFname = sName;
+					var sLname = '';
+				}
+			}else{
+				var sFname = '';
+				var sLname = '';
+			}
+			//-- school --//
+			if($('#filter-schools').get(0)){
+				var school = $('#filter-schools').val();
+			}else{
+				var school = <?php echo $this->session->get("user-school"); ?>;
+			}
+			//-- coach --//
+			if($('#filter-coach').get(0)){
+				var coach = $('#filter-coach').val();
+			}else{
+				var coach = <?php echo $this->session->get("user-id"); ?>;
+			}
+			//-- Assign the form vars --//
+			if(sAlt){
+				$('#add-alt-id').val(sAlt);
+			}
+			$('#add-first').val(sFname);
+			$('#add-last').val(sLname);
+			$('#add-school').val(school);
+			$('#add-coach').val(coach);
+			<?php
+			if($this->session->get("user-role") == 6){
+				echo "$('#add-coach').val(".$this->session->get("user-id").");";
+			} ?>
+			//-- Show / Hide Buttons --//
+			$('.addFound').attr('data-sid', '').hide();
+			$('.addUser').show();
+			//-- Show Add Form --//
+			$('#addUserForm, #addUserRosterModal .modal-footer').show();
+			//-- Hide Search Form --//
+			$('#roster-search').hide();
+			$('#roster-search-results').hide();
+		};
+		
+		
+		//-- Capture Search Student when pressing enter --//
+		$('#search-name, #search-alt-id').on('keydown', function(e){
+			if (e.keyCode == 13) {
+				$('#find-district-student').trigger('click');
+			}
+		});
+		
+		
+		/*--------------------
+			Remove Student
+		---------------------*/
+		$('.removeStudent').click(function(e){
+		    var theID = $(this).attr('data-student-val');
+			var theName = $(this).attr('data-student-name');
+			var container = $(this).parent('td').parent('tr');
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/rosters/removestudent";'."\n"; ?>
+			var data = {
+				action: "remove_student",
+				theID: theID
+				};
+			//-- Ask to confirm "Do you really want to delete this?" --//
+			bootbox.confirm("Are you sure you want to remove <span style='font-weight: bold;'>"+ theName +"</span> from your roster?", function(result) {
+				if(result){
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(container).delay(500).slideUp('fast');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Student Removed', 'The student was successfully removed.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-ban', false);
+								}else if(results.result == 'invalid'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+		});
+		/*-----------------------
+			END: Remove Student
+		------------------------*/
+		
+		
+		/*-----------------------
+			Validate Alt ID
+		------------------------*/
+		$('#add-alt-id, #edit-alt-id').blur(function(e){
+			var alt_id = $(this).val();
+			var school = $(this).parent().parent().find('.school-input').val();
+			var studentID = $(this).attr('data-student-val');
+			var thisInput = $(this);
+			if(alt_id){
+				if(school){
+					//-- setup ajax request --//
+					<?php if(strrpos($_SERVER['REQUEST_URI'], '/', 3) === false){ $ajaxUrl = $_SERVER['REQUEST_URI'].'/validaltid";'; }else{ $ajaxUrl = $_SERVER['REQUEST_URI'].'validaltid";'; } ?>
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].$ajaxUrl."\n"; ?>
+					var data = {
+						action: "validate_alt_id",
+						altid: alt_id,
+						school: school,
+						student_id: studentID
+					};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									$(thisInput).prev('em').text('Alt ID is okay');
+									$(thisInput).parent('div').removeClass('failed').addClass('successful');
+								}else if(results.result == 'failed'){
+									$(thisInput).prev('em').text('Alt ID is already in use');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}else if(results.result == 'invalid'){
+									$(thisInput).prev('em').text('School has not been selected.');
+									$(thisInput).parent('div').removeClass('successful').addClass('failed');
+								}
+							}
+						}
+					});
+				}else{
+					$(thisInput).prev('em').text('School has not been selected.');
+					$(thisInput).parent('div').removeClass('successful').addClass('failed');
+				}
+			}else{
+				$(thisInput).prev('em').text('');
+				$(thisInput).parent('div').removeClass('failed').removeClass('successful');
+			}
+		});
+		/*-- end validate alt ID --*/
+		
+	});
+</script>
+
+<!-- Add User Modal -->
+<div id="addUserRosterModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Add Student To Roster</h3>
+			</div>
+			<div class="modal-body">
+				
+				<div id="roster-search">
+					<div class="well">
+						<h4 class="font-weight-600">Student Search</h4>
+						<p>Quickly see if a student exists in Athlos Tools, by entering the student's SIS ID # or their name and then submit your search.</p>
+					
+						<!-- Search Form -->
+						<div class="row">
+							<div class="col-sm-6">
+								<div class="form-group">
+									<label for="search-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+									<input type="text" id="search-alt-id" class="form-control" value="" placeholder="Enter SIS Number" />
+								</div><!-- /.form-group -->
+							</div><!-- /.col -->
+							<div class="col-sm-6">
+								<div class="form-group">
+									<label for="search-name">Student Name</label>
+									<input type="text" id="search-name" class="form-control" value="" placeholder="Enter First or Last Name">
+								</div>
+								<div class="text-right">
+									<button type="button" id="find-district-student" class="btn btn-primary"><i class="fa fa-search"></i> &nbsp;Find Student</button>
+								</div>
+							</div><!-- /.col -->
+						</div><!-- /.row -->
+					</div><!-- /.well -->
+					
+					<div id="roster-search-results">
+						<h4>Search Results:</h4>
+						<table class="table table-condensed table-striped table-hover">
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>Alt / SIS ID#</th>
+									<th>Name</th>
+									<th>Grade</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div><!-- /#roster-search -->
+				
+				<!-- Add User Form -->
+				<form id="addUserForm" action="" method="post">
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="add-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="alt-id" id="add-alt-id" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-first">First Name</label>
+						<input type="text" name="first" id="add-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="add-last">Last Name</label>
+						<input type="text" name="last" id="add-last" class="form-control" value="" data-required="true">
+					</div>
+					
+					<div class="form-group" <?php if($this->session->get("user-role") == 6){ echo 'style="display: none;"'; } ?>>	
+						<label for="add-school">School</label>
+						<select id="add-school" name="add-school" class="form-control school-input" data-required="true">
+							<option value="">Select School</option>
+							<?php
+							if($schools){
+								$curState = '';
+								foreach($schools as $school){
+									if($school->state != $curState){
+										if($curState){
+											echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+										}else{
+											echo '<optgroup label="'.$states[$school->state].'">';
+										}
+										$curState = $school->state;
+									}
+									echo '<option value="'.$school->id.'" data-nickname="'.$school->abbreviation.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+								}
+								echo '</optgroup>';
+							}
+							?>
+						</select>
+					</div>
+					<?php //-- Select Grade Level --//
+						if(!isset($grade_level) || !$grade_level){
+							echo '<input type="hidden" id="add-grade" value="0" />';
+						}else{ ?>
+							<div class="form-group">	
+								<label for="add-grade">Grade Level</label>
+								<select id="add-grade" name="add-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<!-- Class Period Filter - Optional -->
+					<div class="form-group">
+						<label for="add-period">Class Period</label>
+						<select name="add-period" id="add-period" class="form-control">
+							<option value="0">No period</option><?php
+							$x = 1;
+							while($x < 11){
+								echo '<option value="'.$x.'">Period '.$x.'</option>';
+								$x++;
+							} ?>
+						</select>
+					</div>
+					
+					<?php
+						//-- Select Coach --//
+						if(isset($coachRef) && $coachRef){ ?>
+							<div class="form-group" <?php if($this->session->get("user-role") == 6){ echo 'style="display: none;"'; } ?>>	
+								<label for="add-coach">Athletic Performance Coach</label>
+								<select id="add-coach" name="add-coach" class="form-control">
+									<option value="">Select Coach</option>
+									<?php
+										foreach($coachRef as $coachID => $coachName){
+											echo '<option value="'.$coachID.'">'.$coachName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					<!-- Optional Fields -->
+					<div class="form-group">
+						<label for="add-state-id">State ID (optional)</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="state-id" id="add-state-id" class="form-control" value="">
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary addUser"><i class="fa fa-plus"></i> &nbsp;Add New Student</button>
+				<button type="button" class="btn btn-primary addFound"><i class="fa fa-plus"></i> &nbsp;Add to Roster</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Edit Student Modal -->
+<div id="editStudentModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Edit Student: <span class="insert-username"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Edit Student Form -->
+				<form id="editStudentForm" class="parsley-form" method="post">
+					<!-- Personal Info Section -->
+					<div class="form-group">
+						<label for="edit-alt-id">Alt ID / SIS ID</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="alt-id" id="edit-alt-id" class="form-control" value="">
+					</div>
+					<div class="form-group">
+						<label for="edit-first">First Name</label>
+						<input type="text" name="first" id="edit-first" class="form-control" value="" data-required="true">
+					</div>
+					<div class="form-group">
+						<label for="edit-last">Last Name</label>
+						<input type="text" name="last" id="edit-last" class="form-control" value="" data-required="true">
+					</div>
+					
+					<div class="form-group" <?php if($this->session->get("user-role") == 6){ echo 'style="display: none;"'; } ?>>	
+						<label for="edit-school">School</label>
+						<select id="edit-school" name="edit-school" class="form-control school-input" data-required="true">
+							<option value="">Select School...</option>
+							<?php
+								//-- List Out Schools --//
+								$curState = '';
+								foreach($schools as $school){
+									if($school->state != $curState){
+										if($curState){
+											echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+										}else{
+											echo '<optgroup label="'.$states[$school->state].'">';
+										}
+										$curState = $school->state;
+									}
+									echo '<option value="'.$school->id.'" data-nickname="'.$school->abbreviation.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+								}
+								echo '</optgroup>';
+							?>
+						</select>
+					</div>
+					
+					<?php //-- Select Grade Level --//
+						if(isset($grade_level) && $grade_level){ ?>
+							<div class="form-group">	
+								<label for="edit-grade">Grade Level</label>
+								<select id="edit-grade" name="edit-grade" class="form-control" data-required="true">
+									<option value="">Select Grade Level</option>
+									<?php
+										foreach($grade_level as $grade){
+											echo '<option value="'.$grade->id.'">'.$grade->gradeName.'</option>';
+										}
+									?>
+								</select>
+							</div><?php
+						}
+					?>
+					
+					<!-- Class Period Filter - Optional -->
+					<div class="form-group">
+						<label for="edit-period">Class Period</label>
+						<select name="edit-period" id="edit-period" class="form-control">
+							<option value="0">No period</option><?php
+							$x = 1;
+							while($x < 11){
+								echo '<option value="'.$x.'">Period '.$x.'</option>';
+								$x++;
+							} ?>
+						</select>
+					</div>
+					
+					<?php
+					//-- Select Coach --//
+					if(isset($coachRef) && $coachRef){ ?>
+						<div class="form-group" <?php if($this->session->get("user-role") == 6){ echo 'style="display: none;"'; } ?>>	
+							<label for="edit-coach">Athletic Performance Coach</label>
+							<select id="edit-coach" name="edit-coach" class="form-control">
+								<option value="">Select Coach</option>
+								<?php
+									foreach($coachRef as $coachID => $coachName){
+										echo '<option value="'.$coachID.'">'.$coachName.'</option>';
+									}
+								?>
+							</select>
+						</div><?php
+					}else{
+						echo '<input type="hidden" id="edit-coach" value="" />';
+					}
+					?>
+					<div class="form-group">
+						<label for="edit-state-id">State ID (optional)</label> &nbsp;<em class="field-msg"></em>
+						<input type="text" name="state-id" id="edit-state-id" class="form-control" value="">
+					</div>
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="editStudentSubmit"><i class="fa fa-refresh"></i> &nbsp;Update Student</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Import CSV Modal -->
+<div id="importCSVModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Import CSV File</h3>
+			</div>
+			<div class="modal-body">
+				
+				<?php
+					/*-------------------------
+						School to import to
+					--------------------------*/
+					if(strpos($_SERVER['REQUEST_URI'], 'administrators') !== FALSE || strpos($_SERVER['REQUEST_URI'], 'parents') !== FALSE){
+						//--- Administrators modal ---// ?>
+						<input type="hidden" name="theImportSchool" id="theImportSchool" value="0" /><?php
+					}else if($this->session->get("user-school")){
+						//-- User has a school they belong to, should be everyone except Administrators --// ?>
+						<input type="hidden" name="theImportSchool" id="theImportSchool" value="<?php echo $this->session->get("user-school"); ?>" /><?php
+					}else{
+						//-- User has no school, select which school the import should be done for --// ?>
+						<p>Please select the school that the new users will be added to.</p>
+						<p style="margin-bottom: 20px;">
+							<select id="theImportSchool" class="form-control" style="width: 65%;">
+								<option value="none">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									if(isset($schools) && $schools){
+										foreach($schools as $school){
+											if($school->state != $curState){
+												if($curState){
+													echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+												}else{
+													echo '<optgroup label="'.$states[$school->state].'">';
+												}
+												$curState = $school->state;
+											}
+											echo '<option value="'.$school->id.'">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+										}
+										echo '</optgroup>';
+									}
+								?>
+							</select>
+						</p><?php
+					}
+					/*-- end import school --*/ ?>
+				
+				<p>
+					Select the file that you would like to import into the selected management interface, Please ensure that the file you are Importing is intended for this section:
+				</p>
+				
+				<!-- Import CSV File Form -->
+				<span class="btn btn-primary fileinput-button">
+			        <i class="glyphicon glyphicon-plus"></i>
+			        <span>Select CSV File...</span>
+			        <!-- The file input field used as target for the file upload widget -->
+			        <input id="fileupload" type="file" name="files[]" multiple>
+			    </span>
+			    <br>
+			    <br>
+			    <!-- The global progress bar -->
+			    <div id="progress" class="progress">
+			        <div class="progress-bar progress-bar-primary"></div>
+			    </div>
+			    <!-- The container for the uploaded files -->
+			    <div id="fileUploads" class="files"></div>
+			    <br>
+				
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

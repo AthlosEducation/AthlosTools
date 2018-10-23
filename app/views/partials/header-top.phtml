@@ -1,0 +1,19 @@
+<?php
+//-- Make sure vars $navPage && $navGroup are set --//
+if(!isset($navPage)){ $navPage = ''; }
+if(!isset($navGroup)){ $navGroup = ''; }
+
+?>
+
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+    <?php echo Phalcon\Tag::getTitle(); ?>
+	<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="">
+	<meta name="author" content="" />
+	<link rel="shortcut icon" href="/img/favicon.ico">

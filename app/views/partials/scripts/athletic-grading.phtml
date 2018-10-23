@@ -1,0 +1,395 @@
+<?php
+
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/jquery.icontains.selector.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/parsley/parsley.js");
+	//echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery.maskedinput.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		//-- Launch Grading Interval --//
+		$('#change-interval').click(function(event){
+			$('#gradingIntervalModal').modal('show');
+		});
+		<?php
+			if(!isset($intervalID) || !$intervalID){
+				echo "$('#gradingIntervalModal').modal('show');";
+			}
+		?>
+		
+		/* Validate / Submit Interval
+		-------------------------------*/
+		$('.submitInterval').click(function(e){
+			//-- Initiate Validation --//
+			$('#gradeIntervalForm').parsley('destroy');
+			$('#gradeIntervalForm').resetParsley();
+			
+			if($('#gradeIntervalForm').parsley('validate')){
+				$('#gradeIntervalForm').submit();
+			}
+		});
+		
+		$.fn.resetParsley = function(){
+			$(this).parsley ({
+				trigger: 'change',
+				errors: {
+					container: function (element, isRadioOrCheckbox) {
+						if (element.parents ('form').is ('.form-horizontal')) {
+							return element.parents ("*[class^='col-']");
+						}
+
+						return element.parents ('.form-group');
+					}
+				}
+			});
+		};
+		
+		//-- Display Filters --//
+		$('#show-user-filters > a').click(function(e){
+			e.preventDefault();
+			$('#user-filters').slideToggle(200);
+			if($(this).children('span').text() == 'Show Filters'){
+				$(this).children('span').text('Hide Filters');
+			}else{
+				$(this).children('span').text('Show Filters');
+			}
+		});
+		
+		//-- Change Assessment --//
+		$('.change-assessment').click(function(event){
+			var testID = $(this).attr('data-test-val');
+			$('#refresh-page .filterAssessments').val(testID);
+			$('#refresh-page').submit();
+		});
+		
+		//-- Format Inputs --//
+		$(".data-seconds").keyup(function(event){
+			var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+			if(fieldVal.length >= 5){
+				fieldVal = fieldVal.substr(0,3) +'.'+ fieldVal.substr(3,2);
+			}else if(fieldVal.length == 4){
+				fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,2);
+			}else if(fieldVal.length > 1){
+				fieldVal = fieldVal.substr(0,1) +'.'+ fieldVal.substr(1);
+			}
+			$(this).val(fieldVal);
+		});
+		$(".data-inches, .data-centimeters").keyup(function(event){
+			var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+			if(fieldVal.length >= 5){
+				fieldVal = fieldVal.substr(0,3) +'.'+ fieldVal.substr(3,2);
+			}else if(fieldVal.length == 4){
+				fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,2);
+			}else if(fieldVal.length > 1){
+				fieldVal = fieldVal.substr(0,1) +'.'+ fieldVal.substr(1);
+			}
+			$(this).val(fieldVal);
+		});
+		$(".data-pounds").keyup(function(event){
+			var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+			if(fieldVal.length == 3){
+				fieldVal = fieldVal.substr(0,2) +'.'+ fieldVal.substr(2,1);
+			}else if(fieldVal.length > 3){
+				fieldVal = fieldVal.substr(0,3) +'.'+ fieldVal.substr(3,1);
+			}
+			$(this).val(fieldVal);
+		});
+		$(".data-whole").keyup(function(event){
+			var fieldVal = $(this).val().replace(/[^0-9]/g,'');
+			if($(this).hasClass('data-length-1')){
+				if(fieldVal.length > 1){
+					fieldVal = fieldVal.substr(0,1);
+				}
+			}else{
+				if(fieldVal.length > 4){
+					fieldVal = fieldVal.substr(0,4);
+				}
+			}
+			$(this).val(fieldVal);
+		});
+		
+		//-- Submit Data --//
+		$('.submit-entry').click(function(event){
+			//-- Grab Vars --//
+			var thisItem = $(this);
+			var theID = $(this).attr('data-grade-val');
+			var test = $(this).attr('data-test-url');
+			var format = $(this).attr('data-format');
+			var studentVal = $(this).attr('data-student-val');
+			var name = $(this).attr('data-student-name');
+			var interval = $(this).attr('data-interval');
+			var dataVal = $(this).parent('.input-group-btn').prev('input.data-entry').val();
+			var validate = true;
+			var reason = '';
+			//console.log(dataVal.length);
+			
+			//-- Add Some Validation --//
+			if(format == 'seconds' && dataVal.length < 3){
+				validate = false;
+				reason = 'Your entry is not valid. Please add values after the decimal. Example: "44.52" or "9.8"';
+			}
+			if((format == 'pounds' || format == 'inches' || format == 'centimeters') && dataVal.length < 2){
+				validate = false;
+				reason = 'Your entry is not valid. You must enter a number with at least 2 digits: "12.0", "2.5", "125"';
+			}
+			
+			//-- Make sure has value --//
+			if(dataVal && validate){
+				//-- Round Inches --//
+				if(format == 'inches'){
+					dataVal = (Math.floor(dataVal * 4) / 4).toFixed(2);
+				}
+				if(format == 'centimeters'){
+					dataVal = (Math.floor(dataVal * 2) / 2).toFixed(2);
+				}
+				//-- Quick check to make sure grade doesn't already exist --//
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/checkgrade";'."\n"; ?>
+				var data = {
+					action: "check_grade",
+					theID: theID,
+					studentID: studentVal,
+					interval: interval,
+					test: test
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Submit Athletic Data --//
+								var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/athletic/submitgrade";'."\n"; ?>
+								var data = {
+									action: "submit_grade",
+									theID: theID,
+									studentID: studentVal,
+									interval: interval,
+									test: test,
+									format: format,
+									dataVal: dataVal
+									};
+								jQuery.post(ajaxurl, data, function(json){
+									if(typeof json != 'undefined'){
+										var results = jQuery.parseJSON(json);
+										if(typeof results.result != 'undefined'){
+											if(results.result == 'success'){
+												//-- add grade ID to submit btn --//
+												$(thisItem).attr('data-grade-val', results.entryID);
+												$(thisItem).parent('.input-group-btn').prev('input.data-entry').addClass('success').removeClass('error').val(dataVal);
+												//-- BMI --//
+												if(results.entryBMI && $('.displayBMI').get(0)){
+													if(results.entryBMI > 29.9){ var bmiclass = 'primary'; }else if(results.entryBMI > 24.9){ var bmiclass = 'secondary'; }else if(results.entryBMI > 18.5){ var bmiclass = 'success'; }else{ var bmiclass = 'info'; }
+													$(thisItem).parent('.input-group-btn').parent('.input-group').parent('.submit-athletic-test').siblings('.displayBMI').html('<span class="label label-'+ bmiclass +'">'+ results.entryBMI +'</span>');
+												}
+												//-- Balance --//
+												if(results.entryBalance && $('.displayBalance').get(0)){
+													$(thisItem).parent('.input-group-btn').parent('.input-group').parent('.submit-athletic-test').siblings('.displayBalance').html('<span class="label label-info">'+ results.entryBalance +'</span>');
+												}
+												//-- SLRaise --//
+												if(results.entrySLRaise && $('.displayBalance').get(0)){
+													if(results.entrySLLeft != 0 && results.entrySLRight != 0){ var slclass = 'info'; }else{ var slclass = 'tertiary'; }
+													$(thisItem).parent('.input-group-btn').parent('.input-group').parent('.submit-athletic-test').siblings('.displayBalance').html('<span class="label label-'+ slclass +'">'+ results.entrySLRaise +'</span>');
+												}
+												
+												//-- Success - Howler MSG --//
+												//howlerMsg('success', 'Grade Entered', 'The grade was successfully entered.', 7500, 'fa fa-check', false);
+											}else if(results.result == 'failed'){
+												$(thisItem).parent('.input-group-btn').prev('input.data-entry').addClass('error').removeClass('success');
+												//-- Failed - Howler MSG --//
+												howlerMsg('danger', 'Grade Failed', 'Something went wrong, the grade was not saved.', 7500, 'fa fa-exclamation', false);
+											}
+										}
+									}
+								});
+									
+							}else if(results.result == 'failed'){
+								//-- Check Failed - Grade Exists - Bootbox Alert User --//
+								
+							}
+						}
+					}
+				});
+				
+			}else{
+				//-- show some kind of error? or visualization that nothing happened --//
+				if(reason == ''){ reason = "You failed to enter any data. Please enter a value and try again." }
+				bootbox.alert(reason, function() {});
+			}
+		});
+		
+		//-- Quick Search --//
+		$('#quick-search').click(function(event){
+			//-- Replace Value in All Search Filters --//
+			var searchVal = $('#searchTerm').val();
+			$('.filterSearch').val(searchVal);
+			//-- Show Search Results --//
+			filterStudents(searchVal);
+		});
+		
+		<?php //-- filter students results --//
+			if(isset($searchTerm) && $searchTerm){
+				echo 'filterStudents("'.$searchTerm.'");';
+			}
+		?>
+		
+		/*-------------------------
+			Athletic Score Cards
+		--------------------------*/
+		$('#generate-score-cards').click(function(){
+			//-- Check to make sure checkboxes are checked --//
+			if($('.select-check:checked').get(0)){
+				var sList = [];
+				//-- Grab value of each checked checkbox --//
+				$('.select-check:checked').each(function(){
+					sList.push($(this).val());
+				});
+				//-- If there was a checked box send form --//
+				if(sList.length > 0){
+					$('#card-ids').val(sList);
+					$('#scorecards-form').submit();
+				}
+			}else{
+				bootbox.alert("Before you can generate athletic score cards, you need to indicate which students you want to generate score cards for.<br /><br /><ol><li>Simply check the checkbox on the left side of the row the student is in.</li><li>Once you have selected the students you need a score card for; press the 'Score Cards' button again.</li>", function(){ /*- do nothing -*/ });
+			}
+		});
+		/*- end athletic score cards -*/
+		
+	});
+	
+	function filterStudents(searchVal){
+		if(!searchVal){
+			//-- Show All if Empty --//
+			jQuery('#display-results .student-entry').show();
+		}else{
+			//-- Hide All --//
+			jQuery('#display-results .student-entry').hide();
+			//-- Show Results --//
+			jQuery('#display-results .first-name:icontains('+ searchVal +')').parent('.student-entry').show();
+			jQuery('#display-results .last-name:icontains('+ searchVal +')').parent('.student-entry').show();
+		}
+	}
+</script>
+
+<!-- Determine Grading Interval Modal -->
+<div id="gradingIntervalModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Testing Phase</h3>
+			</div>
+			<div class="modal-body">
+				
+				<!-- Add Student Form -->
+				<form id="gradeIntervalForm" action="/athletic/grading" class="parsley-form" method="post">
+					
+					<?php //-- Select School --//
+					if($schools && $this->session->get("user-role") <= 3){ ?>
+						<div class="form-group">
+							<label for="filter-schools">School Filter</label>
+							<select name="filterSchool" id="filter-schools" class="form-control" data-required="true">
+								<option value="">Select School</option>
+								<?php
+									//-- List Out Schools --//
+									$curState = '';
+									foreach($schools as $school){
+										if($school->state != $curState){
+											if($curState){
+												echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+											}else{
+												echo '<optgroup label="'.$states[$school->state].'">';
+											}
+											$curState = $school->state;
+										}
+										if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+									}
+									echo '</optgroup>';
+								?>
+							</select>
+						</div><?php
+					} ?>
+					
+					<?php //-- Select Interval --//
+						$intervals = array(array("id" => 1, "intervalName" => "Assessment 1"), array("id" => 2, "intervalName" => "Assessment 2"));
+						if(isset($intervals) && $intervals){ ?>
+							<div class="form-group">	
+								<label for="grading-interval">Testing Phase</label>
+								<select id="grading-interval" name="grading-interval" class="form-control" data-required="true">
+									<option value="">Select Phase</option><?php
+									foreach($intervals as $interval){
+										if(isset($intervalID) && $intervalID == $interval['id']){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$interval['id'].'" '.$sel.'>'.$interval['intervalName'].'</option>';
+									} ?>
+								</select>
+							</div><?php
+						}
+						
+						/*//-- Select Class Period --// ?>
+						<div class="form-group">	
+							<label for="class-period">Class Period</label>
+							<select id="class-period" name="class-period" class="form-control" data-required="true">
+								<option value="">Select Period</option><?php
+								$x = 1;
+								while($x < 11){
+									if(isset($periodID) && $periodID == $x){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+									echo '<option value="'.$x.'" '.$sel.'>Period '.$x.'</option>';
+									$x++;
+								} ?>
+								<option value="0" <?php if(isset($periodID) && $periodID == 0){ echo 'selected="selected"'; } ?>>Unassigned</option>
+							</select>
+						</div><?php*/
+						
+						//-- Assessment Filter --//
+						if(isset($assessments) && !empty($assessments)){ ?>
+							<div class="form-group">	
+								<label for="filter-assessments">Assessment</label>
+								<select id="filter-assessments" name="filterAssessments" class="form-control" data-required="true">
+									<option value="">Select Assessment</option><?php
+									foreach($assessments as $test){
+										if(isset($assessmentUrl) && $test->url_name == $assessmentUrl){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+										echo '<option value="'.$test->id.'" '.$sel.'>'.$test->assessment_name.'</option>';
+									} ?>
+								</select>
+							</div><?php
+						} ?>
+				</form>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary submitInterval">Submit</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- End Grading Interval Modal -->
+
+<!-- BMI Key Modal -->
+<div id="bmiKeyModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				<!-- Legend -->
+				<div class="well col-sm-12" style="float: none; margin: 0; position: relative; top: 5px;">
+					<h4 style="font-weight: 600;">BMI Color Codes</h4>
+					<p><span class="label label-info" style="font-size: 11px;">BMI &lt; 18.5</span>&nbsp;&nbsp; <i class="fa fa-long-arrow-right"></i>&nbsp;&nbsp;<span class="font14">Under Weight</span></p>
+					<p><span class="label label-success" style="font-size: 11px;">BMI &gt; 18.5</span>&nbsp;&nbsp; <i class="fa fa-long-arrow-right"></i>&nbsp;&nbsp;<span class="font14">Normal Weight</span></p>
+					<p><span class="label label-secondary" style="font-size: 11px;">BMI &gt; 24.9</span>&nbsp;&nbsp; <i class="fa fa-long-arrow-right"></i>&nbsp;&nbsp;<span class="font14">Over Weight</span></p>
+					<p><span class="label label-primary" style="font-size: 11px;">BMI &gt; 29.9</span>&nbsp;&nbsp; <i class="fa fa-long-arrow-right"></i>&nbsp;&nbsp;<span class="font14">Considered Obese</span></p>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<!-- End BMI Key Modal -->

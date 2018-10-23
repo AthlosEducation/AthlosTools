@@ -1,0 +1,181 @@
+<?php
+/*
+*	Widget: Missing Athletic Assessments Portlet
+*/
+?>
+<div class="portlet">
+	<div class="portlet-header">
+		<h3>
+			<i class="fa fa-star-half-o"></i> Missing Athletic Assessments
+		</h3>
+		<ul class="portlet-tools pull-right">
+			<li>
+				<span id="missing-assessments-student-search-toggle" class="btn btn-sm btn-default"><i class="fa fa-search"></i> &nbsp;Student Search</span>
+			</li>
+		</ul>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content" style="padding-top: 15px;">
+		
+		<div id="miss-assess-student" style="display: none;">
+			<?php //-- school filter --//
+			if($schools && (!isset($schoolID) || !$schoolID)){ ?>
+				<label for="miss-assess-student-school">School Filter</label>
+				<select id="miss-assess-student-school" class="form-control" style="margin: 0 0 10px 0;">
+					<option value="">Select School</option>
+					<?php
+						//-- List Out Schools --//
+						$curState = '';
+						foreach($schools as $school){
+							if($school->state != $curState){
+								if($curState){
+									echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+								}else{
+									echo '<optgroup label="'.$states[$school->state].'">';
+								}
+								$curState = $school->state;
+							}
+							if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+							echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+						}
+						echo '</optgroup>';
+					?>
+				</select><?php
+			}else if(isset($schoolID) || $schoolID){ ?>
+				<input type="hidden" id="miss-assess-student-school" value="<?php echo $schoolID; ?>" /><?php
+			} ?>
+			<!-- Testing Phases -->
+			<div class="miss-assess-student-phases" style="margin: 0 0 10px 0;">
+				<label for="ma-student-phases">Testing Phase</label>
+				<select id="ma-student-phases" class="form-control">
+					<?php
+						foreach($newIntervals as $interval){
+							echo '<option value="'.$interval['id'].'">'.$interval['intervalName'].'</option>';
+						}
+						/*foreach($intervals as $interval){
+							echo '<option value="'.$interval->id.'">'.$interval->intervalName.'</option>';
+						}*/
+					?>
+				</select>
+			</div>
+			<!-- student search bar -->
+			<div class="miss-assess-search-student" style="margin: 0 0 10px 0;">
+				<label for="miss-assess-student-search">Find Student</label>
+				<div class="input-group">
+					<input type="text" id="miss-assess-student-search" class="form-control" placeholder="Student Name" value="" />
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-tertiary" id="miss-assess-search-students"><i class="fa fa-search" id="miss-assess-search-students-txt"></i></button>
+					</div><!-- /input-group-btn -->
+				</div>
+				<ul id="miss-assess-student-results"></ul>
+			</div><hr>
+			
+		</div>
+		<div id="miss-assess-all">
+			<?php //-- school filter --//
+			if($schools && (!isset($schoolID) || !$schoolID)){ ?>
+				<label for="miss-assess-all-school">School Filter</label>
+				<select id="miss-assess-all-school" class="form-control" style="margin: 0 0 10px 0;">
+					<option value="">Select School</option>
+					<?php
+						//-- List Out Schools --//
+						$curState = '';
+						foreach($schools as $school){
+							if($school->state != $curState){
+								if($curState){
+									echo '</optgroup><optgroup label="'.$states[$school->state].'">';
+								}else{
+									echo '<optgroup label="'.$states[$school->state].'">';
+								}
+								$curState = $school->state;
+							}
+							if(isset($schoolID) && $school->id == $schoolID){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+							echo '<option value="'.$school->id.'" '.$sel.'>'.$school->schoolName.' ('.$school->city.', '.$school->state.')</option>';
+						}
+						echo '</optgroup>';
+					?>
+				</select><?php
+			}else if(isset($schoolID) || $schoolID){ ?>
+				<input type="hidden" id="miss-assess-all-school" value="<?php echo $schoolID; ?>" /><?php
+			} ?>
+			<!-- Coach Filter (Optional) -->
+			<div class="miss-assess-coach" style="margin: 0 0 10px 0;">
+				<label for="ma-coach">Coach Filter (Optional)</label>
+				<select id="ma-coach" class="form-control">
+					<option value="">Select Coach</option>
+					<?php
+						//-- Print out the coach options if school is already set --//
+						if(isset($schoolID) || !empty($schoolID)){
+							//-- Compile Coach Query --//
+							$coach_students = Students::find(array("school = :sid: AND active = 1", "bind" => array("sid" => $schoolID), "column" => 'coach', "group" => 'coach'));
+							if(!empty($coach_students)){
+								$csList = '';
+								foreach($coach_students as $cs){
+									if(isset($cs->coach) && $cs->coach != 0){
+										if($csList == ''){
+											$csList.= 'id = '.$cs->coach;
+										}else{
+											$csList.= ' OR id = '.$cs->coach;
+										}
+									}
+								}
+							}
+					
+							//-- Grab Coaches --//
+							if(isset($csList) && $csList){
+								$coachList = Users::find(array($csList, "order" => "lname ASC, fname ASC"));
+								//-- List Out Coaches --//
+								if(!empty($coachList)){
+									foreach($coachList as $coach){
+										echo '<option value="'.$coach->id.'" data-type="coach">'.$coach->lname.', '.$coach->fname.'</option>';
+									}
+								}
+							}
+						}
+					?>
+				</select>
+			</div>
+			
+			<!-- Testing Phases -->
+			<div class="miss-assess-all-phases" style="margin: 0 0 10px 0;">
+				<label for="ma-all-phases">Testing Phase</label>
+				<select id="ma-all-phases" class="form-control">
+					<option value="">Select Phase</option>
+					<?php
+						foreach($newIntervals as $interval){
+							echo '<option value="'.$interval['id'].'">'.$interval['intervalName'].'</option>';
+						}
+						/*foreach($intervals as $interval){
+							echo '<option value="'.$interval->id.'">'.$interval->intervalName.'</option>';
+						}*/
+					?>
+				</select>
+			</div>
+			
+			<!-- Testing Phases -->
+			<div class="miss-assess-all-tests" style="margin: 0 0 10px 0;">
+				<label for="ma-all-tests">Assessment</label>
+				<select id="ma-all-tests" class="form-control">
+					<option value="all">All Assessments</option>
+					<?php
+						$assessments = AthleticAssessments::find(array('active = 1', "order" => "assessment_name ASC"));
+						if(!empty($assessments)){
+							foreach($assessments as $test){
+								echo '<option value="'.$test->url_name.'" data-type="'.$test->type.'">'.$test->assessment_name.'</option>';
+							}
+						}
+					?>
+				</select>
+			</div>
+			<div style="margin: 0 0 10px 0; text-align: center;">
+				<span id="miss-assess-all-get-list" class="btn btn-secondary">Get Missing Assessment List &nbsp;<i class="fa fa-arrow-right"></i></span>
+			</div><hr>
+		</div>
+		
+		<div id="missing-assessment-details">
+			<div class="well">
+				No search has been performed...
+			</div>
+		</div><!-- /#missing-assessment-details -->
+
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

@@ -1,0 +1,167 @@
+<?php
+/*
+*	Widget: Tracking Athletic Metrics Portlet
+*/
+?>
+<div class="portlet">
+	<div class="portlet-header">
+		<h3>
+			<i class="fa fa-location-arrow"></i> Tracking Athletic Metrics
+		</h3>
+		<ul class="portlet-tools pull-right">
+			<li>
+				<span id="track-metrics-settings-toggle" class="btn btn-sm btn-default"><i class="fa fa-gears"></i> &nbsp;Settings</span>
+			</li>
+		</ul>
+	</div> <!-- /.portlet-header -->
+	<div class="portlet-content" style="padding-top: 15px;">
+		
+		<div id="track-metrics-settings" style="display: none;">
+			<?php
+			/* Track Metric Settings
+			---------------------------*/
+			$levels = GradeLevel::find('');
+			if($schools && (!isset($schoolID) || !$schoolID)){
+				echo '<h4>Schools to Include:</h4>';
+				
+				//-- List Out School Checkboxes --//
+				$curState = '';
+				foreach($schools as $school){
+					if($school->state != $curState){
+						echo '<h5 style="font-weight: 600;">'.$states[$school->state].'</h5>';
+						$curState = $school->state;
+					}
+					echo '<p class="tsm-container"><input type="checkbox" value="'.$school->id.'" checked="checked" class="track-school" id="track-school-'.$school->id.'" style="position: relative; bottom: 1px;" /> &nbsp; <i class="fa fa-toggle-right" style="cursor: pointer;"></i> &nbsp; <label for="track-school-'.$school->id.'" style="font-weight: normal; margin: 0;">'.$school->schoolName.' ('.$school->city.', '.$school->state.')</label></p>';
+					
+					//-- List out grade levels --//
+					$grade_list = Students::find(array('school = :sid:', "bind" => array("sid" => $school->id), "columns" => "grade", "group" => "grade"));
+					if(!empty($grade_list)){
+						echo '<div class="school-grades-container" style="position: relative; bottom: 8px; margin: 0 0 2px 22px; display: none;">';
+						foreach($grade_list as $sGrade){
+							echo '<p style="margin: 0;"><input type="checkbox" value="'.$sGrade->grade.'" checked="checked" class="track-grade" id="track-grade-'.$school->id.'-'.$sGrade->grade.'" style="position: relative; bottom: 1px;" /> &nbsp; <label for="track-grade-'.$school->id.'-'.$sGrade->grade.'" style="font-weight: normal; margin: 0;">'.$levels[$sGrade->grade]->gradeName.'</label></p>';
+						}
+						echo '</div><!-- /.school-grades-container -->';
+					}
+					
+				}
+				
+			}else if(isset($schoolID) || $schoolID){
+				//-- If not Admin and set to 1 school --//
+				echo '<h5 style="font-weight: 600;">'.$states[$school->state].'</h5>';
+				echo '<p class="tsm-container"><input type="checkbox" value="'.$theSchool->id.'" checked="checked" class="track-school" id="track-school-'.$theSchool->id.'" style="position: relative; bottom: 1px;" /> &nbsp; <i class="fa fa-toggle-right" style="cursor: pointer;"></i> &nbsp; <label for="track-school-'.$theSchool->id.'" style="font-weight: normal; margin: 0;">'.$theSchool->schoolName.' ('.$theSchool->city.', '.$theSchool->state.')</label></p>';
+				
+				//-- List out grade levels --//
+				$grade_list = Students::find(array('school = :sid:', "bind" => array("sid" => $theSchool->id), "columns" => "grade", "group" => "grade"));
+				if(!empty($grade_list)){
+					echo '<div class="school-grades-container" style="position: relative; bottom: 8px; margin: 0 0 2px 22px; display: none;">';
+					foreach($grade_list as $sGrade){
+						echo '<p style="margin: 0;"><input type="checkbox" value="'.$theSchool->id.'-'.$sGrade->grade.'" checked="checked" class="track-grade" id="track-grade-'.$theSchool->id.'-'.$sGrade->grade.'" style="position: relative; bottom: 1px;" /> &nbsp; <label for="track-grade-'.$theSchool->id.'-'.$sGrade->grade.'" style="font-weight: normal; margin: 0;">'.$levels[$sGrade->grade]->gradeName.'</label></p>';
+					}
+					echo '</div><!-- /.school-grades-container -->';
+				}
+			}
+			?>
+		</div><!-- /#track-metrics-settings -->
+		<div id="track-metrics-report">
+			<?php
+			//-- School Year Filter --//
+			if($semesters){ ?>
+				<div class="tm-year" action="" method="post" style="margin: 0 0 10px 0;">
+					<label for="tm-year">School Year</label>
+					<select id="tm-year" class="form-control">
+						<?php
+							//-- List Out Semesters --//
+							foreach($semesters as $term){
+								if($term->id == $this->session->get("current-semester")){ $sel = 'selected="selected"'; }else{ $sel = ''; }
+								echo '<option value="'.$term->id.'" '.$sel.'>'.$term->semesterName.'</option>';
+							}
+						?>
+					</select>
+				</div><?php
+			} ?>
+			
+			<!-- Testing Phases -->
+			<div class="track-metrics-phases" style="margin: 0 0 10px 0;">
+				<label for="track-metrics-phases">Testing Phase</label>
+				<select id="track-metrics-phases" class="form-control">
+					<option value="">Select Phase</option>
+					<?php
+						foreach($newIntervals as $interv){
+							echo '<option value="'.$interv['id'].'" data-type="new">'.$interv['intervalName'].'</option>';
+						}
+						foreach($intervals as $interval){
+							echo '<option value="'.$interval->id.'" data-type="old">'.$interval->intervalName.'</option>';
+						}
+					?>
+				</select>
+			</div>
+			
+			<!-- BUILD OUT QUERY -->
+			<div class="row" style="margin-bottom: 0;">
+				<div class="col-sm-12">
+					<label>Build Query:</label>
+				</div><!-- /.col -->
+			</div><!-- /.row -->
+			<div class="row" style="margin-bottom: 0;">
+				<div class="col-sm-5">
+					<!-- Assessment List -->
+					<div class="tm-assessments" style="margin: 0 0 10px 0;">
+						<select id="tm-assessments" class="form-control">
+							<option value="">Select Metric</option>
+							<?php
+								$assessments = AthleticAssessments::find(array("", "order" => "assessment_name ASC"));
+								if(!empty($assessments)){
+									foreach($assessments as $test){
+										if($test->data_label == 'Sec.'){ $newLabel = 'Seconds'; }else if($test->data_label == 'In.'){ $newLabel = "Inches"; }else{ $newLabel = $test->data_label; }
+										echo '<option value="'.$test->url_name.'" data-type="'.$test->type.'" data-measure="'.$test->data.'" data-label="'.$newLabel.'" data-active="'.$test->active.'">'.$test->assessment_name.'</option>';
+									}
+								}
+							?>
+						</select>
+					</div>
+				</div><!-- /.col -->
+				<div class="col-sm-2" style="padding: 0;">
+					<!-- Comarison Operators -->
+					<div class="tm-operators" style="margin: 0 0 10px 0;">
+						<select id="tm-operators" class="form-control">
+							<option value=""></option>
+							<option value="equal" data-text="that is equal to">=</option>
+							<option value="greater" data-text="that is greater than">&gt;</option>
+							<option value="less" data-text="that is less than">&lt;</option>
+						</select>
+					</div>
+				</div><!-- /.col -->
+				<div class="col-sm-5">
+					<div class="form-group" style="margin-bottom: 0;">
+						<div class="input-group">
+							<input class="form-control" id="tm-query-data" type="text" />
+							<span class="input-group-addon">?</span>
+						</div>
+					</div>
+				</div><!-- /.col -->
+			</div><!-- /.row -->
+			<div class="row" style="margin-bottom: 0;">
+				<div class="col-sm-12">
+					<div class="well well-sm" id="text-query">
+						All students that have a 
+						<span class="assessment-txt"></span>
+						<span class="operator-txt"></span>
+						<span class="value-txt"></span>
+					</div>
+				</div><!-- /.col -->
+			</div><!-- /.row -->
+			<!-- END BUILD OUT QUERY -->
+			
+			<div style="margin: 0 0 10px 0; text-align: center;">
+				<span id="tm-retrieval" class="btn btn-secondary">Retrieve Metrics &nbsp;<i class="fa fa-arrow-right"></i></span>
+			</div>
+			<hr>
+			<div id="tm-retrieval-results">
+				<div class="well">
+					No metrics have been run...
+				</div>
+			</div><!-- /#missing-assessment-details -->
+		</div>
+
+	</div> <!-- /.portlet-content -->
+</div> <!-- /.portlet -->

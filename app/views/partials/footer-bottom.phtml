@@ -1,0 +1,323 @@
+<script type="text/javascript">
+	//-- Error Messages Popup --//
+	function howlerMsg(status, title, msg, duration, icon, sticky){
+		jQuery.howl ({
+			type: status,
+			title: title,
+			content: msg,
+			lifetime: duration,
+			iconCls: icon,
+			sticky: sticky
+		});
+	}
+</script>
+
+<!-- Basic Modal to display all content -->
+<div id="basicModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title"></h3>
+			</div>
+			<div class="modal-body">
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="simpleModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body">
+				
+			</div>
+			<div class="modal-footer">
+				<span class="view_author" style="float: left; position: relative; top: 5px; font-size: 14px;"></span>
+				<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Howl Messages -->
+<ul class="howl"></ul>
+
+<?php
+
+echo $this->tag->javascriptInclude("js/jquery.iframe-transport.js");
+echo $this->tag->javascriptInclude("js/jquery.fileupload.js");
+
+?>
+
+<!-- Form to start CSV file Export -->
+<form id="exportCSV" name="exportCSV" method="post" action="" target="_blank">
+	<input type="hidden" id="CSVaction" name="action" value="CSVExport">
+	<input type="hidden" id="CSVType" name="CSVType" value="">
+	<input type="hidden" id="CSVRows" name="CSVRows" value="">
+	<input type="hidden" id="CSVschool" name="CSVschool" value="">
+	<input type="hidden" id="CSVgrade" name="CSVgrade" value="">
+	<input type="hidden" id="CSVteacher" name="CSVteacher" value="">
+	<input type="hidden" id="CSVonlyAltIDs" name="CSVonlyAltIDs" value="">
+</form><!-- /CSV Export -->
+
+<script type="text/javascript">
+
+	$(document).ready(function() {
+ 		
+		$.fn.getCSV = function(){
+			
+			var x=0;
+			$('input:checkbox.select-check').each(function () {
+				var sThisVal = (this.checked ? $(this).val() : "");
+				if(sThisVal != ""){
+					if(x==0){
+						$("#CSVRows").val(sThisVal)
+					}else{
+						var newVal = $("#CSVRows").val() + "," + sThisVal;
+						$("#CSVRows").val(newVal);
+					}
+					x++;
+				}
+			});
+				
+			var currLocation = $(location).attr('href').replace("/staff","");
+			$("#exportCSV").attr("action", currLocation + "/csvexport");
+			
+			if($("#filter-schools").length > 0 && $.isNumeric($("#filter-schools").val())){
+				$("#CSVschool").val($("#filter-schools").val());
+			}
+			
+			if($("#filter-grade").length > 0 && $.isNumeric($("#filter-grade").val())){
+				$("#CSVgrade").val($("#filter-grade").val());
+			}
+			
+			if($("#filter-teacher").length > 0 && $.isNumeric($("#filter-teacher").val())){
+				$("#CSVteacher").val($("#filter-teacher").val());
+			}
+						
+			if($("#CSVRows").val() == ""){
+				$("#CSVType").val("full");
+			}else{
+				$("#CSVType").val("selected");
+			}
+			$("#exportCSV").submit();
+		}
+
+	});
+	
+	//jquery file upload handler
+	$(function () {
+	    'use strict';
+	    // Change this to the location of your server-side upload handler:
+		var currLocation = $(location).attr('href').replace("/staff","");
+	    var uploadUrl = currLocation + "/csvupload";
+		var importUrl = currLocation + "/csvimport";
+		var theTrait = "";
+		$("#upload-trait").change(function(){
+			if($(this).val() > 0){
+				theTrait = $(this).val();
+			}
+		});
+	
+	    $('#fileupload').fileupload({
+	        url: uploadUrl,
+	        dataType: 'json',
+			maxFileSize: 5000000,
+			acceptFileTypes: /(\.|\/)(csv)$/i,
+	        done: function (e, data) {
+				
+				var theSchool = '';
+				if($('#theImportSchool').get(0)){
+					theSchool = $('#theImportSchool').val();
+				}
+				//-- Make sure a school is selected --//
+				if(theSchool !== 'none'){
+					
+					$('#fileUploads').empty();
+					console.log(data);
+		            $.each(data.result.files, function (index, file) {
+						if('error' in file){
+							alert("Your file: '" + file.name + "' received the following error after being uploaded -- '" + file.error +"' -- Please Try Again");
+						}else{
+							$.ajax({
+								type: "post",
+								url: importUrl,
+								data: { name: file.name, action: "CSVImport", trait: theTrait, importSchool: theSchool },
+								success: function(data){
+									console.log(data);
+									var results = jQuery.parseJSON(data);
+									//alert(results.recordsUpdated);
+									if('uploaded' in results){
+										$('<h5/>').text("Your File '" + results.uploaded + "' Was Successfully Uploaded").appendTo('#fileUploads');
+									}	
+									//messages for newly Added							
+									if('added' in results){
+										$('<h4/>').text("Successfully Added The Following " + results.userType + ":").appendTo('#fileUploads');
+
+										if(results.userType == "Student(s)"){
+											$('<h5/>').text("Click a Name to Add/Confirm Parent Relationships:").appendTo('#fileUploads');
+										}
+
+										$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+										var addedSplit = results.added.split(',');
+										if(typeof results.addedID !== 'undefined'){
+											var addedIDSplit = results.addedID.split(',');
+										}
+										$.each(addedSplit, function(number){
+											if(addedSplit[number] != ""){
+												if(typeof results.addedID !== 'undefined'){
+													$('<li/>').addClass("assignParents").attr("data-student-val",addedIDSplit[number]).attr("data-student-name",addedSplit[number]).text(addedSplit[number]).appendTo('#fileUploads ul:last');
+												}else{
+													$('<li/>').addClass("editUser").attr("data-user-val","id").text(addedSplit[number]).appendTo('#fileUploads ul:last');
+												}	
+											}
+										});
+									}
+
+									//Updated Records
+									if(results.recordsUpdated > 0){
+										if('resultSucceeded' in results){
+											$('<h4/>').text("Successfully Added/Updated " + results.userType + " For The Following :").appendTo('#fileUploads');
+											$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+											var succeededSplit = results.resultSucceeded.split(',');
+											$.each(succeededSplit, function(number){
+												if(succeededSplit[number] != ""){
+													$('<li/>').text(succeededSplit[number]).appendTo('#fileUploads ul:last');
+												}
+											});
+										}else{
+											$('<h4/>').text("Successfully Updated The Following " + results.userType + ":").appendTo('#fileUploads');
+											$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+											var updatesSplit = results.updatedRecords.split(',');
+											$.each(updatesSplit, function(number){
+												if(updatesSplit[number] != ""){
+													$('<li/>').text(updatesSplit[number]).appendTo('#fileUploads ul:last');
+												}
+											});
+										}
+
+									}else if(results.recordsAdded > 0){
+										if('resultSucceeded' in results){
+											$('<h4/>').text("Successfully Added " + results.userType + " For The Following :").appendTo('#fileUploads');
+											$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+											var succeededSplit = results.resultSucceeded.split(',');
+											$.each(succeededSplit, function(number){
+												if(succeededSplit[number] != ""){
+													$('<li/>').text(succeededSplit[number]).appendTo('#fileUploads ul:last');
+												}
+											});
+										}
+									}else{
+										$('<h4/>').text("No Records Were Updated").appendTo('#fileUploads');
+										if('resultFailed' in results){
+											$('<h4/>').text("Failed to Add/Update " + results.userType + " For The Following :").appendTo('#fileUploads');
+											$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+											var failedSplit = results.resultFailed.split(',');
+											$.each(failedSplit, function(number){
+												if(failedSplit[number] != ""){
+													$('<li/>').text(failedSplit[number]).appendTo('#fileUploads ul:last');
+												}
+											});
+											$('<h5/>').text("Error Messages:").appendTo('#fileUploads');
+											$.each(results.msg, function(number){
+												if(results.msg[number] != ""){
+													$('<p/>').text(results.msg[number]).appendTo('#fileUploads');
+												}
+											});
+										}
+									}
+
+									//Messages if Parents Already Exist
+									if('parentsExist' in results){
+										$('<h5/>').text("These Students Parents are already linked to them").appendTo('#fileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+										var existSplit = results.parentsExist.split(',');
+										$.each(existSplit, function(number){
+											if(existSplit[number] != ""){
+												$('<li/>').text(existSplit[number]).appendTo('#fileUploads ul:last');
+											}
+										});
+									}
+
+									//Messages if Parents were unable to be saved
+									if('parentsRejected' in results){
+										$('<h5/>').text("These Students Parents relationships were unable to be saved").appendTo('#fileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+										var rejectedSplit = results.parentsRejected.split(',');
+										$.each(rejectedSplit, function(number){
+											if(rejectedSplit[number] != ""){
+												$('<li/>').text(rejectedSplit[number]).appendTo('#fileUploads ul:last');
+											}
+										});
+									}
+
+									//Error Messages
+									if('failed' in results){
+										$('<h4/>').text("Failed Adding/Updating The Following " + results.userType + ":").appendTo('#fileUploads');
+										$('<ul/>').addClass("list-inline").appendTo('#fileUploads');
+										var failSplit = results.failed.split(',');
+										$.each(failSplit, function(number){
+											if(failSplit[number] != ""){
+												$('<li/>').text(failSplit[number]).appendTo('#fileUploads ul:last');
+											}
+										});
+										$('<h5/>').text("Error Messages:").appendTo('#fileUploads');
+										$.each(results.msg, function(number){
+											if(results.msg[number] != ""){
+												$('<p/>').text(results.msg[number]).appendTo('#fileUploads');
+											}
+										});
+
+									}
+
+									if('permissions' in results){
+										$('<h4/>').text("Your Permissions Are Not Sufficient to Perform This Action").appendTo('#fileUploads');
+									}
+								}
+							})
+						}
+		                //$('<p/>').text(file.name).appendTo('#fileUploads');
+		            });
+					
+				}else{
+					//-- Failed - No School Selected, when school dropdown is available--//
+					howlerMsg('danger', 'No School Selected', 'No school was selected for us to import users to. Please select a school and try again.', 7500, 'fa fa-exclamation', false);
+				}
+				
+	        },
+	        progressall: function (e, data) {
+	            var progress = parseInt(data.loaded / data.total * 100, 10);
+	            $('#progress .progress-bar').css(
+	                'width',
+	                progress + '%'
+	            );
+	        }
+	    }).prop('disabled', !$.support.fileInput)
+	        .parent().addClass($.support.fileInput ? undefined : 'disabled');
+	});
+
+</script>
+
+<script type="text/javascript" src="https://s3.amazonaws.com/assets.freshdesk.com/widget/freshwidget.js"></script>
+<script type="text/javascript">
+	FreshWidget.init("", {"queryString": "&widgetType=popup", "widgetType": "popup", "buttonType": "text", "buttonText": "Support", "buttonColor": "white", "buttonBg": "#222222", "alignment": "3", "offset": "70px", "formHeight": "500px", "url": "https://athlos.freshdesk.com"} );
+</script>
+
+<script>
+	//-- Google Analytics Tracking --//
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-48101675-2', 'athlosacademies.org');
+  ga('send', 'pageview');
+</script>
+
+</body>
+</html>

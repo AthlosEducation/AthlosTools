@@ -1,0 +1,76 @@
+<?php
+
+//-- Page Vars --//
+$page_title = 'Edit Profile';
+
+
+	//-- Pull in Header --//
+	Phalcon\Tag::appendTitle($page_title);
+	$this->partial("partials/header-top");
+	$this->partial("partials/styles/default");
+	$this->partial("partials/header-bottom");
+
+	//-- Page Content Title --//
+	echo '<div id="content-header"><h1>'.$page_title.'</h1></div><!-- #content-header -->';
+
+	//-- Page Content --// ?>
+	<div id="content-container">
+		
+		<?php $this->flashSession->output(); ?>
+		
+		<div class="col-sm-8">
+			<!-- Edit User Form -->
+			<form id="editProfileForm" action="" class="form parsley-form" method="post">
+				<input type="hidden" id="send-email" name="send_email" value="">
+				
+				<!-- Personal Info Section -->
+				<div class="form-group">
+					<label for="edit-first">First Name</label>
+					<input type="text" name="first" id="edit-first" class="form-control" value="<?php echo $profile->fname; ?>" data-required="true">
+				</div>
+				<div class="form-group">
+					<label for="edit-last">Last Name</label>
+					<input type="text" name="last" id="edit-last" class="form-control" value="<?php echo $profile->lname; ?>" data-required="true">
+				</div>
+				<div class="form-group">
+					<label for="edit-email">Email Address</label> &nbsp;<em class="field-msg"></em>
+					<input type="text" name="email" id="edit-email" class="form-control" value="<?php echo $profile->email; ?>" data-required="true">
+				</div>
+
+				<!-- Password Section -->
+				<div style="margin: 0 0 5px;">
+					<span class="label label-primary edit-generate" style="cursor: pointer;">Generate Password</span>
+				</div>
+				<div class="form-group">
+					<label for="edit-pass">Password</label> &nbsp;<em class="field-msg"></em>
+					<input type="password" name="pass" id="edit-pass" class="form-control" value="">
+				</div>
+				<div class="form-group">
+					<label for="confirm-edit-pass">Re-enter Password</label> &nbsp;<em class="field-msg"></em>
+					<input type="password" name="confirm-pass" id="confirm-edit-pass" class="form-control" value="">
+				</div>
+				
+			</form>
+			
+			<div class="form-group">
+				<div class="checkbox">
+					<label>
+						<input type="checkbox" id="sendEmail" value="" checked="checked"> Send email with your new password.<br><em style="color: #e5412d;">(sends only when your password changes)</em>
+					</label>
+				</div>
+			</div>
+			
+			<div class="form-group">
+				<span class="btn btn-primary" id="updateStudentProfile">Update Profile</span>
+			</div>
+			
+		</div>
+		
+	</div>
+
+<?php
+	//-- Footer --//
+	$this->partial("partials/footer-top");
+	$this->partial("partials/scripts/profile");
+	$this->partial("partials/footer-bottom");
+?>

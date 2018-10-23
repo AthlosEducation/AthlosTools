@@ -1,0 +1,105 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		
+		/*-------------------------
+			Verify Guardianship
+		--------------------------*/
+		$('.verify-child').click(function(e){
+			//-- Grab the data --//
+			var relID = $(this).attr('data-rel-val');
+			var theName = $(this).parent('p').siblings('h3').children('span.student-name').text();
+			var status = $(this).parent('p').siblings('.relationship').children('span.rel-status');
+			
+			//console.log('id: '+ relID +' - name: '+ theName +' - status: '+ status);
+			
+			var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/updaterelation";'."\n"; ?>
+			var data = {
+				action: "verify_child",
+				relID: relID
+				};
+			jQuery.post(ajaxurl, data, function(json){
+				if(typeof json != 'undefined'){
+					var results = jQuery.parseJSON(json);
+					if(typeof results.result != 'undefined'){
+						if(results.result == 'success'){
+							//-- Update Status --//
+							$(status).removeClass('text-primary').addClass('text-success');
+							$(status).children('i').removeClass('fa-ban').addClass('fa-check');
+							$(status).children('span').text('Verified');
+							//-- Success - Howler MSG --//
+							howlerMsg('success', 'Verification Successful', 'The relationship between you and '+ theName +' has been verified.', 7500, 'fa fa-check', false);
+						}else if(results.result == 'failed'){
+							//-- Failed - Howler MSG --//
+							howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+						}
+					}
+				}
+			});
+			
+		});
+		/*----------------------------
+			end verify guardianship
+		-----------------------------*/
+		
+		/*-------------------------
+			Remove Relationship
+		--------------------------*/
+		$('.remove-child').click(function(e){
+			//-- Grab the data --//
+			var relID = $(this).attr('data-rel-val');
+			var theName = $(this).parent('p').siblings('h3').children('span.student-name').text();
+			var status = $(this).parent('p').siblings('.relationship').children('span.rel-status');
+			var thisBtn = $(this);
+			
+			bootbox.confirm("Are you sure you want to remove this relationship with "+ theName +"?", function(result){
+				if(result){
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/updaterelation";'."\n"; ?>
+					var data = {
+						action: "remove_child",
+						relID: relID
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Update Status --//
+									$(status).removeClass('text-success').addClass('text-primary');
+									$(status).children('i').removeClass('fa-ban').removeClass('fa-check').addClass('fa-times');
+									$(status).children('span').text('Removed');
+									
+									//-- Remove From Page --//
+									$(thisBtn).parent('p').fadeOut(500).delay(500).remove();
+									
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Relationship Removed', 'The relationship between you and '+ theName +' has been removed.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				}
+			});
+			
+			
+			
+		});
+		/*-----------------------------
+			end remove relationship
+		------------------------------*/
+		
+	});
+</script>

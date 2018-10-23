@@ -1,0 +1,562 @@
+<?php
+	//-- Scripts --//
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-1.9.1.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/jquery-ui-1.9.2.custom.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/bootstrap.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/plugins/howl/howl.js");
+	echo $this->tag->javascriptInclude("js/bootbox.min.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/App.js");
+	echo $this->tag->javascriptInclude("js/canvas-admin/libs/raphael-2.1.2.min.js");
+	
+?>
+<script type="text/javascript">
+	jQuery(document).ready(function($){
+		/*------------------
+			Add Semester
+		-------------------*/
+		$('#createSemester').click(function(e){
+			var semName = $('#new-semester').val();
+			if(semName){
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/addsemester";'."\n"; ?>
+				var data = {
+					action: "add_semester",
+					theName: semName
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- Add to semester list --//
+								if(results.semesterID){
+									$('#semester-list').prepend('<div class="checkbox"><label><input type="checkbox" class="setSemester" value="'+ results.semesterID +'"> <span class="bold semester-name">'+ results.semesterName +'</span></label><span class="text-primary editSemester" data-sem-val="'+ results.semesterID +'"><i class="fa fa-pencil"></i></span><span class="text-primary delSemester" data-sem-val="'+ results.semesterID +'"><i class="fa fa-times"></i></span></div>');	
+								}
+								//-- Set Event Listeners --//
+								$('body').off("change", ".setSemester").on("change", ".setSemester", function(){ $(this).setCurrentSemester(); });
+								$('body').off("click", ".delSemester").on("click", ".delSemester", function(){ $(this).deleteSemester(); });
+								$('body').off("click", ".editSemester").on("click", ".editSemester", function(){ $(this).renameSemester(); });
+								//-- Failed - Howler MSG --//
+								howlerMsg('success', 'Semester Added', 'The semester was created successfully.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Add Semester Failed', 'There was a problem adding the semester. Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+			}
+		});
+		/*---------------------
+			end add semester
+		----------------------*/
+		
+		$.fn.setCurrentSemester = function(){
+			if(!$(this).hasClass('active')){
+				if($(this).prop('checked')){
+					var semesterID = $(this).val();
+					var semesterName = $(this).next('span.semester-name').text();
+					var thisItem = $(this);
+					if(semesterID){
+						bootbox.confirm("Are you sure you want to set <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ semesterName +"</span> as the current semester?", function(result){
+							if(result){
+								var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/setsemester";'."\n"; ?>
+								var data = {
+									action: "set_semester",
+									theID: semesterID
+									};
+								jQuery.post(ajaxurl, data, function(json){
+									if(typeof json != 'undefined'){
+										var results = jQuery.parseJSON(json);
+										if(typeof results.result != 'undefined'){
+											if(results.result == 'success'){
+												//-- clear the old active semester --//
+												if(results.cleared == 'success'){
+													$('.setSemester').prop('checked', false).removeClass('active');
+													$(thisItem).prop('checked', true).addClass('active');
+												}
+												//-- Success - Howler MSG --//
+												howlerMsg('success', 'Set to Current Semester', 'The current semester was changed to '+ semesterName, 7500, 'fa fa-check', false);
+											}else if(results.result == 'failed'){
+												//-- Failed - Howler MSG --//
+												howlerMsg('danger', 'Set Semester Failed', 'Something went wrong, the current semester was not changed.', 7500, 'fa fa-exclamation', false);
+											}
+										}
+									}
+								});
+
+							}
+						});
+					}
+				}
+			}else{
+				$(this).prop('checked', true);
+			}	
+		} //-- end setCurrentSemester() --//
+		
+		$.fn.renameSemester = function(){
+			var semesterID = $(this).attr('data-sem-val');
+			var semesterName = $(this).siblings('label').children('span.semester-name').text();
+			var nameContainer = $(this).siblings('label').children('span.semester-name');
+			if(semesterID){
+				//-- Display Modal --//
+				$('#renameSemesterModal .modal-header h3 .insert-semestername').text(semesterName);
+				$('#rename-semester').val(semesterName);
+				$('#renameSemesterModal').modal('show');
+				
+				$('#renameSemester').off().click(function(event){
+					//-- Grab New Name --//
+					var newName = $('#rename-semester').val();
+					
+					//-- run ajax call to update Semester Name --//
+					var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/renamesemester";'."\n"; ?>
+					var data = {
+						action: "rename_semester",
+						theID: semesterID,
+						theName: newName
+						};
+					jQuery.post(ajaxurl, data, function(json){
+						if(typeof json != 'undefined'){
+							var results = jQuery.parseJSON(json);
+							if(typeof results.result != 'undefined'){
+								if(results.result == 'success'){
+									//-- Replace Display Name --//
+									$(nameContainer).text(results.semesterName);
+									//-- hide modal --//
+									$('#renameSemesterModal').modal('hide');
+									//-- Success - Howler MSG --//
+									howlerMsg('success', 'Semester Renamed', 'The semester name was changed successfully.', 7500, 'fa fa-check', false);
+								}else if(results.result == 'failed'){
+									//-- Failed - Howler MSG --//
+									howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+								}
+							}
+						}
+					});
+				});
+
+			}
+		} //-- end renameSemester --//
+		
+		$.fn.deleteSemester = function(){
+			var thisCheck = $(this).siblings('label').children('input');
+			if(!$(thisCheck).hasClass('active')){
+				var semesterID = $(this).attr('data-sem-val');
+				var semesterName = $(this).siblings('label').children('span.semester-name').text();
+				var thisItem = $(this);
+				if(semesterID){
+					bootbox.confirm("Are you sure you want to delete <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ semesterName +"</span>?", function(result){
+						if(result){
+							var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/delsemester";'."\n"; ?>
+							var data = {
+								action: "delete_semester",
+								theID: semesterID
+								};
+							jQuery.post(ajaxurl, data, function(json){
+								if(typeof json != 'undefined'){
+									var results = jQuery.parseJSON(json);
+									if(typeof results.result != 'undefined'){
+										if(results.result == 'success'){
+											//-- remove checkbox section --//
+											$(thisItem).parent('div.checkbox').remove();
+											//-- Success - Howler MSG --//
+											howlerMsg('success', 'Semester Removed', 'The semester was successfully deleted', 7500, 'fa fa-check', false);
+										}else if(results.result == 'failed'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+										}else if(results.result == 'invalid'){
+											//-- Invalid - Howler MSG --//
+											howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+										}
+									}
+								}
+							});
+
+						}
+					});
+				}
+			}else{
+				bootbox.alert("You can't delete the current semester.", function(){ /*- do nothing -*/ });
+			}	
+		} //-- end deleteSemester() --//
+		
+		$.fn.grabSchoolNotifications = function(){
+			var schoolID = $(this).val();
+			if(schoolID){
+				//-- run ajax call to grab notifications --//
+				var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/grabnotifications";'."\n"; ?>
+				var data = {
+					action: "grab_notifications",
+					theID: schoolID
+					};
+				jQuery.post(ajaxurl, data, function(json){
+					if(typeof json != 'undefined'){
+						var results = jQuery.parseJSON(json);
+						if(typeof results.result != 'undefined'){
+							if(results.result == 'success'){
+								//-- remove resend buttons --//
+								$('.resend-note').remove();
+								
+								//-- populate table --//
+								if(results.notifications){
+									jQuery.each(results.notifications, function (i, trait){
+										if(trait){
+											$('#trait-'+ i).prop('checked', true);
+											//-- Add Resend Button --//
+											$('#trait-'+ i).parent('td').next('td').append('<span class="label label-primary resend-note" data-trait="'+ i +'" style="float: right; padding: 3px 5px 4px;">Resend</span>');
+										}else{
+											$('#trait-'+ i).prop('checked', false);
+										}
+									});
+								}
+								
+								//-- Set Event Listener for Resend Notifications --//
+								$('body').off("click", ".resend-note").on("click", ".resend-note", function(){ $(this).resendNotifications(); });
+								
+								//-- Success - Howler MSG --//
+								howlerMsg('success', 'Notifications Retrieved', 'The school notifications were retrieved successfully.', 7500, 'fa fa-check', false);
+							}else if(results.result == 'failed'){
+								//-- Failed - Howler MSG --//
+								howlerMsg('danger', 'Failed to Retrieve Notifications', 'There was a problem retrieving notifications, Refresh the page, and please try again.', 7500, 'fa fa-exclamation', false);
+							}
+						}
+					}
+				});
+				
+			}else{
+				//-- wipe notifications (no school selected) --//
+				$('.select-trait').prop('checked', false);
+			}
+		} //-- end grabSchoolNotifications --//
+		
+		$.fn.sendNotifications = function(){
+			if($(this).prop('checked')){
+				$(this).prop('checked', false);
+				var thisItem = $(this);
+				var trait = $(this).val();
+				var schoolID = $('#selected-school').val();
+				if(schoolID){
+					//-- grab school name --//
+					if($('#school-name-h4').get(0)){
+						var schoolName = $('#school-name-h4').text();
+					}else{
+						var schoolName = $('#selected-school option:selected').text();
+					}
+					
+					//-- Display Modal --//
+					$('#sendNoteModal .modal-header h3 .insert-schoolname').text(schoolName);
+					$('#sendNoteModal').modal('show');
+					
+					$('#sendNotifications').off().click(function(event){
+						if($('.notify-users:checked').get(0)){
+							var users = new Array();
+							$('.notify-users:checked').each(function(e){
+								users.push($(this).val());
+							});
+							
+							//-- run ajax call to update notifications / send notifications --//
+							var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/sendnotifications";'."\n"; ?>
+							var data = {
+								action: "send_notifications",
+								theID: schoolID,
+								users: users,
+								trait: trait
+								};
+							jQuery.post(ajaxurl, data, function(json){
+								if(typeof json != 'undefined'){
+									var results = jQuery.parseJSON(json);
+									if(typeof results.result != 'undefined'){
+										if(results.result == 'success'){
+											//-- mark item as checked --//
+											$(thisItem).prop('checked', true);
+											//-- Add Resend Button --//
+											$(thisItem).parent('td').next('td').append('<span class="label label-primary resend-note" data-trait="'+ trait +'" style="float: right; padding: 3px 5px 4px;">Resend</span>');
+											//-- Hide modal --//
+											$('#sendNoteModal').modal('hide');
+											//-- Set Event Listener for Resend Notifications --//
+											$('body').off("click", ".resend-note").on("click", ".resend-note", function(){ $(this).resendNotifications(); });
+											//-- Success - Howler MSG --//
+											howlerMsg('success', 'Notifications Sent', 'The school notifications were sent successfully.', 7500, 'fa fa-check', false);
+										}else if(results.result == 'failed'){
+											//-- Failed - Howler MSG --//
+											howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+										}
+									}
+								}
+							});
+							
+						}else{
+							bootbox.alert("You can't send notifications unless you select teachers, turf coaches or students to send them to.", function(){ /*- do nothing -*/ });
+						}
+					});
+
+				}else{
+					bootbox.alert("You can't send notifications for grading without selecting a school first.", function(){ /*- do nothing -*/ });
+				}
+			}else{
+				$(this).prop('checked', true);
+				bootbox.alert("Grading Notifications for this character trait have already been sent. To Resend this notification, click the 'Resend' button on the right of the character trait. If you are trying to reset notifications to start a new year, you need to click the 'Reset Notifications' button.", function(){ /*- do nothing -*/ });
+			}
+		} //-- end sendNotifications --//
+		
+		/*-------------------------------
+			Send Parent Notifications
+		--------------------------------*/
+		$('#notify-parents').click(function(event){
+			var thisItem = $(this);
+			var schoolID = $('#selected-school').val();
+			if(schoolID){
+				//-- grab school name --//
+				if($('#school-name-h4').get(0)){
+					var schoolName = $('#school-name-h4').text();
+				}else{
+					var schoolName = $('#selected-school option:selected').text();
+				}
+				
+				//-- make sure they want the notifications to go out to parents --//
+				bootbox.confirm("Are you sure you want to send parent notifications for <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ schoolName +"</span>?", function(result){
+					if(result){
+						//-- run ajax call to send notifications --//
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/sendnotifications";'."\n"; ?>
+						var data = {
+							action: "send_to_parents",
+							theID: schoolID
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Notifications Sent', 'The school notifications were sent to parents successfully.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+					}
+				});
+				
+			}else{
+				bootbox.alert("You can't send parent notifications for grading without selecting a school first.", function(){ /*- do nothing -*/ });
+			}
+		}); //-- end Parent Notifications --//
+		
+		
+		$.fn.resendNotifications = function(){
+			var trait = $(this).attr('data-trait');
+			var schoolID = $('#selected-school').val();
+			if(schoolID){
+				//-- grab school name --//
+				if($('#school-name-h4').get(0)){
+					var schoolName = $('#school-name-h4').text();
+				}else{
+					var schoolName = $('#selected-school option:selected').text();
+				}
+				
+				//-- Display Modal --//
+				$('#resendNoteModal .modal-header h3 .insert-schoolname').text(schoolName);
+				$('#resendNoteModal').modal('show');
+				
+				$('#resendNotifications').off().click(function(event){
+					if($('.re-notify-users:checked').get(0)){
+						var users = new Array();
+						$('.re-notify-users:checked').each(function(e){
+							users.push($(this).val());
+						});
+						
+						//-- run ajax call to update notifications / send notifications --//
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/resendnotifications";'."\n"; ?>
+						var data = {
+							action: "resend_notifications",
+							theID: schoolID,
+							users: users,
+							trait: trait
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- hide modal --//
+										$('#resendNoteModal').modal('hide');
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Notifications Sent', 'The school notifications were sent successfully.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+						
+					}else{
+						bootbox.alert("You can't send notifications unless you select teachers, turf coaches or students to send them to.", function(){ /*- do nothing -*/ });
+					}
+				});
+
+			}else{
+				bootbox.alert("You can't send notifications for grading without selecting a school first.", function(){ /*- do nothing -*/ });
+			}
+		} //-- end resendNotifications --//
+		
+		
+		$.fn.resetNotifications = function(){
+			var schoolID = $('#selected-school').val();
+			if(schoolID){
+				//-- grab school name --//
+				if($('#school-name-h4').get(0)){
+					var schoolName = $('#school-name-h4').text();
+				}else{
+					var schoolName = $('#selected-school option:selected').text();
+				}
+				//-- are you sure? to reset notifications --//
+				bootbox.confirm("Are you sure you want to reset notifications for <span style='font-weight: bold; letter-spacing: 0.3px;'>"+ schoolName +"</span>?", function(result){
+					if(result){
+						var ajaxurl = <?php echo '"'.$this->htprotocol.$_SERVER['HTTP_HOST'].'/grading/resetnote";'."\n"; ?>
+						var data = {
+							action: "reset_notifications",
+							theID: schoolID
+							};
+						jQuery.post(ajaxurl, data, function(json){
+							if(typeof json != 'undefined'){
+								var results = jQuery.parseJSON(json);
+								if(typeof results.result != 'undefined'){
+									if(results.result == 'success'){
+										//-- remove checkbox selection --//
+										$('.select-trait').prop('checked', false);
+										//-- remove resend buttons --//
+										$('.resend-note').remove();
+										//-- Success - Howler MSG --//
+										howlerMsg('success', 'Notifications Reset', 'The notifications for the school were successfully reset.', 7500, 'fa fa-check', false);
+									}else if(results.result == 'failed'){
+										//-- Failed - Howler MSG --//
+										howlerMsg('danger', results.error_title, results.error_msg, 7500, 'fa fa-exclamation', false);
+									}else if(results.result == 'invalid'){
+										//-- Invalid - Howler MSG --//
+										howlerMsg('warning', 'Invalid Data!', 'There was a problem applying your changes, Please try again, If problem persists contact your Administrator', 7500, 'fa fa-exclamation', false);
+									}
+								}
+							}
+						});
+
+					}
+				});
+
+			}else{
+				bootbox.alert("You can't reset school notifications for grading without selecting a school first.", function(){ /*- do nothing -*/ });
+			}
+		} //-- end resetNotifications --//
+		
+		//-- Set Event Listeners --//
+		$('body').off("change", ".setSemester").on("change", ".setSemester", function(){ $(this).setCurrentSemester(); });
+		$('body').off("click", ".delSemester").on("click", ".delSemester", function(){ $(this).deleteSemester(); });
+		$('body').off("click", ".editSemester").on("click", ".editSemester", function(){ $(this).renameSemester(); });
+		$('body').off("change", "#selected-school").on("change", "#selected-school", function(){ $(this).grabSchoolNotifications(); });
+		$('body').off("change", ".select-trait").on("change", ".select-trait", function(){ $(this).sendNotifications(); });
+		$('body').off("click", ".resend-note").on("click", ".resend-note", function(){ $(this).resendNotifications(); });
+		$('body').off("click", "#reset-notifications").on("click", "#reset-notifications", function(){ $(this).resetNotifications(); });
+		
+	});
+</script>
+
+<!-- Rename Semester Modal -->
+<div id="renameSemesterModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">New Name For: <span class="insert-semestername"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<div id="rename-the-semester" class="form-group">
+					<label for="rename-semester">Enter Name For Semester</label><br>
+					<input type="text" id="rename-semester" class="form-control" value="" maxLength="64">
+					<span class="btn btn-primary" id="renameSemester">Rename Semester</span>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Determine Notifications to Send Modal -->
+<div id="sendNoteModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Notifications For: <span class="insert-schoolname"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<div class="form-group">
+					<label style="font-size: 18px;">Send Notifications to:</label><br />
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="notify-users" id="notify-teachers" value="3" checked="checked"> Home Room Teachers
+						</label>
+					</div>
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="notify-users" id="notify-turf" value="4" checked="checked"> Turf Coaches
+						</label>
+					</div>
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="notify-users" id="notify-students" value="0" checked="checked"> Students
+						</label>
+					</div>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="sendNotifications">Send Notifications</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Determine Notifications to Resend Modal -->
+<div id="resendNoteModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h3 class="modal-title">Notifications: <span class="insert-schoolname"></span></h3>
+			</div>
+			<div class="modal-body">
+				
+				<div class="form-group">
+					<label style="font-size: 18px;">Resend Notifications to:</label><br />
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="re-notify-users" id="notify-teachers" value="3" checked="checked"> Home Room Teachers
+						</label>
+					</div>
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="re-notify-users" id="notify-turf" value="4" checked="checked"> Turf Coaches
+						</label>
+					</div>
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="re-notify-users" id="notify-students" value="0" checked="checked"> Students
+						</label>
+					</div>
+				</div>
+				
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" id="resendNotifications">Send Notifications</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
