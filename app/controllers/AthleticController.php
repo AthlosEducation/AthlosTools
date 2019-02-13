@@ -1369,14 +1369,22 @@ class AthleticController extends \Phalcon\Mvc\Controller
 
 	} //-- end scorecardAction() --//
 	
-	
+	/**
+	 * For Data Reports Showing Athletic Improvments & Exporting Athletic Data
+	 */
 	public function reportsAction()
 	{
-		//-- For Data Reports Showing Athletic Improvments --//
-		
-		
+		//-- Permissions --//
+		$preMsg = "<a class='close' data-dismiss='alert' href='#' aria-hidden='true'>×</a>";
+		if(!$this->cap['dashboard']['reports']){
+			$this->flashSession->warning($preMsg."<strong>Access Denied!</strong> You have insufficient privileges to access that page.");
+			return $this->response->redirect("");
+		}
+
 		//-- Grab Schools --//
 		$schools = Schools::find(array("order" => "state ASC, schoolName ASC, city ASC"));
+		//-- Grab Available School Years --//
+		$school_years = Semesters::find(array("", "order" => "id DESC"));
 		//-- Grab Grade Levels --//
 		$grade_level = GradeLevel::find(array("order" => "id ASC"));
 		//-- Grab Intervals Object --//
@@ -1385,6 +1393,7 @@ class AthleticController extends \Phalcon\Mvc\Controller
 		//-- Pass Objects / Vars to View --//
 		$this->view->setVar("intervals", $intervals);
 		$this->view->setVar("schools", $schools);
+		$this->view->setVar("school_years", $school_years);
 		$this->view->setVar("grade_level", $grade_level);
 	} //-- end reportsAction() --//
 	
@@ -2018,5 +2027,134 @@ class AthleticController extends \Phalcon\Mvc\Controller
 		$this->view->disable();
 		
 	} //-- end exportAthleticismAction() --//
+
+	/**
+	 * Pull athletic data filtered by params for school year reports.
+	 */
+	public function exportAthleticDataAction(){
+		//-- Data was posted --//
+		if($this->request->isPost() == true){
+			//-- Function to Report of all students with given metrics --//
+			if($this->request->getPost("action") == 'export_athletic_data'){
+				//-- Sanitize Vars --//
+				$campus = $this->request->getPost("campus", "int");
+				$year = $this->request->getPost("year", "int");
+				$phase = $this->request->getPost("phase");
+				$results = $studentList = array();
+				//-- Make Sure vital data exists and is correct --//
+				if ($campus && $year && in_array($phase, array('all', 1, 2))) {
+				
+					//-- Grab School Name --//
+					$campusName = '';
+					$campusData = Schools::findFirst(array('id = :sid:', "bind" => array("sid" => $campus)));
+					if(!empty($campusData)){
+						$campusName = $campusData->schoolName;
+					}
+
+					//-- Grab School Year Title --//
+					$schoolYear = '';
+					$yearData = Semesters::findFirst(array('id = :sid:', "bind" => array("sid" => $year)));
+					if(!empty($yearData)){
+						$schoolYear = $yearData->semesterName;
+					}
+					
+					//-- Grab Student List to include in report --//
+					if ($phase === 'all') {
+						//-- All Phases --//
+						$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus." ORDER BY s.lname ASC, s.fname ASC";
+					} else {
+						//-- Single Phases --//
+						$phase = (int)$phase;
+						$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus." AND a.interval = ".$phase." ORDER BY s.lname ASC, s.fname ASC";
+					}
+					//-- Grab and assemble the list of Student Ids --//
+					$response = $this->db->query($query, array());
+					$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
+					$list_response = $response->fetchAll();
+					//$results['query'] = $query;
+					$studentList = array();
+					if(!empty($list_response)){
+						foreach($list_response as $listItem){
+							if(!in_array($listItem->id, $studentList)){
+								$studentList[] = $listItem->id;
+							}
+						}
+					}
+			
+					//-- Compare Lists & Compile Final Result List --//
+					if (!empty($studentList)) {
+						foreach ($studentList as $index => $student) {
+							if ($index === 0) {
+								//-- On First student, Send out document headers --//
+								//-- CSV File Info --//
+								$CSVFilename = "Athlos_".str_ireplace(" ", "_", $campusName)."_Athletic_Data_Export_".str_ireplace(" ", "_", $schoolYear)."_".time().".csv";
+								$filepath = $_SERVER['DOCUMENT_ROOT']."/downloads/temp/".$CSVFilename;
+								$results['result'] = 'success';
+								$results['filepath'] = $filepath;
+								$results['urlpath'] = "https://tools.athlosacademies.org/downloads/temp/".$CSVFilename;
+								$fp = fopen($filepath, 'w');
+								if ($fp !== false) {
+									//-- table headers --//
+									fwrite($fp, "School Name, Student Number, Last Name, First Name, School Year, Assessment Phase, 20 yard sprint, Vertical Jump, Straight Leg Raise (Left Leg), Straight Leg Raise (Right Leg), Push up, Plank, Pacer, Hex Test, Height (BMI), Weight (BMI), BMI, Limb Length (Balance), Reach Distance (Balance)\r\n");
+								}
+							}
+
+							//-- Grab Student Name --//
+							$student_info = Students::findFirst(array("id = :sid:", "bind" => array("sid" => $student), "columns" => "id, alt_id, fname, lname"));
+							$reportItems = array();
+							//-- Build / Run Grading Queries --//
+							if ($phase === 'all') {
+								//-- All Phases --//
+								$athleticData = AthleticGrading::find(array("school = :school: AND semester = :sem: AND student = :sid:", "bind" => array('school' => $campus, 'sem' => $year, 'sid' => $student), "order" => "interval ASC"));
+								if (!empty($athleticData)) {
+									foreach ($athleticData as $data) {
+										$reportItems[] = $data;
+									}
+								}
+							} else {
+								//-- Single Phases --//
+								$athleticData = AthleticGrading::findFirst(array("school = :school: AND semester = :sem: AND interval = :phase: AND student = :sid:", "bind" => array('school' => $campus, 'sem' => $year, 'phase' => $phase, 'sid' => $student), "limit" => 1));
+								$reportItems[] = $athleticData;
+							}
+							
+							//-- If file socket is open and working - Iterate over studentList and each Student's Data --//
+							if($fp !== false){
+								foreach($reportItems as $item){
+									//-- Write Out Report Data --//
+									fwrite($fp, $campusName.", ".$student_info->alt_id.", ".$student_info->lname.", ".$student_info->fname.", ".$schoolYear.", Phase ".$item->interval.", ".$item->sprint.", ".$item->vjump.", ".$item->sl_left.", ".$item->sl_right.", ".$item->pushup.", ".$item->plank.", ".$item->pacer.", ".$item->hex.", ".$item->height.", ".$item->weight.", ".$item->bmi.", ".$item->limb_length.", ".$item->absolute_reach."\r\n");
+								}
+								
+							}else{
+								$results['result'] = "failed";
+								$results['opened'] = "no";
+								$results['reason'] = "Failed to Open Socket - Maybe partially worked.";
+							}
+	
+						} // end foreach
+
+						//-- Close Socket --//
+						if ($fp !== false) {
+							fclose($fp);
+						}
+						
+					}else{
+						$results['result'] = "failed";
+						$results['reason'] = "No Students included in the reports.";
+					}
+
+				} else {
+					$results['result'] = "failed";
+					$results['reason'] = "Required Information Missing";
+				}
+				
+				//-- encode results --//
+				echo json_encode($results);
+			}
+		}
+
+		//-- Disable View --//
+		$this->view->disable();
+
+	} // exportAthleticDataAction
 	
 }
