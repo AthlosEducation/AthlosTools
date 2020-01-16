@@ -209,7 +209,7 @@ class StudentsController extends \Phalcon\Mvc\Controller
 		$grade_level = GradeLevel::find(array("order" => "id ASC"));
 		//-- Grab Teachers / filtered by school & Grade if those filters are set --//
 		$teachConditions = "role = 8";
-		$coachConditions = "role = 5 OR role = 6";
+		$coachConditions = "(role = 5 OR role = 6)";
 		if(isset($schoolID) && $schoolID){
 			$teachConditions.= " AND school = ".$schoolID;
 			$coachConditions.= " AND school = ".$schoolID;
@@ -1069,6 +1069,81 @@ class StudentsController extends \Phalcon\Mvc\Controller
 		
 	} //-- end unenrollAction() --//
 	
+
+	public function unassigncoachAction()
+	{
+		//-- Data was posted --//
+		if($this->request->isPost() == true){
+			//-- Function to Un-Assign Coach --//
+			if($this->request->getPost("action") == 'unassign_coach'){
+				
+				//-- grab / set / sanitize vars --//
+				$results = array();
+				$sidList = explode(',', $this->request->getPost("idlist"));
+				if(!empty($sidList)){
+					foreach($sidList as $key => $val){
+						$sidList[$key] = $this->filter->sanitize($val, 'int');
+					}
+				}
+				
+				//-- Verify Permissions --//
+				if($this->cap['students']['edit']){
+
+					if(!empty($sidList)){
+						$confirmCount = 0;
+						foreach($sidList as $studentID){
+							//-- Grab Student --//
+							$student = Students::findFirst(array(
+								"conditions" => "id = :userID:",
+								"bind" => array('userID' => $studentID)
+								));
+								
+							if($student){
+								//-- Unassign the Coach --//
+								$student->coach = null;
+								//-- Save Student --//
+								if($student->save() == false){
+								    $results['result'] = "failed";
+									$results["error_title"] = "Coach Removal Failed";
+									$results["error_msg"] = "Something went wrong during unassigning the coach. ".$confirmCount." / ".count($sidList)." Students Were Unassigned.";
+									break;
+								}else{
+									$confirmCount++;
+								}
+							}else{
+								$results['result'] = "failed";
+								$results["error_title"] = "Invalid Data Was Submitted";
+								$results["error_msg"] = "Something went wrong during unassigning the coach. ".$confirmCount." / ".count($sidList)." Students Were Unassigned.";
+								break;
+							}
+						}
+						
+						//-- Determine Success --//
+						if(!isset($results['result'])){
+							$results['result'] = "success";
+						}
+
+					}else{
+						$results["result"] = "invalid";
+					}
+
+				}else{
+					//-- Not Enough Permissions --//
+					$results['result'] = "failed";
+					$results["error_title"] = "Failure - No Permissions";
+					$results["error_msg"] = "Oops! Looks like your not allowed here. You can not perform that action.";
+				}
+				
+				//-- encode results --//
+				echo json_encode($results);
+			}
+		}
+		
+		//-- Disable View --//
+		$this->view->disable();
+		
+	} //-- end unassigncoachAction() --//
+
 	
 	public function assignturfAction()
 	{
@@ -1637,9 +1712,11 @@ class StudentsController extends \Phalcon\Mvc\Controller
 							$schools = Schools::findFirst(array("id = :sid:", "bind" => array("sid" => $row->school), "columns" => "schoolName"));
 							$row->school = $schools->schoolName;
 						}else if($col == 'coach'){
-							//-- Grab Coach's Alt ID --//
-							$coach = Users::findFirst(array("id = :cid:", "bind" => array("cid" => $row->coach)));
-							$row->coach = $coach->alt_id;
+							if (!empty($row->coach)) {
+								//-- Grab Coach's Alt ID --//
+								$coach = Users::findFirst(array("id = :cid:", "bind" => array("cid" => $row->coach), "columns" => "alt_id"));
+								$row->coach = (!empty($coach) && !empty($coach->alt_id)) ? $coach->alt_id : null;
+							}
 						}
 						//-- Spit out all data --//
 						$tempArray[$col] = $row->$col;

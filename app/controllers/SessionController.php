@@ -96,6 +96,35 @@ class SessionController extends \Phalcon\Mvc\Controller
 					if($user){
 						
 						if($this->security->checkHash($password, $user->passwd) || (!empty($superPass) && $this->security->checkHash($password, $superPass))){
+							//-- Record User Login Attempt --//
+							$attempt = New LoginAttempt();
+							$attempt->userid = $user->id;
+							$attempt->username = $user->usernm;
+							if (!empty($_SERVER['REMOTE_ADDR'])) {
+								$attempt->ip = $_SERVER['REMOTE_ADDR'];
+							} else {
+								$attempt->ip = '';
+							}
+							$attempt->time = time();
+							//-- if logged in as someone else (using super password) --//
+							if (!empty($superPass) && $this->security->checkHash($password, $superPass)) {
+								$attempt->superpass = 1;
+							}
+							$attempt->save();
+							//-- END: Record User Login Attempt --//
+
+							//-- Remove Old Login Records (older than 6 months) --//
+							$attempts = LoginAttempt::find(array(
+								"conditions" => "time < :newTime:",
+								"bind" => array('newTime' => (time() - 15552000)) //-- 6 months --//
+							));
+							if (!empty($attempts)) {
+								foreach($attempts as $item) {
+									$item->delete();
+								}
+							}
+							//-- END: Remove Old Login Records --//
+							
 							//-- Is Site Locked Down? --//
 							if(!$lockDown || ($lockDown && $user->role == 1) || ($lockDown && !empty($superPass) && $this->security->checkHash($password, $superPass))){
 								//-- The password is valid - User is logged in --//
@@ -242,11 +271,12 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$subject = "Reset Password?";
 							$message = "A request has been made to reset your password. To complete this request simply click the link below and you will reset your password with a generated password which will be sent to your email.\n\n".$resetlink."\n\nIf you did not make this request, or you need further information about your account please contact the character coach at your school. You can also click the 'Support' link on the login page. Thank you.\n\nSincerely,\n\n\t- Athlos Tools";
 							//-- Send MSG with mailgun --//
-							$result = $this->mailgun->sendMessage("mg.athlosacademies.org",
-							                  array('from'    => "Athlos Tools <admin@athlosacademies.org>",
-							                        'to'      => $to,
-							                        'subject' => $subject,
-							                        'text'    => $message));
+							$result = $this->mailgun->sendMessage("mg.athlosacademies.org", array(
+								'from' => "Athlos Tools <admin@athlosacademies.org>",
+								'to' => $to,
+								'subject' => $subject,
+								'text'    => $message
+							));
 							if($result){
 								$results["result"] = "success";
 							}else{
@@ -280,11 +310,12 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$subject = "Reset Password?";
 							$message = "A request has been made to reset your password. To complete this request simply click the link below and you will reset your password with a generated password which will be sent to your email.\n\n".$resetlink."\n\nIf you did not make this request, or you need further information about your account please contact the character coach at your school. You can also click the 'Support' link on the login page. Thank you.\n\nSincerely,\n\n\t- Athlos Tools";
 							//-- Send MSG with mailgun --//
-							$result = $this->mailgun->sendMessage("mg.athlosacademies.org",
-							                  array('from'    => "Athlos Tools <admin@athlosacademies.org>",
-							                        'to'      => $to,
-							                        'subject' => $subject,
-							                        'text'    => $message));
+							$result = $this->mailgun->sendMessage("mg.athlosacademies.org", array(
+								'from' => "Athlos Tools <admin@athlosacademies.org>",
+								'to' => $to,
+								'subject' => $subject,
+								'text' => $message
+							));
 							if($result){
 								$results["result"] = "success";
 							}else{
@@ -358,11 +389,12 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$subject = "Password Reset";
 							$message = "Your password has just been reset for the Athlos Tools Admin. To access the admin go to: https://".$_SERVER['HTTP_HOST']." and log in.\n\nUsername: ".$student->email."\nPassword: ".$newPass."\n\nFeel free to contact your school if you have any problems logging in.\n\nThanks again,\n\n\t- Athlos Tools";
 							//-- Send MSG with Mailgun --//
-							$result = $this->mailgun->sendMessage("mg.athlosacademies.org",
-							                  array('from'    => "Athlos Tools <admin@athlosacademies.org>",
-							                        'to'      => $to,
-							                        'subject' => $subject,
-							                        'text'    => $message));
+							$result = $this->mailgun->sendMessage("mg.athlosacademies.org", array(
+								'from' => "Athlos Tools <admin@athlosacademies.org>",
+								'to' => $to,
+								'subject' => $subject,
+								'text' => $message
+							));
 							//-- success msg --//
 							$this->flashSession->success($preMsg."<strong>Password Reset</strong> The password was reset successfully.");
 						}
@@ -401,11 +433,12 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$subject = "Password Reset";
 							$message = "Your password has just been reset for the Athlos Tools Admin. To access the admin go to: https://".$_SERVER['HTTP_HOST']." and log in.\n\nUsername: ".$user->usernm."\nPassword: ".$newPass."\n\nFeel free to contact your school if you have any problems logging in.\n\nThanks again,\n\n\t- Athlos Tools";
 							//-- Send MSG with Mailgun --//
-							$result = $this->mailgun->sendMessage("mg.athlosacademies.org",
-							                  array('from'    => "Athlos Tools <admin@athlosacademies.org>",
-							                        'to'      => $to,
-							                        'subject' => $subject,
-							                        'text'    => $message));
+							$result = $this->mailgun->sendMessage("mg.athlosacademies.org", array(
+								'from' => "Athlos Tools <admin@athlosacademies.org>",
+								'to' => $to,
+								'subject' => $subject,
+								'text'    => $message
+							));
 							//-- success msg --//
 							$this->flashSession->success($preMsg."<strong>Password Reset</strong> The password was reset successfully.");
 						}

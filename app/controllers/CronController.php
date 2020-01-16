@@ -40,11 +40,6 @@ class CronController extends \Phalcon\Mvc\Controller
 					//if($cur_item > 60){
 						$s3->deleteObject("athlos-tools-bkps", $key);
 						echo 'Deleted - '.$key.'<br />';
-						
-						if(file_exists('/bkps/'.$file['name'])){
-							//-- Delete local bkp file --//
-							unlink('/bkps/'.$file['name']);
-						}
 					}
 				}
 				
@@ -56,54 +51,25 @@ class CronController extends \Phalcon\Mvc\Controller
 							Perform DB Backup Cron Script
 							- push to Amazon S3 Bucket -
 						------------------------------------*/
-						//ENTER THE RELEVANT INFO BELOW
-						$mysqlDatabaseName = 'athlos_tools';
-						$mysqlUserName = 'root';
-						$mysqlPassword = 'D1zzkn33l@nd';
-						$mysqlHostName = '192.168.128.94';
 
 						//-- Filename --//
+						$tmpFileName = 'athlos_tools_2.sql';
 						$filename = time().'-bkp-db-'.date('m').'.'.date('d').'.'.date('Y').'.sql';
-						$mysqlExportPath ='../../tmp/'.$filename;
 						$output=array();
-
-						//DO NOT EDIT BELOW THIS LINE
-						//Export the database and output the status to the page
-						$command='mysqldump --skip-dump-date -h '.$mysqlHostName.' -u '.$mysqlUserName.' -p'.$mysqlPassword.' '.$mysqlDatabaseName.' > ~/'.$mysqlExportPath;
-						exec($command,$output,$worked);
-						switch($worked){
-							case 0:
-							echo 'Database <b>' .$mysqlDatabaseName .'</b> successfully exported to <b>~/' .$mysqlExportPath .'</b>';
-							break;
-							case 1:
-							echo 'There was a warning during the export of <b>' .$mysqlDatabaseName .'</b> to <b>~/' .$mysqlExportPath .'</b>';
-							break;
-							case 2:
-							echo 'There was an error during export. Please check your values:<br/><br/><table><tr><td>MySQL Database Name:</td><td><b>' .$mysqlDatabaseName .'</b></td></tr><tr><td>MySQL User Name:</td><td><b>' .$mysqlUserName .'</b></td></tr><tr><td>MySQL Password:</td><td><b>NOTSHOWN</b></td></tr><tr><td>MySQL Host Name:</td><td><b>' .$mysqlHostName .'</b></td></tr></table>';
-							break;
-						}
 						
-						//-- Push to Amazon Bucket / local backup on server --//
-						if(file_exists('/tmp/'.$filename)){
+						//-- Push to Amazon Bucket --//
+						if(file_exists('/tmp/'.$tmpFileName)){
 							echo '<br />Server Address: '.$_SERVER['SERVER_ADDR'].'<br /><br />';
+							//-- See if new file is different from old one --//
 							$md5Str = md5(file_get_contents('http://athlos-tools-bkps.s3.amazonaws.com/'.$file['name']));
-							$md5File = md5_file('/tmp/'.$filename);
+							$md5File = md5_file('/tmp/'.$tmpFileName);
 							if($md5Str != $md5File){
 								//-- Place into amazon s3 --//
-								if($s3->putObjectFile('/tmp/'.$filename, "athlos-tools-bkps", $filename, S3::ACL_PUBLIC_READ)) {
-									echo "\n\n<br /><strong>Success</strong> We successfully uploaded your file.<br />";
-									
-									//-- DB Local Backup --//
-									if(copy('http://athlos-tools-bkps.s3.amazonaws.com/'.$filename, '/bkps/'.$filename)){
-										echo "\n\n<br /><strong>Success</strong> We successfully created local backup.<br />";
-									}else{
-										echo "\n\n<br /><strong>Error</strong> Local Backup failed!<br />";
-									}
-									
+								if($s3->putObjectFile('/tmp/'.$tmpFileName, "athlos-tools-bkps", $filename, S3::ACL_PUBLIC_READ)) {
+									echo "\n\n<br /><strong>Success</strong> We successfully uploaded your file '".$filename."'.<br />";					
 								}else{
 									echo "\n\n<br /><strong>Error</strong> Something went wrong while uploading your file... sorry.<br />";
 								}
-								
 							}else{
 								echo "\n\n<br /><strong>DB Hasn't Changed</strong> Did not backup file, no changes have been made to DB since last backup.<br />";
 							}
@@ -111,9 +77,12 @@ class CronController extends \Phalcon\Mvc\Controller
 							echo "\n\nremote: ".$md5Str." local: ".$md5File."\n";
 							
 							//-- Delete bkp file --//
-							unlink('/tmp/'.$filename);
+							if (unlink('/tmp/'.$tmpFileName)) {
+								echo "\nSuccessfully Unlinked File\n";	
+							} else {
+								echo "\nDid not unlink file\n";
+							}
 						}
-						
 					}
 				}
 			}

@@ -106,7 +106,7 @@
 						//-- Print out the coach options if school is already set --//
 						if(isset($schoolID) || !empty($schoolID)){
 							//-- Compile Coach Query --//
-							$coach_students = Students::find(array("school = :sid: AND active = 1", "bind" => array("sid" => $schoolID), "column" => 'coach', "group" => 'coach'));
+							$coach_students = Students::find(array("school = :sid: AND active = 1", "bind" => array("sid" => $schoolID), "columns" => 'coach', "group" => 'coach'));
 							if(!empty($coach_students)){
 								$csList = '';
 								foreach($coach_students as $cs){

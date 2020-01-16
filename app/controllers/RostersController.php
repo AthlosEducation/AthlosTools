@@ -195,7 +195,7 @@ class RostersController extends \Phalcon\Mvc\Controller
 		$grade_level = GradeLevel::find(array("order" => "id ASC"));
 		
 		//-- Grab Coaches / filtered by school --//
-		$coachConditions = "role = 5 OR role = 6";
+		$coachConditions = "(role = 5 OR role = 6)";
 		if(isset($schoolID) && $schoolID){
 			$coachConditions.= " AND school = ".$schoolID;
 		}else if($this->session->get("user-district")){

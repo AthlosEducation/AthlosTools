@@ -755,7 +755,7 @@ class IndexController extends \Phalcon\Mvc\Controller
 				//-- Make sure vital data is not empty --//
 				if(!empty($schoolID)){
 					//-- Compile Coach Query --//
-					$coach_students = Students::find(array("school = :sid: AND active = 1", "bind" => array("sid" => $schoolID), "column" => 'coach', "group" => 'coach'));
+					$coach_students = Students::find(array("school = :sid: AND active = 1", "bind" => array("sid" => $schoolID), "columns" => 'coach', "group" => 'coach'));
 					if(!empty($coach_students)){
 						$csList = '';
 						foreach($coach_students as $cs){
@@ -874,18 +874,18 @@ class IndexController extends \Phalcon\Mvc\Controller
 										
 										if(!empty($grade->{$test})){
 											//-- Update Completed Counts --//
-											$results['grade'][$curGrade]['complete']++;
+											$results['grade'][$curGrade]['complete'] = (empty($results['grade'][$curGrade]['complete']) ? 1 : $results['grade'][$curGrade]['complete'] + 1);
 											$results['grade'][$curGrade][$test]['complete']++;
 										}else{
 											//-- Update Missed Counts --//
-											$results['grade'][$curGrade]['missed']++;
+											$results['grade'][$curGrade]['missed'] = (empty($results['grade'][$curGrade]['missed']) ? 1 : $results['grade'][$curGrade]['missed'] + 1);
 											$results['grade'][$curGrade][$test]['missed']++;
 											//-- Add Student to Missed Array --//
 											$results['grade'][$curGrade][$test]['students'][] = $student->fname." ".$student->lname;
 										}
 										
 										//-- Update Total Counts --//
-										$results['grade'][$curGrade]['total']++;
+										$results['grade'][$curGrade]['total'] = (empty($results['grade'][$curGrade]['total']) ? 1 : $results['grade'][$curGrade]['total'] + 1);
 										$results['grade'][$curGrade][$test]['total']++;
 									}
 								}else{
@@ -901,14 +901,14 @@ class IndexController extends \Phalcon\Mvc\Controller
 										}
 										
 										//-- Update Missed Counts --//
-										$results['grade'][$curGrade]['missed']++;
+										$results['grade'][$curGrade]['missed'] = (empty($results['grade'][$curGrade]['missed']) ? 1 : $results['grade'][$curGrade]['missed'] + 1);
 										$results['grade'][$curGrade][$test]['missed']++;
 										//-- Add Student to Missed Array --//
 										$results['grade'][$curGrade][$test]['students'][] = $student->fname." ".$student->lname;
 									}
 									
 									//-- Update Total Counts --//
-									$results['grade'][$curGrade]['total']++;
+									$results['grade'][$curGrade]['total'] = (empty($results['grade'][$curGrade]['total']) ? 1 : $results['grade'][$curGrade]['total'] + 1);
 									$results['grade'][$curGrade][$test]['total']++;
 								}
 								
