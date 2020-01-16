@@ -26,7 +26,7 @@ $page_title = 'Prepared Mind';
 					$missedFolders = 0;
 					foreach($folders as $folderID => $folder_contents){
 						//-- Validate view -- only views state or all folder --//
-						if((['prepared-mind']['view']) || ($this->session->get("campus-state") !== null && (in_array($this->session->get("campus-state"), $folder_contents['permissions']) || in_array('all', $folder_contents['permissions'])))){ ?>
+						if(($cap['prepared-mind']['view']) || ($this->session->get("campus-state") !== null && (in_array($this->session->get("campus-state"), $folder_contents['permissions']) || in_array('all', $folder_contents['permissions'])))){ ?>
 							
 							<div class="row">
 								<div class="col-md-3 col-sm-4">

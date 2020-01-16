@@ -967,7 +967,7 @@ class AthleticController extends \Phalcon\Mvc\Controller
 			//$totalStudents = Students::count(array($totalConditions, "order" => $column." ".$dir));
 			
 			//-- Grab Coach List --//
-			$coach_students = Students::find(array($conditions, "column" => 'coach', "group" => 'coach'));
+			$coach_students = Students::find(array($conditions, "columns" => 'coach', "group" => 'coach'));
 		}
 		
 		//-- Compile Coach Query --//
@@ -1295,8 +1295,14 @@ class AthleticController extends \Phalcon\Mvc\Controller
 				$students = explode(',', $cards);
 				
 				//-- Include mPDF Library --//
-				require "../app/controllers/mpdf/mpdf.php";
-				$mpdf = new mPDF('','Letter', 0, 'helvetica');
+				require "../app/controllers/mpdf/vendor/autoload.php";
+				//$mpdf = new Mpdf('','Letter', 0, 'helvetica');
+				$mpdf = new \Mpdf\Mpdf([
+					'mode' => '',
+					'format' => 'Letter',
+					'default_font_size' => 0,
+					'default_font' => 'Helvetica',
+				]);
 
 				if(!empty($students)){
 					//-- Set Footer --//

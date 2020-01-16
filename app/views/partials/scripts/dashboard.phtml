@@ -1056,12 +1056,15 @@
 								//-- Clear out old options --//
 								$('#ma-coach').children('option[data-type]').remove();
 								
-								//-- show grade scores / missing --//
+								//-- populate new options --//
 								$.each(results.coaches, function(i, data){
 									$('#ma-coach').append('<option value="'+ data[0] +'" data-type="coach">'+ data[1] +'</option>');
 								});
 								
 							}else if(results.result == 'failed'){
+								//-- Clear out old options --//
+								$('#ma-coach').children('option[data-type]').remove();
+								
 								//-- Failed - Howler MSG --//
 								//howlerMsg('danger', 'Invalid Data', 'Could not grab the coach information.', 7500, 'fa fa-exclamation', false);
 							}
@@ -1111,6 +1114,8 @@
 									//-- show grade scores / missing --//
 									$.each(results.grade, function(key, data){
 										if(!data.missed){ data.missed = 0; }
+										if(!data.complete){ data.complete = 0; }
+										if(!data.total){ data.total = 0; }
 										$('#missing-assessment-details').append('<p style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #d7d7d7; cursor: pointer;" class="ma-grade-container" data-grade="'+ key +'"><i class="fa fa-toggle-right"></i> &nbsp;'+ results.level[key] +' - <em>(Assessments: &nbsp;&nbsp; <span class="text-primary"><i class="fa fa-times"></i> '+ data.missed +'</span> &nbsp;&nbsp; <span class="text-success"><i class="fa fa-check"></i> '+ data.complete +'</span> &nbsp;&nbsp; <span class="text-tertiary"><i class="fa fa-certificate"></i> &nbsp;'+ data.total +'</span>)</em></p>');
 										
 										//-- List out Assessments --//

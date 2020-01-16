@@ -190,7 +190,7 @@ class ControllerBase extends \Phalcon\Mvc\Controller
 				//-- Verify Permissions --//
 				if($this->cap['users']['add']){
 					//-- Make sure user can only create users with the same access or less --//
-					if($role <= $this->session->get("user-role")){
+					if($role < (int)$this->session->get("user-role")){
 						//-- error out - not enough permissions - illegal action --//
 						$results['result'] = "failed";
 						$results["error_title"] = "Failure - Illegal Action";

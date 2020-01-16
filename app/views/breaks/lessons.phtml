@@ -51,7 +51,7 @@ $page_title = 'Movement Breaks';
 						<div class="tab-pane fade <?php if($type->id == 1){ echo 'in active'; } ?>" id="<?php echo $type->url_name; ?>-tab">
 							<h3 class="heading"><?php echo '<i class="fa '.$type->icon.'"></i> &nbsp;'.$type->type_name; ?></h3>
 							
-							<div id="<?php echo $theTrait->url_name; ?>-content-types" class="tab-content">
+							<div id="<?php echo $type->url_name; ?>-content-types" class="tab-content">
 
 								<?php
 									//-- Grab posts from movement breaks type --//
@@ -89,7 +89,7 @@ $page_title = 'Movement Breaks';
 														if(!empty($post->post_video_image)){
 															//-- make sure video image is pulling from https --//
 															$post->post_video_image = str_ireplace('http://', 'https://', $post->post_video_image);
-															if(getimagesize($post->post_video_image) !== false){
+															if(@getimagesize($post->post_video_image) !== false){
 																$post->post_image_url = $post->post_video_image;
 															}else{
 																$post->post_image_url = '/img/empty-photo_320x180.jpg';

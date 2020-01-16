@@ -36,7 +36,7 @@
 							<?php
 								if(isset($staff_members)){
 									//-- List Out Staff Members --//
-									$roles = array(3 => 'Teachers', 4 => 'Turf Coaches');
+									$roles = array(4 => 'Campus Admins', 5 => 'Lead Athletic Coaches', 6 => 'Turf Coaches', 7 => 'Character Coaches', 8 => 'Teachers');
 									$curRole = '';
 									foreach($staff_members as $staff){
 										if($staff->role != $curRole){

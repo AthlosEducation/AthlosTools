@@ -356,5 +356,84 @@ class AdministrationController extends \Phalcon\Mvc\Controller
 		$this->view->disable();
 		
 	} //-- end delsemesterAction() --//
+
+	public function accesslogAction()
+    {
+        //-- Variables were posted --//
+		if($this->request->isPost() == true){
+			//-- grab / set vars / sanitize vars --//
+			$limit = $this->request->getPost("limit", "int");
+			$page = $this->request->getPost("pageNum", "int");
+			$field = $this->request->getPost("field", "string");
+			$lastField = $this->request->getPost("lastField", "string");
+			$dir = $this->request->getPost("dir", "string");
+			
+			//-- Figure out ordering --//
+			if($field){
+			    if(!$lastField){
+					//-- Do Nothing --//
+			    }else if($field == $lastField){
+			        if($dir && $dir == 'ASC'){ $dir = 'DESC'; }else{ $dir = 'ASC'; }
+			    }else{
+			        $dir = 'ASC';
+			    }
+				//-- Build out fields --//
+				$lastField = '<input type="hidden" name="lastField" value="'.$field.'" />';
+				$inputs = '<input type="hidden" name="field" value="'.$field.'" />';
+				if($dir){
+					$inputs.= '<input type="hidden" name="dir" value="'.$dir.'" />';
+					$lastField.= '<input type="hidden" name="dir" value="'.$dir.'" />';
+				}
+			}else{
+			    $inputs = '<input type="hidden" name="field" value="lastname" /><input type="hidden" name="dir" value="ASC" />';
+				$lastField = '<input type="hidden" name="lastField" value="lastname" /><input type="hidden" name="dir" value="ASC" />';
+			}
+			
+		}else{
+		    $inputs = '<input type="hidden" name="field" value="lastname" /><input type="hidden" name="dir" value="ASC" />';
+			$lastField = '<input type="hidden" name="lastField" value="lastname" /><input type="hidden" name="dir" value="ASC" />';
+		}
+		
+		//-- Set Vars to Defaults - if not present --//
+		if(!isset($limit) || !$limit){ $limit = 10; }
+		if(!isset($page) || !$page){
+			$page = 1;
+			$offset = 0;
+		}else{
+			//-- set offset based on page number --//
+			$offset = ($page - 1) * $limit;
+		}
+		if(!isset($field) || !$field){ $field = 'lastname'; }
+		if(!isset($dir) || !$dir){ $dir = 'ASC'; }
+		
+		$limitFilter = '<input type="hidden" name="limit" value="'.$limit.'" />';
+		$filters = $limitFilter;
+		
+		//-- Add Filter inputs --//
+		$lastField.= $filters;
+		
+		//-- Map to real column names --//
+		if($field == 'userid'){ $column = 'userid'; }
+		else if($field == 'username'){ $column = 'username'; }
+		else if($field == 'ip'){ $column = 'ip'; }
+		else if($field == 'superpass'){ $column = 'superpass'; }
+		else{ $column = 'time'; }
+		
+		//-- Grab Login Attempts Object --//
+		$loginAttempts = LoginAttempt::find(array($conditions, "order" => $column." ".$dir, "limit" => array("number" => $limit, "offset" => $offset)));
+		$totalAttempts = LoginAttempt::count(array($conditions, "order" => $column." ".$dir));
+		
+		//-- Pass Objects / Vars to View --//
+		$this->view->setVar("cap", $this->cap);
+        $this->view->setVar("loginAttempts", $loginAttempts);
+		$this->view->setVar("lastField", $lastField);
+		$this->view->setVar("inputs", $inputs);
+		$this->view->setVar("filters", $filters);
+		$this->view->setVar("field", $field);
+		$this->view->setVar("dir", strtolower($dir));
+		$this->view->setVar("limit", $limit);
+		$this->view->setVar("pageNum", $page);
+		$this->view->setVar("totalAttempts", $totalAttempts);
+    } //-- Access Logs --//
 	
 }

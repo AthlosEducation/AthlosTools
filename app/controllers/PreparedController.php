@@ -284,12 +284,12 @@ class PreparedController extends \Phalcon\Mvc\Controller
 				if($this->cap['prepared-mind']['manage']){
 					
 					//-- Make sure the required info is present --//
-					if($name && $url && ($parent || $parent == '') && $icon && !empty($permissions)){
+					if($name && $url && $icon && !empty($permissions)){
 						//-- serialize permissions --//
 						$permissions = serialize($permissions);
 						
 						//-- Set empty parent to be child of "Prepared Minds" Folder --//
-						if($parent == ''){ $parent = 1; }
+						if(empty($parent)){ $parent = 1; }
 						
 						//-- Make sure parent exists --//
 						$checkParent = CurriculumFolders::findFirst(array('id = :id:', "bind" => array('id' => $parent)));

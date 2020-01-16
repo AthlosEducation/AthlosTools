@@ -99,7 +99,7 @@ class BreaksController extends \Phalcon\Mvc\Controller
 									if(!empty($post->post_video_image)){
 										//-- make sure video image is pulling from https --//
 										$post->post_video_image = str_ireplace('http://', 'https://', $post->post_video_image);
-										if(getimagesize($post->post_video_image) !== false){
+										if(@getimagesize($post->post_video_image) !== false){
 											$post->post_image_url = $post->post_video_image;
 										}else{
 											$post->post_image_url = '/img/empty-photo_320x180.jpg';
@@ -844,7 +844,7 @@ class BreaksController extends \Phalcon\Mvc\Controller
 										<?php
 										//-- Setup Image to Display --//
 										if($post->post_video_image){
-											if(getimagesize($post->post_video_image) !== false){
+											if(@getimagesize($post->post_video_image) !== false){
 												$post->post_image_url = $post->post_video_image;
 											}else{
 												$post->post_image_url = '/img/empty-photo_320x180.jpg';

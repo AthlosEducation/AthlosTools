@@ -22,7 +22,7 @@ $page_title = 'Manage Students';
 		<?php //if(isset($output)){ print_r($output); } ?>
 		
 		<?php $this->flashSession->output(); ?>
-		
+
 		<div id="controlBar" class="col-md-12">
 			<?php if($cap['students']['add']){ ?>
 				<!-- add User Btn -->
@@ -50,7 +50,8 @@ $page_title = 'Manage Students';
 						//-- Option to assign students to Gym Period --//
 						if(isset($schoolID) && $schoolID){ ?>
 							<li><a href="javascript:;" onclick="jQuery('#assignTurfModal').modal('show');">Assign Selected Students to Turf Period</a></li><?php
-						} ?>	
+						} ?>
+						<li><a href="javascript:;" onclick="$(this).unassignCoach();">Remove Coach Affiliation from Selected Students</a></li>
 					</ul>
 				</div><!-- /#bulk-actions -->
 			<?php } ?>
