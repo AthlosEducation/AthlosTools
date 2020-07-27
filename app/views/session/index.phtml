@@ -17,12 +17,12 @@ $page_title = 'Login';
 		<?php //-- Messages --//
 			$this->flashSession->output(); ?>
 			<?php //echo date('H:i:s'); ?>
-			<h3>Welcome to Athlos Tools.</h3>
+			<h3>Welcome to Athlos Tools!</h3>
 
 			<h5>Please sign in to get access.</h5>
-			
+
 			<form id="login-form" action="/session/login" class="form" method="post">
-			
+
 				<div class="form-group">
 					<label for="login-username">Username / Email Address</label>
 					<input type="text" name="login" class="form-control" id="login-username" placeholder="Username / Email" maxlength="150" />
@@ -37,9 +37,9 @@ $page_title = 'Login';
 				<div class="form-group">
 					<button type="submit" id="login-btn" class="btn btn-primary btn-block">Login &nbsp; <i class="fa fa-play-circle"></i></button>
 				</div>
-				
+
 			</form>
-			
+
 			<a href="#" onclick="jQuery('#forgotPasswordModal').modal('show');" class="btn btn-default">Forgot Password?</a>
 
 		</div> <!-- /#login -->
@@ -47,10 +47,10 @@ $page_title = 'Login';
 		<!--<a href="javascript: alert('Setup Ticketing System...');" id="signup-btn" class="btn btn-lg btn-block">
 			Athlos Tools Support
 		</a>-->
-		
+
 		<script type="text/javascript" src="https://s3.amazonaws.com/assets.freshdesk.com/widget/freshwidget.js"></script>
 		<script type="text/javascript">
 			FreshWidget.init("", {"queryString": "&widgetType=popup", "widgetType": "popup", "buttonType": "text", "buttonText": "Support", "buttonColor": "white", "buttonBg": "#222222", "alignment": "3", "offset": "70px", "formHeight": "500px", "url": "https://athlos.freshdesk.com"} );
 		</script>
-		
+
 <?php $this->partial("partials/login-footer"); ?>
