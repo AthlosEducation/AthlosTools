@@ -166,8 +166,13 @@
 											Athletic Assessments
 										</a>
 									</li>
-									<!-- 	Assesment Protocols taken out
-									<?php if($cap['assessments']['protocols']){ ?>
+									<?php if(
+										/*
+										--Assesment Protocols taken out--
+
+										$cap['assessments']['protocols']
+
+										*/ false){ ?>
 										<li>
 											<a href="/athletic/testing">
 												<i class="fa fa-pencil"></i>
@@ -175,13 +180,16 @@
 											</a>
 										</li>
 									<?php } ?>
-									-->
 								</ul>
 							</li>
 					<?php } ?>
 
-<!--			Resources transfered to portal
-					<?php if($cap['athletic-curriculum']['view']){ ?>
+					<?php if(
+					/*
+					--Resources transfered to portal--
+					$cap['athletic-curriculum']['view']
+					*/
+					false){ ?>
 							<li class="dropdown <?php if($navGroup == 'Athletic'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-flag"></i>
@@ -214,7 +222,6 @@
 								</ul>
 							</li>
 					<?php } ?>
--->
 
 					<?php if($cap['campuses']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Schools'){ echo 'active'; } ?>">
@@ -278,8 +285,12 @@
 							</li>
 					<?php } ?>
 
-<!--			Movement Breaks moved to portal
-					<?php if($cap['movement-breaks']['view']){ ?>
+					<?php if(
+					/*
+					--Movement Breaks moved to portal--
+					$cap['movement-breaks']['view']
+					*/
+					false ){ ?>
 							<li class="dropdown <?php if($navGroup == 'Breaks'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-bolt"></i>
@@ -304,7 +315,6 @@
 								</ul>
 							</li>
 					<?php } ?>
--->
 
 					<?php if($cap['parents']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Parents'){ echo 'active'; } ?>">
@@ -324,8 +334,12 @@
 							</li>
 					<?php } ?>
 
-<!--			Performance Character no longer included
-					<?php if($cap['character-curriculum']['view']){ ?>
+					<?php if(
+					/*
+					--Performance Character no longer included
+					$cap['character-curriculum']['view']
+					*/
+					false){ ?>
 							<li class="dropdown <?php if($navGroup == 'Character'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-trophy"></i>
@@ -356,10 +370,13 @@
 								</ul>
 							</li>
 					<?php } ?>
--->
 
-<!--				Prepared Mind no longer required
-						<?php if($cap['prepared-mind']['view']){ ?>
+						<?php if(
+						/*
+						--Prepared Mind no longer required--
+						$cap['prepared-mind']['view']
+						*/
+						false){ ?>
 							<li class="dropdown <?php if($navGroup == 'Prepared-Mind'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-cloud"></i>
@@ -392,7 +409,7 @@
 								</ul>
 							</li>
 					<?php } ?>
--->
+
 
 					<?php if($cap['rosters']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Rosters'){ echo 'active'; } ?>">
