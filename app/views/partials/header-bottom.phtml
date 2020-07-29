@@ -7,7 +7,7 @@
 				<img src="/img/logos/athlos-tools-logo.png" alt="Site Logo" />
 			</a>
 		</h1>
-		
+
 		<a href="#" data-toggle="collapse" data-target=".top-bar-collapse" id="top-bar-toggle" class="navbar-toggle collapsed">
 			<i class="fa fa-cog"></i>
 		</a>
@@ -37,7 +37,7 @@
 						<a href="javascript:;"><i class="fa fa-<?php if($lock){ echo 'lock'; }else{ echo 'unlock'; } ?>"></i> <?php if($lock){ echo 'Locked'; }else{ echo 'Unlocked'; } ?></a>
 					</li><?php
 				} ?>
-				
+
 				<?php
 				//-- Customize Dash --//
 				if($navGroup == 'Dash'){ ?>
@@ -45,11 +45,11 @@
 						<a href="javascript:;"><i class="fa fa-gear"></i> Customize</a>
 					</li><?php
 				} ?>
-				
+
 				<li class="dropdown">
 					<a class="dropdown-toggle" data-toggle="dropdown" href="#">
 						<i class="fa fa-user"></i>
-			        	<?php echo $this->session->get("user-name"); ?> 
+			        	<?php echo $this->session->get("user-name"); ?>
 			        	<span class="caret"></span>
 			    	</a>
 			    	<ul class="dropdown-menu" role="menu">
@@ -61,7 +61,7 @@
 				        </li>
 				        <li>
 				        	<a href="/index/logout">
-				        		<i class="fa fa-sign-out"></i> 
+				        		<i class="fa fa-sign-out"></i>
 				        		&nbsp;&nbsp;Logout
 				        	</a>
 				        </li>
@@ -74,7 +74,7 @@
 				<li class="dropdown">
 					<a class="dropdown-toggle" data-toggle="dropdown" href="#">
 						<i class="fa fa-user"></i>
-			        	<?php echo $this->session->get("student-name"); ?> 
+			        	<?php echo $this->session->get("student-name"); ?>
 			        	<span class="caret"></span>
 			    	</a>
 			    	<ul class="dropdown-menu" role="menu">
@@ -86,7 +86,7 @@
 				        </li>
 				        <li>
 				        	<a href="/index/logout">
-				        		<i class="fa fa-sign-out"></i> 
+				        		<i class="fa fa-sign-out"></i>
 				        		&nbsp;&nbsp;Logout
 				        	</a>
 				        </li>
@@ -99,27 +99,27 @@
 
 
 	<div id="sidebar-wrapper" class="collapse sidebar-collapse">
-	
+
 		<div id="search">
 			<form style="display: none;">
 				<input class="form-control input-sm" type="text" name="search" placeholder="Search..." />
 
 				<button type="submit" id="search-btn" class="btn"><i class="fa fa-search"></i></button>
-			</form>		
+			</form>
 		</div> <!-- #search -->
 
-		<nav id="sidebar">		
+		<nav id="sidebar">
 			<?php
 			//-- Make sure user has logged in completely --//
 			if($this->session->get('user-id') !== null){ ?>
-				
-				<ul id="main-nav" class="open-active">			
 
-					<li class="<?php if($navGroup == '' || $navGroup == 'Dash'){ echo 'active'; } ?>">				
+				<ul id="main-nav" class="open-active">
+
+					<li class="<?php if($navGroup == '' || $navGroup == 'Dash'){ echo 'active'; } ?>">
 						<a href="/">
 							<i class="fa fa-dashboard"></i>
 							Dashboard
-						</a>				
+						</a>
 					</li>
 
 					<?php if($cap['administration']['view']){ ?>
@@ -128,74 +128,77 @@
 									<i class="fa fa-gavel"></i>
 									Administration
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/administration/">
-											<i class="fa fa-calendar"></i> 
+											<i class="fa fa-calendar"></i>
 											School Years
 										</a>
 									</li>
 									<li>
 										<a href="/administration/newyear">
-											<i class="fa fa-cog"></i> 
+											<i class="fa fa-cog"></i>
 											Setup New Year
 										</a>
 									</li>
 									<li>
 										<a href="/administration/accesslog">
-											<i class="fa fa-key"></i> 
+											<i class="fa fa-key"></i>
 											Access Log
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
 					<?php if($cap['assessments']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Assessments'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-clock-o"></i>
 									Assessments
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/athletic/grading">
-											<i class="fa fa-pencil"></i> 
+											<i class="fa fa-pencil"></i>
 											Athletic Assessments
 										</a>
 									</li>
+									<!-- 	Assesment Protocols taken out
 									<?php if($cap['assessments']['protocols']){ ?>
 										<li>
 											<a href="/athletic/testing">
-												<i class="fa fa-pencil"></i> 
+												<i class="fa fa-pencil"></i>
 												Assessment Protocols
 											</a>
 										</li>
 									<?php } ?>
-								</ul>	
+									-->
+								</ul>
 							</li>
 					<?php } ?>
-					
+
+<!--			Resources transfered to portal
 					<?php if($cap['athletic-curriculum']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Athletic'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-flag"></i>
 									Athletic Curriculum
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/athletic/curriculum">
-											<i class="fa fa-flag"></i> 
+											<i class="fa fa-flag"></i>
 											Athletic Curriculum
 										</a>
 									</li>
 									<?php if($cap['athletic-curriculum']['submit-contribution']){ ?>
 										<li>
 											<a href="/athletic/suggestions">
-												<i class="fa fa-star"></i> 
+												<i class="fa fa-star"></i>
 												Contributions
 											</a>
 										</li>
@@ -203,45 +206,46 @@
 									<?php if($cap['athletic-curriculum']['manage']){ ?>
 										<li>
 											<a href="/athletic/manage">
-												<i class="fa fa-file-text"></i> 
+												<i class="fa fa-file-text"></i>
 												Manage Curriculum
 											</a>
 										</li>
 									<?php } ?>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+-->
+
 					<?php if($cap['campuses']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Schools'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-bell"></i>
 									Campuses
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/schools">
-											<i class="fa fa-list"></i> 
+											<i class="fa fa-list"></i>
 											Manage Campuses
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
 					<?php if($cap['character-grading']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Grading'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-check"></i>
 									Grading
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<?php if($cap['character-grading']['staff-grade']){ ?>
 										<li>
 											<a href="/grading/staff">
-												<i class="fa fa-pencil"></i> 
+												<i class="fa fa-pencil"></i>
 												Grade Students
 											</a>
 										</li>
@@ -249,7 +253,7 @@
 									<?php if($cap['character-grading']['parent-grade']){ ?>
 										<li>
 											<a href="/grading/parents">
-												<i class="fa fa-pencil"></i> 
+												<i class="fa fa-pencil"></i>
 												Grade Students
 											</a>
 										</li>
@@ -257,7 +261,7 @@
 									<?php if($cap['character-grading']['verify-child']){ ?>
 										<li>
 											<a href="/grading/verifychild">
-												<i class="fa fa-thumbs-up"></i> 
+												<i class="fa fa-thumbs-up"></i>
 												Verify Students
 											</a>
 										</li>
@@ -265,109 +269,114 @@
 									<?php if($cap['character-grading']['reportcard']){ ?>
 										<li>
 											<a href="/grading/reportcard">
-												<i class="fa fa-tasks"></i> 
+												<i class="fa fa-tasks"></i>
 												Report Cards
 											</a>
 										</li>
 									<?php } ?>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
+<!--			Movement Breaks moved to portal
 					<?php if($cap['movement-breaks']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Breaks'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-bolt"></i>
 									Movement Breaks
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/breaks/lessons">
-											<i class="fa fa-bolt"></i> 
+											<i class="fa fa-bolt"></i>
 											Movement Breaks
 										</a>
 									</li>
 									<?php if($cap['movement-breaks']['submit-contribution']){ ?>
 										<li>
 											<a href="/breaks/suggestions">
-												<i class="fa fa-star"></i> 
+												<i class="fa fa-star"></i>
 												Contributions
 											</a>
 										</li>
 									<?php } ?>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+-->
+
 					<?php if($cap['parents']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Parents'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-compass"></i>
 									Parents
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/parents">
-											<i class="fa fa-list"></i> 
+											<i class="fa fa-list"></i>
 											Manage Parents
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
+<!--			Performance Character no longer included
 					<?php if($cap['character-curriculum']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Character'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-trophy"></i>
 									Performance Character
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/traits/grit">
-											<i class="fa fa-trophy"></i> 
+											<i class="fa fa-trophy"></i>
 											Character Curriculum
 										</a>
 									</li>
 									<?php if($cap['character-curriculum']['submit-contribution']){ ?>
 										<li>
 											<a href="/suggestions">
-												<i class="fa fa-star"></i> 
+												<i class="fa fa-star"></i>
 												Contributions
 											</a>
 										</li>
 									<?php } ?>
 									<li>
 										<a href="/instruction">
-											<i class="fa fa-file-text"></i> 
+											<i class="fa fa-file-text"></i>
 											Instruction
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
-					<?php if($cap['prepared-mind']['view']){ ?>
+-->
+
+<!--				Prepared Mind no longer required
+						<?php if($cap['prepared-mind']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Prepared-Mind'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-cloud"></i>
 									Prepared Mind
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/prepared/newcurriculum">
-											<i class="fa fa-cloud"></i> 
+											<i class="fa fa-cloud"></i>
 											Prepared Mind
 										</a>
 									</li>
 									<?php if($cap['prepared-mind']['submit-contribution']){ ?>
 										<li>
 											<a href="/prepared/suggestions">
-												<i class="fa fa-comment"></i> 
+												<i class="fa fa-comment"></i>
 												Contributions
 											</a>
 										</li>
@@ -375,131 +384,132 @@
 									<?php if($cap['prepared-mind']['manage']){ ?>
 										<li>
 											<a href="/prepared/newmanage">
-												<i class="fa fa-tasks"></i> 
+												<i class="fa fa-tasks"></i>
 												Manage Curriculum
 											</a>
 										</li>
 									<?php } ?>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+-->
+
 					<?php if($cap['rosters']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Rosters'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-table"></i>
 									Rosters
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/rosters">
-											<i class="fa fa-tasks"></i> 
+											<i class="fa fa-tasks"></i>
 											Class Roster
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
 					<?php if($cap['students']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Students'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-shield"></i>
 									Students
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/students">
-											<i class="fa fa-list"></i> 
+											<i class="fa fa-list"></i>
 											Manage Students
 										</a>
 									</li>
 									<li>
 										<a href="/resources">
-											<i class="fa fa-download"></i> 
+											<i class="fa fa-download"></i>
 											Student Resources
 										</a>
 									</li>
 									<?php if($cap['administration']['view']){ ?>
 										<li>
 											<a href="/index/secure">
-												<i class="fa fa-upload"></i> 
+												<i class="fa fa-upload"></i>
 												Secure Upload
 											</a>
 										</li>
 										<li>
 											<a href="/students/resources">
-												<i class="fa fa-pencil"></i> 
+												<i class="fa fa-pencil"></i>
 												Manage Resources
 											</a>
 										</li>
-									<?php } ?>	
-								</ul>	
+									<?php } ?>
+								</ul>
 							</li>
 					<?php } ?>
-					
+
 					<?php if($cap['users']['view']){ ?>
 							<li class="dropdown <?php if($navGroup == 'Users'){ echo 'active'; } ?>">
 								<a href="#">
 									<i class="fa fa-group"></i>
 									Users
 									<span class="caret"></span>
-								</a>				
+								</a>
 								<ul class="sub-nav">
 									<li>
 										<a href="/users">
-											<i class="fa fa-list"></i> 
+											<i class="fa fa-list"></i>
 											Manage Users
 										</a>
 									</li>
-								</ul>	
+								</ul>
 							</li>
 					<?php } ?>
-					
+
 				</ul><?php
 			}else if($this->session->get('student-id') !== null){ ?>
-				<ul id="main-nav" class="open-active">			
-					<li class="<?php if($navGroup == '' || $navGroup == 'Dash'){ echo 'active'; } ?>">				
+				<ul id="main-nav" class="open-active">
+					<li class="<?php if($navGroup == '' || $navGroup == 'Dash'){ echo 'active'; } ?>">
 						<a href="/">
 							<i class="fa fa-dashboard"></i>
 							Dashboard
-						</a>				
+						</a>
 					</li>
 					<li class="dropdown <?php if($navGroup == 'Grading'){ echo 'active'; } ?>">
 						<a href="#">
 							<i class="fa fa-check"></i>
 							Grading
 							<span class="caret"></span>
-						</a>				
-						<ul class="sub-nav">	
+						</a>
+						<ul class="sub-nav">
 							<li>
 								<a href="/grading/students">
-									<i class="fa fa-pencil"></i> 
+									<i class="fa fa-pencil"></i>
 									Grade Yourself
 								</a>
 							</li>
-						</ul>	
+						</ul>
 					</li>
-					<li class="<?php if($navPage == 'Resources'){ echo 'active'; } ?>">				
+					<li class="<?php if($navPage == 'Resources'){ echo 'active'; } ?>">
 						<a href="/resources">
 							<i class="fa fa-download"></i>
 							Resources
-						</a>				
+						</a>
 					</li>
-					<li class="<?php if($navGroup == 'Help'){ echo 'active'; } ?>">				
+					<li class="<?php if($navGroup == 'Help'){ echo 'active'; } ?>">
 						<a href="/tutorials">
 							<i class="fa fa-video-camera"></i>
 							Tutorials
-						</a>				
+						</a>
 					</li>
 				</ul><?php
 			} ?>
-					
+
 		</nav> <!-- #sidebar -->
 
 	</div> <!-- /#sidebar-wrapper -->
 
-	
+
 	<div id="content">
