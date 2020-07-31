@@ -18,15 +18,15 @@ $page_title = 'Manage Campuses';
 
 	//-- Page Content --// ?>
 	<div id="content-container">
-		
+
 		<?php $this->flashSession->output(); ?>
-		
+
 		<div id="controlBar" class="col-md-12">
 			<?php if($cap['campuses']['add']){ ?>
 				<!-- add School Btn -->
 				<span class="btn btn-primary" onclick="jQuery('#addSchoolModal').modal('show');" title="Add School" style="margin-right: 5px;"><i class="fa fa-plus"></i></span>
 			<?php } ?>
-			
+
 			<!-- Refresh Button -->
 			<div class="btn-group" title="Refresh Page" style="margin-right: 5px;">
 				<form id="refresh-page" action="" method="post">
@@ -34,7 +34,7 @@ $page_title = 'Manage Campuses';
 					<?php echo $inputs.$filters; ?>
 				</form>
 			</div>
-			
+
 			<div class="limit-results" title="Display Limit" style="float: right;">
 				<form id="changeLimit" action="" method="post">
 					<div id="bulk-actions" class="btn-group">
@@ -55,9 +55,9 @@ $page_title = 'Manage Campuses';
 				</form>
 			</div><!-- /.limit-results -->
 		</div><!-- /#controlBar -->
-		
+
 		<div id="display-results" class="col-md-12">
-			
+
 			<table class="table table-hover table-bordered">
 				<thead>
 					<tr>
@@ -123,11 +123,11 @@ $page_title = 'Manage Campuses';
 					} ?>
 				</tbody>
 			</table>
-			
+
 		</div><!-- /#display-results -->
-		
+
 		<div class="col-md-12">
-			
+
 			<?php
 			//-- Create Pager --//
 			if($totalSchools > $limit){
@@ -136,7 +136,7 @@ $page_title = 'Manage Campuses';
 				$curMin = (($pageNum - 1) * $limit) + 1;
 				$curMax = $pageNum * $limit;
 				if($curMax > $totalSchools){ $curMax = $totalSchools; }
-				
+
 				echo '<div class="users-pager">';
 				echo '<span class="page-count">Showing <span class="curMin">'.$curMin.'</span> - <span class="curMax">'.$curMax.'</span> of '.$totalSchools.' entries</span>';
 				echo '<ul class="pagination" data-limit="'.$limit.'" data-total="'.$totalSchools.'">';
@@ -154,15 +154,15 @@ $page_title = 'Manage Campuses';
 				if($curMax == $totalSchools){ $nextClass = 'disabled'; }else{ $nextClass = ''; }
 				echo '<li class="next '.$nextClass.'"><a href="#">Next → </a></li></ul>';
 				echo '</div>'; ?>
-				
+
 				<form id="pagerForm" action="" method="post">
 					<input type="hidden" name="pageNum" id="pageNumber" value="<?php echo $pageNum; ?>" />
 					<?php echo $inputs.$limitFilter; ?>
 				</form><?php
 			} ?>
-			
+
 		</div>
-		
+
 	</div>
 
 <?php

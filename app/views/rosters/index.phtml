@@ -18,9 +18,9 @@ $page_title = 'Class Roster';
 
 	//-- Page Content --// ?>
 	<div id="content-container">
-		
+
 		<?php $this->flashSession->output(); ?>
-		
+
 		<div id="controlBar" class="col-md-12">
 			<!-- add User Btn -->
 			<?php
@@ -32,7 +32,7 @@ $page_title = 'Class Roster';
 					<?php }
 				}
 			?>
-			
+
 			<?php
 			//-- Show / Hide Filters --//
 			if(((isset($schoolID) && $schoolID) && $this->session->get("user-role") <= 3) || isset($gradeID) || isset($periodID) || (isset($coachID) && $this->session->get("user-role") != 6) || (isset($searchTerm) && $searchTerm)){
@@ -48,7 +48,7 @@ $page_title = 'Class Roster';
 			<div id="show-user-filters" class="btn-group" title="Filters" style="margin-right: 5px;">
 				<a href="#" class="btn btn-secondary"><i class="fa fa-filter"></i> <span><?php echo $filterText; ?></span></a>
 			</div>
-			
+
 			<!-- Refresh Button -->
 			<div class="btn-group" title="Refresh Page" style="margin-right: 5px;">
 				<form id="refresh-page" action="" method="post">
@@ -56,7 +56,7 @@ $page_title = 'Class Roster';
 					<?php echo $inputs.$filters; ?>
 				</form>
 			</div>
-			
+
 			<!-- Filters -->
 			<div id="user-filters" class="well" <?php echo $showFilters; ?>>
 				<?php //-- school filter --//
@@ -88,7 +88,7 @@ $page_title = 'Class Roster';
 						</form>
 					</div><?php
 				}
-				
+
 				//-- grade filter --//
 				if(isset($grade_level) && $grade_level){ ?>
 					<div class="filter-grade col-sm-6">
@@ -108,7 +108,7 @@ $page_title = 'Class Roster';
 						</form>
 					</div><?php
 				}
-				
+
 				//-- coach filter --//
 				if(isset($coachList) && $this->session->get("user-role") != 6){ ?>
 					<div class="filter-coach col-sm-6" <?php if($this->session->get("user-role") <= 3){ echo 'style="margin-top: 10px;"'; } ?>>
@@ -128,7 +128,7 @@ $page_title = 'Class Roster';
 						</form>
 					</div><?php
 				} ?>
-				
+
 				<!-- Class Period Filter -->
 				<div class="filter-period col-sm-6" <?php if($this->session->get("user-role") != 6){ echo 'style="margin-top: 10px;"'; } ?>>
 					<form id="periodFilter" action="" method="post">
@@ -142,12 +142,12 @@ $page_title = 'Class Roster';
 								$x++;
 							} ?>
 							<option value="0" <?php if(isset($periodID) && $periodID == 0){ echo 'selected="selected"'; } ?>>Unassigned</option>
-							
+
 						</select>
 						<?php echo $inputs.$schoolFilter.$coachFilter.$gradeFilter.$searchFilter ?>
 					</form>
 				</div>
-				
+
 				<!-- Search Filter -->
 				<div id="filter-search" class="col-sm-6" style="margin-top: 10px;">
 					<form id="searchFilter" action="" method="post">
@@ -166,14 +166,14 @@ $page_title = 'Class Roster';
 			</div>
 			<!-- end filters -->
 		</div><!-- /#controlBar -->
-		
+
 		<div id="display-results" class="col-md-12">
 			<?php
 			if(!isset($schoolID) || !$schoolID){
 				echo '<div class="alert alert-danger">To view enrolled students on the roster, please select a school first.</div>';
 			}else{ ?>
 				<div class="table-responsive">
-				
+
 					<table class="table table-hover table-bordered">
 						<thead>
 							<tr>
@@ -299,13 +299,13 @@ $page_title = 'Class Roster';
 							} ?>
 						</tbody>
 					</table>
-				
+
 				</div><!-- /.table-responsive --> <?php
 			} ?>
 		</div><!-- /#display-results -->
-		
+
 		<div class="col-md-12">
-			
+
 			<?php
 			//-- Create Pager --//
 			if($totalStudents){
@@ -314,9 +314,9 @@ $page_title = 'Class Roster';
 				echo '</div>'; ?>
 				<?php
 			} ?>
-			
+
 		</div>
-		
+
 	</div><!-- /#content-container -->
 
 <?php
