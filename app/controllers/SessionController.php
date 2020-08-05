@@ -14,16 +14,16 @@ class SessionController extends \Phalcon\Mvc\Controller
 		if($this->session->get("logged_in")){
 			return $this->response->redirect("");
 		}
-		
+
 		//-- Setup Mailgun Object --//
 		$this->mailgun = new Mailgun('key-9smg5kx05w1kjd5l3kd1j8zs252p2-h6');
-		
+
 		//-- Setup Page Titles --//
 		$this->tag->setTitle("Athlos Grading | ");
 	}
-	
+
 	public function indexAction()
-    {	
+    {
 		/*-----------------
 			Splash Page
 		-----------------*/
@@ -38,20 +38,20 @@ class SessionController extends \Phalcon\Mvc\Controller
 				return $this->response->redirect("session/splash");
 			}
 		}
-		
-		
+
+
 		//-- Grab & Pass Token Vars --//
 		$tokenKey = $this->security->getTokenKey();
 		$token = $this->security->getToken();
 		$this->view->setVar("tokenKey", $tokenKey);
 		$this->view->setVar("token", $token);
     }
-	
+
     public function loginAction()
 	{
 		//-- Setup Vars --//
 		$preMsg = "<a class='close' data-dismiss='alert' href='#' aria-hidden='true'>×</a>";
-		
+
 		if($this->request->isPost()) {
 			$login = $this->request->getPost('login');
 			$password = $this->request->getPost('password');
@@ -66,7 +66,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 			if($option2){
 				$lockDown = $option2->value;
 			}
-			
+
 			//if($this->security->checkToken()) {
 				//-- CSRF Token is ok --//
 
@@ -92,9 +92,9 @@ class SessionController extends \Phalcon\Mvc\Controller
 							"bind" => array('login' => $login)
 							));
 					}
-					
+
 					if($user){
-						
+
 						if($this->security->checkHash($password, $user->passwd) || (!empty($superPass) && $this->security->checkHash($password, $superPass))){
 							//-- Record User Login Attempt --//
 							$attempt = New LoginAttempt();
@@ -124,7 +124,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 								}
 							}
 							//-- END: Remove Old Login Records --//
-							
+
 							//-- Is Site Locked Down? --//
 							if(!$lockDown || ($lockDown && $user->role == 1) || ($lockDown && !empty($superPass) && $this->security->checkHash($password, $superPass))){
 								//-- The password is valid - User is logged in --//
@@ -147,11 +147,11 @@ class SessionController extends \Phalcon\Mvc\Controller
 									$this->session->set("campus-state", $campus_info->state);
 									$this->session->set("district", $campus_info->district);
 								}
-								
+
 								//-- Capabilities --//
 								$capabilities = userCapabilities($user->role);
 								$this->session->set("capabilities", $capabilities);
-								
+
 								//-- Grab Current Semester --//
 								$semester = Semesters::findFirst(array("active = 1", "order" => "id DESC"));
 								$this->session->set("current-semester", $semester->id);
@@ -166,9 +166,9 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$this->flashSession->error($preMsg."<strong>Password Is Incorrect!</strong> Please try again, or select the 'Forgot your password' option below.");
 							return $this->response->redirect("session");
 						}
-						
+
 					}else if($student){
-						
+
 						if((!empty($student->pass) && $this->security->checkHash($password, $student->pass)) || (!empty($superPass) && $this->security->checkHash($password, $superPass))){
 							//-- Is Site Locked Down? --//
 							if(!$lockDown || ($lockDown && !empty($superPass) && $this->security->checkHash($password, $superPass))){
@@ -196,7 +196,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$this->flashSession->error($preMsg."<strong>Password Is Incorrect!</strong> Please try again, or select the 'Forgot your password' option below.");
 							return $this->response->redirect("session");
 						}
-						
+
 					}else{
 						$this->flashSession->error($preMsg."<strong>Incorrect Login!</strong> We found no user with that username or email. Please enter a different one.");
 						return $this->response->redirect("session");
@@ -210,22 +210,22 @@ class SessionController extends \Phalcon\Mvc\Controller
 				return $this->response->redirect("session");
 			}*/
 		}
-		
+
 		//-- Do not allow accessing page without submitting login form --//
 		return $this->response->redirect("session");
-		
+
 	} // end loginAction()
-	
-	
+
+
 	public function forgotAction()
-    {	
+    {
 		//-- Data was posted --//
 		if($this->request->isPost() == true) {
 			//-- Function to Send RESET Password Email --//
 			if($this->request->getPost("action") == 'forgot_password'){
 				$forgotVal = trim($this->request->getPost('forgotVal'));
 				$results = array();
-				
+
 				if($forgotVal){
 					//-- Grab User by either Username or Email --//
 					if(strpos($forgotVal, '@')){
@@ -261,7 +261,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 							$res->date = time();
 							$res->save();
 						}
-						
+
 						if($res->id){
 							//-- Generate Reset Link --//
 							$resetlink = "https://".$_SERVER['HTTP_HOST']."/session/reset?e=".$res->id;
@@ -282,11 +282,11 @@ class SessionController extends \Phalcon\Mvc\Controller
 							}else{
 								$results["result"] = "failed";
 							}
-							
+
 						}else{
 							$results["result"] = "failed";
 						}
-						
+
 					}else if($student){
 						//-- Detect if reset has been entered --//
 						$res = ResetPass::findFirst(array("userid = ".$student->id." AND is_student = 1 AND complete = 0", "order" => "id DESC"));
@@ -322,7 +322,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 								$results["result"] = "failed";
 								$results['msg4'] = 'Failed to send reset password email.';
 							}
-								
+
 						}else{
 							$results["result"] = "failed";
 							$results['msg3'] = 'failed to grab student from reset pass table';
@@ -336,21 +336,21 @@ class SessionController extends \Phalcon\Mvc\Controller
 					$results["result"] = "invalid";
 				}
 			}
-			
+
 			//-- Disable View --//
 			$this->view->disable();
 
 			//-- encode results --//
-			echo json_encode($results);	
+			echo json_encode($results);
 		}
     } // end forgotAction()
-	
-	
+
+
 	public function resetAction()
-    {	
+    {
 		//-- Setup Vars --//
 		$preMsg = "<a class='close' data-dismiss='alert' href='#' aria-hidden='true'>×</a>";
-		
+
 		/*---------------------------------------------------------------------------
 			Validate that url is valid and user is ready for password to be reset
 		----------------------------------------------------------------------------*/
@@ -402,7 +402,7 @@ class SessionController extends \Phalcon\Mvc\Controller
 						//-- if student wasn't found or student has no email address set --//
 						$this->flashSession->success($preMsg."<strong>Password Reset Failed</strong> User not found, or has no email address.");
 					}
-					
+
 				}else{
 					//-- grab user --//
 					$user = Users::findFirst(array(
@@ -444,22 +444,22 @@ class SessionController extends \Phalcon\Mvc\Controller
 						}
 					}
 				}
-				
-				
+
+
 			}else{
 				$this->flashSession->error($preMsg."<strong>Password Already Reset</strong> To reset your password, fill out the forgot password form.");
 			}
 		}else{
 			$this->flashSession->error($preMsg."<strong>Invalid Url!</strong> Url was incorrectly formed. To reset your password fill out the forgot password form.");
 		}
-		
+
 		//-- Disable View --//
 		$this->view->disable();
-		
+
 		return $this->response->redirect("session");
-		
+
     } // end resetAction()
-	
+
 	public function splashAction()
     {
 		//-- Display Splash Page --//
@@ -470,12 +470,12 @@ class SessionController extends \Phalcon\Mvc\Controller
 			return $this->response->redirect("session");
 		}
 	}
-	
+
 	public function lockdownAction()
     {
 		//-- nothing --//
 	}
-	
+
 } //-- End Class: SessionController --//
 
 function userCapabilities($userRole){
@@ -496,10 +496,60 @@ function userCapabilities($userRole){
 		"students" => array("view" => 0, "add" => 0, "edit" => 0, "delete" => 0),
 		"users" => array("view" => 0, "add" => 0, "edit" => 0, "delete" => 0)
 	);
-	
+
 	//-- Add Capabilities per User Role --//
+	switch ($userRole) {
+		case 1://-- Super Admin --//
+			$capabilities['administration'] = array("view" => 1, "manage" => 1);
+		case 2://-- Athlos Admin --//
+
+			//	Management capabilities
+			$capabilities['athletic-curriculum']['manage'] = 1;
+			$capabilities['character-curriculum']['manage'] = 1;
+			$capabilities['movement-breaks']['manage'] = 1;
+			$capabilities['prepared-mind']['manage'] = 1;
+
+			$capabilities['campuses'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
+			$capabilities['dashboard'] = array("reports" => 1);
+			$capabilities['districts'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
+			$capabilities['users']['add'] = 1;
+			$capabilities['users']['edit'] = 1;
+
+
+		case 3://--	District Admin --//
+		case 4://-- Campus Admin --//
+		case 5: //-- Lead APC (Lead Athletic Coach) --//
+			$capabilities['rosters']['remove'] = 1;
+			$capabilities['users']['view'] = 1;
+			$capabilities['users']['delete'] = 1;
+
+		case 6: //-- Athletic Coach --//
+		case 7: //-- Character Coach --//
+		case 8: //-- Teacher --//
+			$capabilities['assessments'] = array("view" => 1, "enter" => 1, "scorecard" => 1, "protocols" => 1);
+			$capabilities['athletic-curriculum']['view'] = 1;
+			$capabilities['athletic-curriculum']['submit-contribution'] = 1;
+			$capabilities['character-curriculum']['view'] = 1;
+			$capabilities['character-curriculum']['submit-contribution'] = 1;
+			$capabilities['movement-breaks']['view'] = 1;
+			$capabilities['movement-breaks']['submit-contribution'] = 1;
+			$capabilities['prepared-mind']['view'] = 1;
+			$capabilities['prepared-mind']['submit-contribution'] = 1;
+			$capabilities['rosters']['view'] = 1;
+			$capabilities['rosters']['add-to-roster'] = 1;
+			$capabilities['rosters']['edit'] = 1;
+			$capabilities['rosters']['create'] = 1;
+			$capabilities['students'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
+		default:
+			break;
+	}
+
+
+	/*
+	PREVIOUS ATHLOS TOOLS CONFIGURATION -- changed as of August 2020 upon migration to Athlos Athletic Assessments
+
 	if($userRole == 9){ //-- Parent --//
-		
+
 	}else if($userRole == 8){ //-- Teacher --//
 		$capabilities['character-curriculum'] = array("view" => 1, "manage" => 0, "submit-contribution" => 1);
 		$capabilities['movement-breaks'] = array("view" => 1, "manage" => 0, "submit-contribution" => 1);
@@ -562,6 +612,7 @@ function userCapabilities($userRole){
 			$capabilities['administration'] = array("view" => 1, "manage" => 1);
 		}
 	}
-	
+	*/
+
 	return $capabilities;
 }
