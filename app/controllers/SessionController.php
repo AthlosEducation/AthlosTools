@@ -510,7 +510,6 @@ function userCapabilities($userRole){
 			$capabilities['prepared-mind']['manage'] = 1;
 
 			$capabilities['campuses'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
-			$capabilities['dashboard'] = array("reports" => 1);
 			$capabilities['districts'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
 			$capabilities['users']['add'] = 1;
 			$capabilities['users']['edit'] = 1;
@@ -531,6 +530,7 @@ function userCapabilities($userRole){
 			$capabilities['athletic-curriculum']['submit-contribution'] = 1;
 			$capabilities['character-curriculum']['view'] = 1;
 			$capabilities['character-curriculum']['submit-contribution'] = 1;
+			$capabilities['dashboard'] = array("reports" => 1);
 			$capabilities['movement-breaks']['view'] = 1;
 			$capabilities['movement-breaks']['submit-contribution'] = 1;
 			$capabilities['prepared-mind']['view'] = 1;
@@ -540,6 +540,8 @@ function userCapabilities($userRole){
 			$capabilities['rosters']['edit'] = 1;
 			$capabilities['rosters']['create'] = 1;
 			$capabilities['students'] = array("view" => 1, "add" => 1, "edit" => 1, "delete" => 1);
+
+
 		default:
 			break;
 	}
