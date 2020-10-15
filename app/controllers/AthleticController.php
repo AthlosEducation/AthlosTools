@@ -2076,13 +2076,11 @@ class AthleticController extends \Phalcon\Mvc\Controller
 					$yearData = Semesters::findFirst(array('id = :sid:', "bind" => array("sid" => $year)));
 					if(!empty($yearData)){
 						$schoolYear = $yearData->semesterName;
-
+					}
 
 					//-- Grab Student List to include in report --//
 
 					//	Calculate phase condition
-
-					/*
 					$phaseCond = ($phase === 'all') ? "" : " AND a.interval = ".$phase;
 					//	Calculate user condition
 					$userCond = "";
@@ -2096,9 +2094,6 @@ class AthleticController extends \Phalcon\Mvc\Controller
 							$userCond = " AND s.teacher = ".$teacherID;
 							break;
 					}
-					*/
-					$phaseCond = "";
-					$userCond = "";
 
 					$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus.$phaseCond.$userCond." ORDER BY s.lname ASC, s.fname ASC";
 
