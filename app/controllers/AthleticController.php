@@ -1400,7 +1400,7 @@ class AthleticController extends \Phalcon\Mvc\Controller
 				$schools = Schools::find(array("district = :dist:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-district"))));
 				break;
 			default:
-				$schools = Schools::find(array("id = :schoolID:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-school"))));		
+				$schools = Schools::find(array("id = :schoolID:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("schoolID" => $this->session->get("user-school"))));		
 		}
 
 		//-- Grab Available School Years --//
