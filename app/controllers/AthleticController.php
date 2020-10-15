@@ -1400,7 +1400,7 @@ class AthleticController extends \Phalcon\Mvc\Controller
 				$schools = Schools::find(array("district = :dist:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-district"))));
 				break;
 			default:
-				$schools = Schools::find(array("id = :schoolID:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("schoolID" => $this->session->get("user-school"))));		
+				$schools = Schools::find(array("id = :schoolID:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("schoolID" => $this->session->get("user-school"))));
 		}
 
 		//-- Grab Available School Years --//
@@ -2076,17 +2076,27 @@ class AthleticController extends \Phalcon\Mvc\Controller
 					$yearData = Semesters::findFirst(array('id = :sid:', "bind" => array("sid" => $year)));
 					if(!empty($yearData)){
 						$schoolYear = $yearData->semesterName;
-					}
+
 
 					//-- Grab Student List to include in report --//
-					if ($phase === 'all') {
-						//-- All Phases --//
-						$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus." ORDER BY s.lname ASC, s.fname ASC";
-					} else {
-						//-- Single Phases --//
-						$phase = (int)$phase;
-						$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus." AND a.interval = ".$phase." ORDER BY s.lname ASC, s.fname ASC";
+
+					//	Calculate phase condition
+					$phaseCond = $phase === 'all' ? "" : " AND a.interval = ".(int)$phase;
+					//	Calculate user condition
+					switch($this->session->get("user-role")){
+						case 6: //	Coach
+							$userCond = "AND s.coach = ".$this->session->get("user-id");
+							break;
+						case 8: //	Teacher
+							$userCond = "AND s.teacher = ".$this->session->get("user-id");
+							break;
+						default:
+							$userCond = "";
+
 					}
+
+					$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus.$phaseCond.$userCond." ORDER BY s.lname ASC, s.fname ASC";
+
 					//-- Grab and assemble the list of Student Ids --//
 					$response = $this->db->query($query, array());
 					$response->setFetchMode(Phalcon\Db::FETCH_OBJ);
