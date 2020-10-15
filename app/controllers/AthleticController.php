@@ -1389,11 +1389,20 @@ class AthleticController extends \Phalcon\Mvc\Controller
 
 
 		//-- Grab Schools --//
-		if($this->session->get("user-district")){
-			$schools = Schools::find(array("district = :dist:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-district"))));
-		}else{
-			$schools = Schools::find(array("order" => "state ASC, schoolName ASC, city ASC"));
+		switch($this->session->get("user-role")){
+			case 1:
+			case 2:
+				//	Athlos/Super Admin
+				$schools = Schools::find(array("order" => "state ASC, schoolName ASC, city ASC"));
+				break;
+			case 3:
+				//	District Admin
+				$schools = Schools::find(array("district = :dist:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-district"))));
+				break;
+			default:
+				$schools = Schools::find(array("id = :schoolID:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-school"))));		
 		}
+
 		//-- Grab Available School Years --//
 		$school_years = Semesters::find(array("", "order" => "id DESC"));
 		//-- Grab Grade Levels --//
