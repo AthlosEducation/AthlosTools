@@ -2081,18 +2081,16 @@ class AthleticController extends \Phalcon\Mvc\Controller
 					//-- Grab Student List to include in report --//
 
 					//	Calculate phase condition
-					$phaseCond = $phase === 'all' ? "" : " AND a.interval = ".(int)$phase;
+					$phaseCond = $phase === 'all' ? "" : " AND a.interval = ".$phase;
 					//	Calculate user condition
+					$userCond = "";
 					switch($this->session->get("user-role")){
 						case 6: //	Coach
-							$userCond = "AND s.coach = ".$this->session->get("user-id");
+							$userCond = " AND s.coach = ".$this->session->get("user-id");
 							break;
 						case 8: //	Teacher
-							$userCond = "AND s.teacher = ".$this->session->get("user-id");
+							$userCond = " AND s.teacher = ".$this->session->get("user-id");
 							break;
-						default:
-							$userCond = "";
-
 					}
 
 					$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus.$phaseCond.$userCond." ORDER BY s.lname ASC, s.fname ASC";
