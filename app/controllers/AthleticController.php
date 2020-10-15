@@ -1387,8 +1387,13 @@ class AthleticController extends \Phalcon\Mvc\Controller
 			return $this->response->redirect("");
 		}
 
+
 		//-- Grab Schools --//
-		$schools = Schools::find(array("order" => "state ASC, schoolName ASC, city ASC"));
+		if($this->session->get("user-district")){
+			$schools = Schools::find(array("district = :dist:", "order" => "state ASC, schoolName ASC, city ASC", "bind" => array("dist" => $this->session->get("user-district"))));
+		}else{
+			$schools = Schools::find(array("order" => "state ASC, schoolName ASC, city ASC"));
+		}
 		//-- Grab Available School Years --//
 		$school_years = Semesters::find(array("", "order" => "id DESC"));
 		//-- Grab Grade Levels --//
