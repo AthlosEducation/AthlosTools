@@ -2095,7 +2095,7 @@ class AthleticController extends \Phalcon\Mvc\Controller
 							break;
 					}
 
-					$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus." ORDER BY s.lname ASC, s.fname ASC";
+					$query = "SELECT s.id FROM athletic_grading AS a, students AS s WHERE s.id = a.student AND a.semester = ".$year." AND a.school = ".$campus.$phaseCond.$userCond." ORDER BY s.lname ASC, s.fname ASC";
 
 					//-- Grab and assemble the list of Student Ids --//
 					$response = $this->db->query($query, array());
